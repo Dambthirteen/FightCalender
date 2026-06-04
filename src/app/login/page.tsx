@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
@@ -28,8 +26,8 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Fehler'); return; }
-      router.push('/');
-      router.refresh();
+      // Hard redirect so the browser sends the new session cookie fresh
+      window.location.href = '/';
     } finally {
       setLoading(false);
     }

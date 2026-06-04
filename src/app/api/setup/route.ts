@@ -44,6 +44,30 @@ export async function POST() {
       )
     `;
     await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS excuse TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS auto_generated BOOLEAN NOT NULL DEFAULT FALSE`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS competitions (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        name VARCHAR(200) NOT NULL,
+        competition_date DATE NOT NULL,
+        location VARCHAR(200) NOT NULL DEFAULT '',
+        weight_class VARCHAR(100) NOT NULL DEFAULT '',
+        notes TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_status (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        status_type VARCHAR(20) NOT NULL CHECK (status_type IN ('sick', 'injured', 'vacation')),
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
     await sql`
       CREATE TABLE IF NOT EXISTS user_schedule (
         id SERIAL PRIMARY KEY,

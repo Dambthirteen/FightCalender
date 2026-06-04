@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh --version)",
+      "Bash(git --version)",
+      "Bash(npm --version)",
+      "PowerShell(gh *)",
+      "PowerShell(winget install *)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(npm install *)",
+      "PowerShell(New-Item *)",
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "PowerShell(npm run *)",
+      "PowerShell(git add *)",
+      "PowerShell(npm *)",
+      "PowerShell(vercel *)",
+      "Bash(vercel *)",
+      "Bash(curl *)",
+      "Bash(openssl rand *)",
+      "Bash(python3 -c \"import secrets; print\\(secrets.token_hex\\(32\\)\\)\")",
+      "PowerShell(git push *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d\\)} Kurse, z.B.: {d[0][\\\\\"name\\\\\"]} {d[0][\\\\\"start_time\\\\\"]} Mo={d[0][\\\\\"day_of_week\\\\\"]}'\\)\")"
+    ]
+  }
+}

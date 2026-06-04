@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { startOfWeek, addWeeks, subWeeks, format, addDays, getDaysInMonth } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useUser } from '@/components/UserProvider';
+import { getNRWHolidays } from '@/lib/holidays';
 import type { GymClass, AttendanceRecord } from '@/lib/db';
 
 const CLASS_COLORS: Record<string, string> = {
@@ -34,8 +34,7 @@ function isVotingWindow() {
 type Step = 'loading' | 'schedule' | 'done';
 
 export default function Home() {
-  const { userName, loading: userLoading, refresh } = useUser();
-  const router = useRouter();
+  const { userName, loading: userLoading } = useUser();
 
   const [step, setStep] = useState<Step>('loading');
   const [allClasses, setAllClasses] = useState<GymClass[]>([]);
@@ -79,7 +78,7 @@ export default function Home() {
   // After user loads, determine step
   useEffect(() => {
     if (userLoading) return;
-    if (!userName) { router.push('/login'); return; }
+    if (!userName) { window.location.href = '/login'; return; }
 
     async function init() {
       const [classRes, profileRes] = await Promise.all([
@@ -96,7 +95,7 @@ export default function Home() {
       }
     }
     init();
-  }, [userName, userLoading, router]);
+  }, [userName, userLoading]);
 
   useEffect(() => {
     if (step === 'done' && userName) fetchCalendarData(weekStart);
@@ -164,8 +163,7 @@ export default function Home() {
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
-    refresh();
-    router.push('/login');
+    window.location.href = '/login';
   }
 
   // --- LOADING ---
@@ -235,6 +233,13 @@ export default function Home() {
   const classesByDay: Record<number, GymClass[]> = {};
   for (let d = 1; d <= 7; d++) classesByDay[d] = classes.filter(c => c.day_of_week === d);
 
+  // Holidays for this week
+  const weekYear = weekMonday.getFullYear();
+  const allHolidays = getNRWHolidays(weekYear);
+  if (addDays(weekMonday, 6).getFullYear() !== weekYear)
+    allHolidays.push(...getNRWHolidays(weekYear + 1));
+  const holidayMap = new Map(allHolidays.map(h => [h.date, h.name]));
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Excuse Modal */}
@@ -297,6 +302,10 @@ export default function Home() {
                     <span>📋</span> Meinen Plan ändern
                   </button>
                   <div className="border-t border-[#1a1a1a]" />
+                  <a href="/account" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>🏥</span> Mein Status</a>
+                  <a href="/competitions" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>🏆</span> Wettkämpfe</a>
+                  <div className="border-t border-[#1a1a1a]" />
+                  <a href="/year" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>📊</span> Jahresauswertung</a>
                   <a href="/macher" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>💪</span> Macher des Monats</a>
                   <a href="/bitch" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>🐔</span> Bitch des Monats</a>
                   <a href="/vote" className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${isVotingWindow() ? 'text-yellow-400 hover:bg-yellow-500/10' : 'text-gray-300 hover:bg-[#1a1a1a] hover:text-white'}`}>
@@ -343,12 +352,18 @@ export default function Home() {
               const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
               const daySkippers = skipping.filter(s => s.date === dateStr);
               const iSkipping = daySkippers.some(s => s.user_name === userName);
+              const holiday = holidayMap.get(dateStr) ?? null;
               return (
-                <div key={day} className={`rounded-xl border ${isToday ? 'border-red-900/50' : 'border-[#1a1a1a]'} overflow-hidden flex flex-col`}>
-                  <div className={`px-3 py-2 text-xs font-semibold uppercase tracking-widest flex justify-between items-center ${isToday ? 'bg-red-600/20 text-red-400' : 'bg-[#111] text-gray-500'}`}>
+                <div key={day} className={`rounded-xl border ${holiday ? 'border-purple-900/40' : isToday ? 'border-red-900/50' : 'border-[#1a1a1a]'} overflow-hidden flex flex-col`}>
+                  <div className={`px-3 py-2 text-xs font-semibold uppercase tracking-widest flex justify-between items-center ${holiday ? 'bg-purple-600/20 text-purple-400' : isToday ? 'bg-red-600/20 text-red-400' : 'bg-[#111] text-gray-500'}`}>
                     <span>{DAY_NAMES_SHORT[day-1]}</span>
                     <span className="text-[10px] font-normal">{format(dayDate, 'd.M.')}</span>
                   </div>
+                  {holiday && (
+                    <div className="px-2 py-1 bg-purple-600/10 border-b border-purple-900/30 text-[10px] text-purple-400 text-center truncate">
+                      🎄 {holiday}
+                    </div>
+                  )}
                   <div className="p-2 flex flex-col gap-2 flex-1">
                     {dayClasses.length === 0 ? (
                       <div className="text-[11px] text-gray-700 text-center py-3">–</div>

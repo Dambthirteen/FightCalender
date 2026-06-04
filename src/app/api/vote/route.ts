@@ -1,9 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
+import { holidayMap } from '@/lib/holidays';
 
-function getSql() {
-  return neon(process.env.DATABASE_URL!);
-}
+function getSql() { return neon(process.env.DATABASE_URL!); }
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,23 +15,34 @@ export async function GET(req: NextRequest) {
 
     const rows = await sql`
       SELECT
-        s.id,
-        s.user_name,
-        s.date::text,
-        s.excuse,
+        s.id, s.user_name, s.date::text, s.excuse,
         EXTRACT(ISODOW FROM s.date)::int AS day_of_week,
         COUNT(CASE WHEN ev.vote = 'accept' THEN 1 END)::int AS accept_count,
         COUNT(CASE WHEN ev.vote = 'reject' THEN 1 END)::int AS reject_count,
-        MAX(CASE WHEN ev.voter_name = ${voter} THEN ev.vote END) AS my_vote
+        MAX(CASE WHEN ev.voter_name = ${voter} THEN ev.vote END) AS my_vote,
+        MAX(st.status_type) AS user_status_type
       FROM skipping s
       LEFT JOIN excuse_votes ev ON ev.skip_id = s.id
+      LEFT JOIN user_status st ON st.user_name = s.user_name
+        AND s.date >= st.start_date AND s.date <= st.end_date
       WHERE s.date >= ${monthStart}::date
         AND s.date < (${monthStart}::date + INTERVAL '1 month')
         AND s.excuse != ''
       GROUP BY s.id, s.user_name, s.date, s.excuse
       ORDER BY s.date DESC
     `;
-    return NextResponse.json(rows);
+
+    const dates = rows.map(r => r.date as string);
+    const hMap = holidayMap(dates.length > 0 ? dates : [monthStart]);
+
+    const enriched = rows.map(r => ({
+      ...r,
+      holiday: hMap.get(r.date as string) ?? null,
+      // injured is NOT auto-exempt — still needs voting
+      is_exempt: !!(hMap.get(r.date as string)) || !!(r.user_status_type && r.user_status_type !== 'injured'),
+    }));
+
+    return NextResponse.json(enriched);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

@@ -22,6 +22,10 @@ export default function AdminPage() {
   const [classes, setClasses] = useState<GymClass[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
 
+  interface UserRow { user_name: string; created_at: string; attend_count: number; skip_count: number; schedule_count: number; }
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
   const [form, setForm] = useState({
     name: '',
     dayOfWeek: 1,
@@ -77,8 +81,29 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (authenticated) loadClasses();
+    if (authenticated) { loadClasses(); loadUsers(); }
   }, [authenticated]);
+
+  async function loadUsers() {
+    setUsersLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users?adminPassword=${encodeURIComponent(password)}`);
+      const data = await res.json();
+      setUsers(Array.isArray(data) ? data : []);
+    } finally {
+      setUsersLoading(false);
+    }
+  }
+
+  async function deleteUser(userName: string) {
+    if (!confirm(`Nutzer "${userName}" wirklich löschen? Alle Daten gehen verloren.`)) return;
+    await fetch('/api/admin/users', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminPassword: password, userName }),
+    });
+    setUsers(prev => prev.filter(u => u.user_name !== userName));
+  }
 
   async function addClass() {
     if (!form.name.trim()) return;
@@ -275,6 +300,50 @@ export default function AdminPage() {
                     className="text-gray-600 hover:text-red-500 transition-colors text-sm px-2 py-1 rounded hover:bg-red-500/10"
                   >
                     Löschen
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Users */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-base">Registrierte Nutzer ({users.length})</h2>
+            <button onClick={loadUsers} className="text-xs text-gray-500 hover:text-white px-3 py-1.5 rounded-lg border border-[#222] hover:border-[#333] transition-colors">
+              ↻ Aktualisieren
+            </button>
+          </div>
+          {usersLoading ? (
+            <div className="text-gray-600 text-sm py-8 text-center">Laden...</div>
+          ) : users.length === 0 ? (
+            <div className="text-gray-600 text-sm py-8 text-center">Noch keine Nutzer registriert.</div>
+          ) : (
+            <div className="bg-[#111] border border-[#1a1a1a] rounded-2xl overflow-hidden">
+              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-4 py-2 border-b border-[#1a1a1a] text-[11px] text-gray-500 uppercase tracking-widest">
+                <span>Name</span>
+                <span className="text-center">Plan</span>
+                <span className="text-center">💪</span>
+                <span className="text-center">🐔</span>
+                <span />
+              </div>
+              {users.map((u, i) => (
+                <div key={u.user_name} className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 items-center px-4 py-3 ${i < users.length - 1 ? 'border-b border-[#1a1a1a]' : ''}`}>
+                  <div>
+                    <div className="font-medium text-sm">{u.user_name}</div>
+                    <div className="text-[11px] text-gray-600">
+                      {new Date(u.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-500 text-center">{u.schedule_count} Kurse</span>
+                  <span className="text-xs text-green-600 text-center font-medium">{u.attend_count}×</span>
+                  <span className="text-xs text-yellow-600 text-center font-medium">{u.skip_count}×</span>
+                  <button
+                    onClick={() => deleteUser(u.user_name)}
+                    className="text-gray-700 hover:text-red-500 transition-colors text-xs px-2 py-1 rounded hover:bg-red-500/10"
+                  >
+                    ✕
                   </button>
                 </div>
               ))}
