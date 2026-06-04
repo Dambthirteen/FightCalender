@@ -1,6 +1,8 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
 
-export { sql };
+function getSql() {
+  return neon(process.env.DATABASE_URL!);
+}
 
 export interface GymClass {
   id: number;
@@ -19,15 +21,15 @@ export interface AttendanceRecord {
 }
 
 export async function getClasses(): Promise<GymClass[]> {
-  const result = await sql`SELECT * FROM classes ORDER BY day_of_week, start_time`;
-  return result.rows as GymClass[];
+  const sql = getSql();
+  const rows = await sql`SELECT * FROM classes ORDER BY day_of_week, start_time`;
+  return rows as GymClass[];
 }
 
 export async function getAttendanceForWeek(weekStart: string): Promise<AttendanceRecord[]> {
-  const result = await sql`
-    SELECT * FROM attendance WHERE week_start = ${weekStart}
-  `;
-  return result.rows as AttendanceRecord[];
+  const sql = getSql();
+  const rows = await sql`SELECT * FROM attendance WHERE week_start = ${weekStart}`;
+  return rows as AttendanceRecord[];
 }
 
 export async function toggleAttendance(
@@ -35,18 +37,21 @@ export async function toggleAttendance(
   weekStart: string,
   userName: string
 ): Promise<{ attending: boolean }> {
+  const sql = getSql();
   const existing = await sql`
     SELECT id FROM attendance
     WHERE class_id = ${classId} AND week_start = ${weekStart} AND user_name = ${userName}
   `;
-  if (existing.rows.length > 0) {
+  if (existing.length > 0) {
     await sql`
-      DELETE FROM attendance WHERE class_id = ${classId} AND week_start = ${weekStart} AND user_name = ${userName}
+      DELETE FROM attendance
+      WHERE class_id = ${classId} AND week_start = ${weekStart} AND user_name = ${userName}
     `;
     return { attending: false };
   } else {
     await sql`
-      INSERT INTO attendance (class_id, week_start, user_name) VALUES (${classId}, ${weekStart}, ${userName})
+      INSERT INTO attendance (class_id, week_start, user_name)
+      VALUES (${classId}, ${weekStart}, ${userName})
     `;
     return { attending: true };
   }
@@ -59,14 +64,16 @@ export async function createClass(
   endTime: string,
   color: string
 ): Promise<GymClass> {
-  const result = await sql`
+  const sql = getSql();
+  const rows = await sql`
     INSERT INTO classes (name, day_of_week, start_time, end_time, color)
     VALUES (${name}, ${dayOfWeek}, ${startTime}, ${endTime}, ${color})
     RETURNING *
   `;
-  return result.rows[0] as GymClass;
+  return rows[0] as GymClass;
 }
 
 export async function deleteClass(id: number): Promise<void> {
+  const sql = getSql();
   await sql`DELETE FROM classes WHERE id = ${id}`;
 }
