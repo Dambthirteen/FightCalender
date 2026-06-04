@@ -5,6 +5,14 @@ export async function POST() {
   try {
     const sql = neon(process.env.DATABASE_URL!);
     await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    await sql`
       CREATE TABLE IF NOT EXISTS classes (
         id SERIAL PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
@@ -23,6 +31,35 @@ export async function POST() {
         user_name VARCHAR(100) NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         UNIQUE(class_id, week_start, user_name)
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS skipping (
+        id SERIAL PRIMARY KEY,
+        date DATE NOT NULL,
+        user_name VARCHAR(100) NOT NULL,
+        excuse TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(date, user_name)
+      )
+    `;
+    await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS excuse TEXT NOT NULL DEFAULT ''`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_schedule (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+        UNIQUE(user_name, class_id)
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS excuse_votes (
+        id SERIAL PRIMARY KEY,
+        skip_id INTEGER NOT NULL REFERENCES skipping(id) ON DELETE CASCADE,
+        voter_name VARCHAR(100) NOT NULL,
+        vote VARCHAR(10) NOT NULL CHECK (vote IN ('accept', 'reject')),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(skip_id, voter_name)
       )
     `;
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });

@@ -121,6 +121,22 @@ export default function AdminPage() {
     alert(data.message ?? data.error);
   }
 
+  async function seedSchedule() {
+    if (!confirm('Aktuellen Stundenplan löschen und NFT Köln Stundenplan laden?')) return;
+    const res = await fetch('/api/seed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminPassword: password }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`${data.inserted} Kurse geladen!`);
+      loadClasses();
+    } else {
+      alert(data.error);
+    }
+  }
+
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4">
@@ -159,6 +175,9 @@ export default function AdminPage() {
           <h1 className="font-bold text-lg">Admin</h1>
         </div>
         <div className="flex gap-3">
+          <button onClick={seedSchedule} className="text-xs text-gray-300 hover:text-white px-3 py-1.5 rounded-lg border border-red-900/50 hover:border-red-600 bg-red-600/10 transition-colors">
+            📋 NFT Stundenplan laden
+          </button>
           <button onClick={initDb} className="text-xs text-gray-500 hover:text-white px-3 py-1.5 rounded-lg border border-[#222] hover:border-[#333] transition-colors">
             DB Init
           </button>
