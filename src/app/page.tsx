@@ -15,6 +15,7 @@ const COLOR_HEX: Record<string, string> = {
   red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7',
 };
 const hex = (c: string) => COLOR_HEX[c] ?? COLOR_HEX.red;
+const hhmmToMin = (t: string) => { const [h, m] = t.split(':').map(Number); return (h || 0) * 60 + (m || 0); };
 
 const DAY_NAMES_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
@@ -294,6 +295,7 @@ export default function Home() {
 
   const activeDays = [1, 2, 3, 4, 5, 6, 7].filter(day => (classesByDay[day] ?? []).length > 0);
   const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const nowMinutes = (() => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); })();
 
   return (
     <div className="min-h-screen text-[var(--text)]">
@@ -374,10 +376,13 @@ export default function Home() {
               const isToday = dateStr === todayStr;
               const daySkippers = skipping.filter(s => s.date === dateStr);
               const holiday = holidayMap.get(dateStr) ?? null;
-              const isPast = dateStr < todayStr;
-              const isPlanned = dayClasses.some(c => selectedIds.has(c.id));
+              const plannedToday = dayClasses.filter(c => selectedIds.has(c.id));
+              const isPlanned = plannedToday.length > 0;
               const attendedAny = dayClasses.some(c => attendance.some(a => a.class_id === c.id && a.user_name === userName));
-              const isNoShow = isPast && isPlanned && !attendedAny && dateStr >= CUTOVER && !holiday;
+              const lastPlannedEnd = plannedToday.reduce((mx, c) => Math.max(mx, hhmmToMin(c.end_time)), 0);
+              // No-Show steht fest, sobald der Tag vorbei ist ODER heute deine letzte geplante Klasse vorbei ist.
+              const dayOver = dateStr < todayStr || (isToday && isPlanned && nowMinutes >= lastPlannedEnd);
+              const isNoShow = dayOver && isPlanned && !attendedAny && dateStr >= CUTOVER && !holiday;
               const myExcuse = skipping.find(s => s.date === dateStr && s.user_name === userName);
               const daysLeft = 3 - Math.round((Date.parse(todayStr) - Date.parse(dateStr)) / 86400000);
               return (
