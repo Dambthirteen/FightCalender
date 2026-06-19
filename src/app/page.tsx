@@ -70,24 +70,28 @@ export default function Home() {
     if (!userName) { window.location.href = '/login'; return; }
 
     async function init() {
-      const [classRes, profileRes, usersRes] = await Promise.all([
-        fetch('/api/classes'),
-        fetch(`/api/profile?user=${encodeURIComponent(userName)}`),
-        fetch('/api/users'),
-      ]);
-      const [classData, profileData, usersData] = await Promise.all([classRes.json(), profileRes.json(), usersRes.json()]);
-      setAllClasses(Array.isArray(classData) ? classData : []);
-      if (Array.isArray(usersData)) {
-        const map: Record<string, string | null> = {};
-        for (const u of usersData) map[u.user_name] = u.color ?? null;
-        setUserColors(map);
-      }
-      const planEdit = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('plan') === '1';
-      if (Array.isArray(profileData) && profileData.length > 0) {
-        setSelectedIds(new Set(profileData));
-        setStep(planEdit ? 'schedule' : 'done');
-      } else {
-        setStep('schedule');
+      try {
+        // Jeder Aufruf für sich abgesichert — ein Fehler darf das Laden nie blockieren.
+        const [classData, profileData, usersData] = await Promise.all([
+          fetch('/api/classes').then(r => r.json()).catch(() => []),
+          fetch(`/api/profile?user=${encodeURIComponent(userName)}`).then(r => r.json()).catch(() => []),
+          fetch('/api/users').then(r => r.json()).catch(() => []),
+        ]);
+        setAllClasses(Array.isArray(classData) ? classData : []);
+        if (Array.isArray(usersData)) {
+          const map: Record<string, string | null> = {};
+          for (const u of usersData) map[u.user_name] = u.color ?? null;
+          setUserColors(map);
+        }
+        const planEdit = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('plan') === '1';
+        if (Array.isArray(profileData) && profileData.length > 0) {
+          setSelectedIds(new Set(profileData));
+          setStep(planEdit ? 'schedule' : 'done');
+        } else {
+          setStep('schedule');
+        }
+      } catch {
+        setStep('schedule'); // Fallback: nie im Ladebildschirm hängen bleiben
       }
     }
     init();

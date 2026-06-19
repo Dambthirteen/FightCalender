@@ -10,7 +10,11 @@ function getSql() {
 export async function GET() {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const sql = getSql();
-  const rows = await sql`SELECT user_name, color FROM users ORDER BY LOWER(user_name)`;
-  return NextResponse.json(rows);
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT user_name, color FROM users ORDER BY LOWER(user_name)`;
+    return NextResponse.json(rows);
+  } catch (error) {
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
 }
