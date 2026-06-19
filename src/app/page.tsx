@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { startOfWeek, addWeeks, subWeeks, format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useUser } from '@/components/UserProvider';
@@ -43,6 +43,8 @@ export default function Home() {
   const [excuseText, setExcuseText] = useState('');
   const [submittingExcuse, setSubmittingExcuse] = useState(false);
   const [userColors, setUserColors] = useState<Record<string, string | null>>({});
+  const [bitchAnim, setBitchAnim] = useState(false);
+  const audioRef = useRef<AudioContext | null>(null);
 
   const weekStart = getWeekStart(currentWeek);
 
@@ -126,12 +128,55 @@ export default function Home() {
       const data = await res.json();
       if (data.attending) {
         setAttendance(prev => [...prev, { id: Date.now(), class_id: classId, week_start: weekStart, user_name: userName }]);
+        // Wer doch noch kommt, ist kein No-Show mehr → Ausrede/Bitch für den Tag entfernen.
+        const cls = classes.find(c => c.id === classId);
+        if (cls) {
+          const d = format(addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), cls.day_of_week - 1), 'yyyy-MM-dd');
+          setSkipping(prev => prev.filter(s => !(s.user_name === userName && s.date === d)));
+        }
       } else {
         setAttendance(prev => prev.filter(a => !(a.class_id === classId && a.user_name === userName)));
       }
     } finally {
       setToggling(null);
     }
+  }
+
+  function unlockAudio() {
+    try {
+      if (!audioRef.current) {
+        const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (Ctx) audioRef.current = new Ctx();
+      }
+      void audioRef.current?.resume?.();
+    } catch { /* egal */ }
+  }
+
+  function celebrateBitch() {
+    const ctx = audioRef.current;
+    if (ctx) {
+      try {
+        void ctx.resume?.();
+        const cluck = (t0: number) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(880, t0);
+          osc.frequency.exponentialRampToValueAtTime(360, t0 + 0.07);
+          osc.frequency.exponentialRampToValueAtTime(640, t0 + 0.12);
+          gain.gain.setValueAtTime(0.0001, t0);
+          gain.gain.exponentialRampToValueAtTime(0.3, t0 + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.15);
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.start(t0); osc.stop(t0 + 0.17);
+        };
+        const now = ctx.currentTime;
+        cluck(now);        // gock
+        cluck(now + 0.2);  // gock
+      } catch { /* egal */ }
+    }
+    setBitchAnim(true);
+    setTimeout(() => setBitchAnim(false), 1100);
   }
 
   function openExcuseModal(dateStr: string) {
@@ -141,6 +186,7 @@ export default function Home() {
   }
 
   async function submitSkip(dateStr: string, excuse: string) {
+    unlockAudio();
     setSubmittingExcuse(true);
     try {
       const res = await fetch('/api/skip', {
@@ -152,6 +198,7 @@ export default function Home() {
       const data = await res.json();
       if (data.skipping) {
         setSkipping(prev => [...prev, { id: Date.now(), date: dateStr, user_name: userName, excuse }]);
+        celebrateBitch();
       } else {
         setSkipping(prev => prev.filter(s => !(s.date === dateStr && s.user_name === userName)));
       }
@@ -276,6 +323,13 @@ export default function Home() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 🐔 Bitch-Pop */}
+      {bitchAnim && (
+        <div className="fixed inset-0 z-[1000] grid place-items-center pointer-events-none">
+          <span className="chicken-pop" style={{ fontSize: '150px', filter: 'drop-shadow(0 12px 34px rgba(0,0,0,0.65))' }}>🐔</span>
         </div>
       )}
 

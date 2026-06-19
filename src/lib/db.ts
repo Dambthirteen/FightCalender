@@ -53,6 +53,15 @@ export async function toggleAttendance(
       INSERT INTO attendance (class_id, week_start, user_name)
       VALUES (${classId}, ${weekStart}, ${userName})
     `;
+    // Wer doch noch kommt, ist kein No-Show mehr → Ausrede/Skip für den Tag löschen
+    // (entfernt damit auch die Ausrede aus dem Ausreden-Gericht; Votes cascaden).
+    await sql`
+      DELETE FROM skipping
+      WHERE user_name = ${userName}
+        AND date = (${weekStart}::date + (
+          (SELECT day_of_week FROM classes WHERE id = ${classId}) - 1
+        ) * INTERVAL '1 day')::date
+    `;
     return { attending: true };
   }
 }
