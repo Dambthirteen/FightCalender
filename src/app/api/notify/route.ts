@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ensurePushConfigured, sendPush } from '@/lib/push';
 import { berlinNow, isoDayOfWeek, weekStartOf, hmToMinutes } from '@/lib/berlin-time';
 import { isHoliday } from '@/lib/holidays';
+import { CUTOVER } from '@/lib/bitch-scoring';
 
 // web-push braucht Node-Crypto → kein Edge-Runtime.
 export const runtime = 'nodejs';
@@ -13,6 +14,13 @@ const LEAD_MIN = 60; // … bis frühestens 1 Std vorher (danach zu spät)
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
+}
+
+/** Datum-String (yyyy-MM-dd) um n Tage verschieben. */
+function addD(dateStr: string, n: number): string {
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 /** ["A","B","C"] → "A, B und C" */
@@ -61,16 +69,18 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   const classOut = new Set<string>();
   const courtOpenOut = new Set<string>();
   const courtResultOut = new Set<string>();
+  const bitchRemindOut = new Set<string>();
   try {
     const prefs = (await sql`
-      SELECT user_name, class_reminders, court_open, court_result FROM notification_prefs
-    `) as { user_name: string; class_reminders: boolean; court_open: boolean; court_result: boolean }[];
+      SELECT user_name, class_reminders, court_open, court_result, bitch_reminders FROM notification_prefs
+    `) as { user_name: string; class_reminders: boolean; court_open: boolean; court_result: boolean; bitch_reminders: boolean }[];
     for (const p of prefs) {
       if (p.class_reminders === false) classOut.add(p.user_name);
       if (p.court_open === false) courtOpenOut.add(p.user_name);
       if (p.court_result === false) courtResultOut.add(p.user_name);
+      if (p.bitch_reminders === false) bitchRemindOut.add(p.user_name);
     }
-  } catch { /* notification_prefs noch nicht vorhanden */ }
+  } catch { /* notification_prefs / Spalte noch nicht vorhanden */ }
 
   let totalSent = 0;
 
@@ -113,6 +123,80 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       url: '/vote',
     });
   }
+
+  // --- Per-User: „Nicht eingetragen / Ausrede-Frist"-Erinnerungen ---
+  try {
+    const winStart = addD(today, -3);
+    const schedRows = (await sql`
+      SELECT us.user_name, c.day_of_week::int AS dow, c.end_time
+      FROM user_schedule us JOIN classes c ON c.id = us.class_id
+    `) as { user_name: string; dow: number; end_time: string }[];
+    const userDows = new Map<string, Set<number>>();
+    const lastEnd = new Map<string, number>(); // `${user}|${dow}` → Minuten der spätesten geplanten Klasse
+    for (const r of schedRows) {
+      if (!userDows.has(r.user_name)) userDows.set(r.user_name, new Set());
+      userDows.get(r.user_name)!.add(r.dow);
+      const k = `${r.user_name}|${r.dow}`;
+      lastEnd.set(k, Math.max(lastEnd.get(k) ?? 0, hmToMinutes(r.end_time)));
+    }
+    const presentRows = (await sql`
+      SELECT a.user_name, (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
+      FROM attendance a JOIN classes c ON c.id = a.class_id
+      WHERE a.week_start >= ${weekStartOf(winStart)}::date
+    `) as { user_name: string; d: string }[];
+    const present = new Set(presentRows.map((r) => `${r.user_name}|${r.d}`));
+    const skipRows = (await sql`
+      SELECT user_name, date::text AS date, excuse FROM skipping
+      WHERE date >= ${winStart}::date AND date <= ${today}::date
+    `) as { user_name: string; date: string; excuse: string }[];
+    const excused = new Set(skipRows.filter((s) => s.excuse !== '').map((s) => `${s.user_name}|${s.date}`));
+    const statusRows = (await sql`
+      SELECT user_name, start_date::text AS s, end_date::text AS e FROM user_status
+      WHERE status_type IN ('sick', 'vacation') AND start_date <= ${today}::date AND end_date >= ${winStart}::date
+    `) as { user_name: string; s: string; e: string }[];
+    const exempt = (u: string, d: string) => statusRows.some((st) => st.user_name === u && d >= st.s && d <= st.e);
+
+    const subUsers = [...new Set(allSubs.map((s) => s.user_name))];
+    for (const user of subUsers) {
+      if (bitchRemindOut.has(user)) continue;
+      const dows = userDows.get(user);
+      if (!dows) continue;
+      for (let ds = 0; ds <= 3; ds++) {
+        const D = addD(today, -ds);
+        if (D < CUTOVER) continue;
+        const dow = isoDayOfWeek(D);
+        if (!dows.has(dow)) continue;
+        if (isHoliday(D)) continue;
+        if (exempt(user, D)) continue;
+        if (present.has(`${user}|${D}`)) continue;     // war da → kein No-Show
+        if (excused.has(`${user}|${D}`)) continue;      // Ausrede schon drin → keine Erinnerung
+        // Zeitfenster: heute erst nach der letzten geplanten Klasse; Folgetage erst ab 10 Uhr.
+        if (ds === 0) {
+          if (nowMin < (lastEnd.get(`${user}|${dow}`) ?? 1440)) continue;
+        } else if (nowMin < 600) {
+          continue;
+        }
+        const claim = await sql`
+          INSERT INTO user_notif_log (user_name, notify_date, kind)
+          VALUES (${user}, ${today}, ${'bitch_' + D})
+          ON CONFLICT (user_name, notify_date, kind) DO NOTHING
+          RETURNING id
+        `;
+        if (claim.length === 0) continue;
+        let title: string, body: string;
+        if (ds === 0) { title = '🐔 Nicht eingetragen!'; body = 'Du warst heute bei keinem geplanten Kurs eingetragen. Warst du da? Dann eintragen! Sonst noch 3 Tage für deine Ausrede.'; }
+        else if (ds === 1) { title = '🐔 Gestern verpasst'; body = 'Gestern nichts eingetragen — du hast noch 2 Tage, deine Ausrede einzutragen.'; }
+        else if (ds === 2) { title = '⏳ Ausrede-Frist'; body = 'Noch 1 Tag, um deine Ausrede fürs Gericht einzutragen!'; }
+        else { title = '⏳ Letzte Chance!'; body = 'Heute ist der letzte Tag, deine Ausrede einzutragen.'; }
+        for (const s of allSubs) {
+          if (s.user_name !== user) continue;
+          const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, { title, body, url: '/' });
+          if (r.ok) totalSent++;
+          else if (r.gone) await sql`DELETE FROM push_subscriptions WHERE endpoint = ${s.endpoint}`;
+        }
+      }
+    }
+  } catch { /* user_notif_log / Spalten evtl. noch nicht vorhanden */ }
 
   // An Feiertagen (NRW) keine KURS-Erinnerungen (Gericht-Pushes oben laufen trotzdem).
   const holiday = isHoliday(today);

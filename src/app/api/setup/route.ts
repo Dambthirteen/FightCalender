@@ -122,6 +122,18 @@ export async function POST() {
         court_result BOOLEAN NOT NULL DEFAULT TRUE
       )
     `;
+    await sql`ALTER TABLE notification_prefs ADD COLUMN IF NOT EXISTS bitch_reminders BOOLEAN NOT NULL DEFAULT TRUE`;
+    // Dedup für personalisierte (pro-Nutzer) Erinnerungen — einmal pro Tag/Art.
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_notif_log (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        notify_date DATE NOT NULL,
+        kind VARCHAR(60) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_name, notify_date, kind)
+      )
+    `;
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
