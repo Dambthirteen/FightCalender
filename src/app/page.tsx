@@ -295,9 +295,10 @@ export default function Home() {
             </svg>
           </button>
           {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-2 z-40 card anim-pop shadow-2xl overflow-hidden min-w-[230px]">
+            <div className="fixed inset-0 z-50 anim-in" onClick={() => setMenuOpen(false)}>
+              <div onClick={(e) => e.stopPropagation()}
+                className="absolute right-4 w-[260px] max-h-[78vh] overflow-y-auto card anim-pop shadow-2xl shadow-black/60"
+                style={{ top: 'calc(env(safe-area-inset-top) + 4.75rem)' }}>
                 <div className="px-4 py-3 border-b border-[var(--border-soft)]">
                   <div className="text-[10px] text-[var(--faint)] uppercase tracking-[0.18em]">Eingeloggt als</div>
                   <div className="font-display text-lg tracking-wide">{userName}</div>
@@ -323,7 +324,7 @@ export default function Home() {
                   <span>🚪</span> Ausloggen
                 </button>
               </div>
-            </>
+            </div>
           )}
         </div>
       </header>
