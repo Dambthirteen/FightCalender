@@ -46,35 +46,89 @@ async function handle(req: NextRequest): Promise<NextResponse> {
 
   const sql = getSql();
   const { date: today, minutes: nowMin } = berlinNow();
+  const ym = today.slice(0, 7);
+  const dayOfMonth = parseInt(today.slice(8, 10), 10);
+  const yr = parseInt(today.slice(0, 4), 10);
+  const mo = parseInt(today.slice(5, 7), 10);
+  const daysInMonth = new Date(Date.UTC(yr, mo, 0)).getUTCDate();
 
-  // 2) An Feiertagen (NRW) keine Benachrichtigungen.
+  // Abos einmal laden.
+  const allSubs = (await sql`
+    SELECT user_name, endpoint, p256dh, auth FROM push_subscriptions
+  `) as SubRow[];
+
+  // Benachrichtigungs-Einstellungen laden (tolerant, falls Tabelle fehlt).
+  const classOut = new Set<string>();
+  const courtOpenOut = new Set<string>();
+  const courtResultOut = new Set<string>();
+  try {
+    const prefs = (await sql`
+      SELECT user_name, class_reminders, court_open, court_result FROM notification_prefs
+    `) as { user_name: string; class_reminders: boolean; court_open: boolean; court_result: boolean }[];
+    for (const p of prefs) {
+      if (p.class_reminders === false) classOut.add(p.user_name);
+      if (p.court_open === false) courtOpenOut.add(p.user_name);
+      if (p.court_result === false) courtResultOut.add(p.user_name);
+    }
+  } catch { /* notification_prefs noch nicht vorhanden */ }
+
+  let totalSent = 0;
+
+  // Broadcast: einmal pro (Ereignis, Monat) an alle Abos außer Abgemeldete (class_id=0 = kein Kurs).
+  async function broadcast(kind: string, notifyDate: string, optOut: Set<string>, payload: { title: string; body: string; url: string }): Promise<number> {
+    const claim = await sql`
+      INSERT INTO notification_log (class_id, notify_date, kind)
+      VALUES (0, ${notifyDate}, ${kind})
+      ON CONFLICT (class_id, notify_date, kind) DO NOTHING
+      RETURNING id
+    `;
+    if (claim.length === 0) return 0;
+    let sent = 0;
+    for (const s of allSubs) {
+      if (optOut.has(s.user_name)) continue;
+      const r = await sendPush({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+      if (r.ok) sent++;
+      else if (r.gone) await sql`DELETE FROM push_subscriptions WHERE endpoint = ${s.endpoint}`;
+    }
+    return sent;
+  }
+
+  // --- Gericht geöffnet (letzte 3 Tage des Monats), einmal pro Monat ---
+  if (dayOfMonth >= daysInMonth - 2) {
+    totalSent += await broadcast('court_open', `${ym}-01`, courtOpenOut, {
+      title: '🗳️ Ausreden-Gericht offen',
+      body: 'Die Ausreden des Monats können jetzt bewertet werden — stimme ab!',
+      url: '/vote',
+    });
+  }
+
+  // --- Gericht-Ergebnis (Monatsanfang, für den Vormonat), einmal ---
+  if (dayOfMonth <= 3) {
+    const pm = mo === 1 ? 12 : mo - 1;
+    const py = mo === 1 ? yr - 1 : yr;
+    const prevYm = `${py}-${String(pm).padStart(2, '0')}`;
+    totalSent += await broadcast('court_result', `${prevYm}-01`, courtResultOut, {
+      title: '⚖️ Gericht-Ergebnis',
+      body: 'Die Ausreden vom letzten Monat sind ausgewertet — schau, ob dein Bitch-Punkt steht!',
+      url: '/vote',
+    });
+  }
+
+  // An Feiertagen (NRW) keine KURS-Erinnerungen (Gericht-Pushes oben laufen trotzdem).
   const holiday = isHoliday(today);
   if (holiday) {
-    return NextResponse.json({ ok: true, today, skipped: `Feiertag: ${holiday.name}` });
+    return NextResponse.json({ ok: true, today, sent: totalSent, skipped: `Feiertag: ${holiday.name}` });
   }
 
   const isoDow = isoDayOfWeek(today);
   const weekStart = weekStartOf(today);
 
-  // 3) Alle Kurse, die heute (an diesem Wochentag) stattfinden.
+  // Alle Kurse, die heute (an diesem Wochentag) stattfinden.
   const classes = (await sql`
     SELECT id, name, start_time FROM classes WHERE day_of_week = ${isoDow}
   `) as ClassRow[];
 
-  // Abos einmal laden und im Speicher zuordnen (kleine Nutzerzahl).
-  const allSubs = (await sql`
-    SELECT user_name, endpoint, p256dh, auth FROM push_subscriptions
-  `) as SubRow[];
-
-  // Wer Kurs-Erinnerungen abgeschaltet hat (Tabelle evtl. noch nicht angelegt → tolerant).
-  let optOut = new Set<string>();
-  try {
-    const rows = (await sql`SELECT user_name FROM notification_prefs WHERE class_reminders = false`) as { user_name: string }[];
-    optOut = new Set(rows.map((r) => r.user_name));
-  } catch { /* notification_prefs noch nicht vorhanden */ }
-
   const summary: { class: string; start: string; attendees: number; sent: number }[] = [];
-  let totalSent = 0;
 
   for (const cls of classes) {
     const minutesUntil = hmToMinutes(cls.start_time) - nowMin;
@@ -96,7 +150,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
 
     // 5) Empfänger = Zugesagte mit Push-Abo.
     const attendeeSet = new Set(attendeeNames);
-    const recipientSubs = allSubs.filter((s) => attendeeSet.has(s.user_name) && !optOut.has(s.user_name));
+    const recipientSubs = allSubs.filter((s) => attendeeSet.has(s.user_name) && !classOut.has(s.user_name));
     if (recipientSubs.length === 0) continue; // keiner abonniert → nächster Lauf prüft erneut
 
     // 6) Genau einmal pro Kurs/Tag "claimen": nur wenn der Log-Eintrag neu entsteht.
