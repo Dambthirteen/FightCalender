@@ -4,7 +4,9 @@ import { jwtVerify } from 'jose';
 const getSecret = () =>
   new TextEncoder().encode(process.env.JWT_SECRET ?? 'fight-calender-dev-secret');
 
-const PUBLIC_PATHS = ['/login', '/api/auth', '/api/setup'];
+// /api/notify wird vom externen Cron-Dienst ohne Login aufgerufen und ist
+// stattdessen per CRON_SECRET geschützt.
+const PUBLIC_PATHS = ['/login', '/api/auth', '/api/setup', '/api/notify'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

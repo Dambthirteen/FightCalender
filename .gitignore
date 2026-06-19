@@ -33,6 +33,14 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# capacitor / ios build artifacts
+/ios/App/Pods/
+/ios/App/App/public/
+/ios/App/build/
+/ios/DerivedData/
+*.xcuserstate
+xcuserdata/
+
 # vercel
 .vercel
 
