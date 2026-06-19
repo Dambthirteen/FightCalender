@@ -1,4 +1,5 @@
 'use client';
+import PageHeader from '@/components/PageHeader';
 
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
@@ -71,11 +72,7 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <header className="border-b border-[#1a1a1a] px-4 py-4 flex items-center justify-between max-w-2xl mx-auto">
-        <a href="/" className="text-gray-500 hover:text-white transition-colors text-sm">← Zurück</a>
-        <h1 className="font-bold text-lg">👤 Mein Status</h1>
-        <div className="w-16" />
-      </header>
+      <PageHeader title="👤 Mein Status" />
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-8">
         {/* Info box */}

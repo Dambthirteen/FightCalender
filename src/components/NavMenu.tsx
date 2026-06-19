@@ -72,7 +72,7 @@ export default function NavMenu() {
               <div className="px-4 pt-3 pb-1 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--faint)' }}>{g.cat}</div>
             )}
             {g.items.map((it) => {
-              const active = pathname === it.href.split('?')[0];
+              const active = !it.href.includes('?') && pathname === it.href;
               const voting = it.badge && isVotingWindow();
               return (
                 <a key={it.label} href={it.href}

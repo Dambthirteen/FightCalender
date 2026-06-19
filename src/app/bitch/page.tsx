@@ -1,4 +1,5 @@
 'use client';
+import PageHeader from '@/components/PageHeader';
 
 import { useEffect, useState } from 'react';
 import { format, subMonths, addMonths } from 'date-fns';
@@ -30,15 +31,7 @@ export default function BitchPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Header */}
-      <header className="border-b border-[#1a1a1a] px-4 py-4 flex items-center justify-between max-w-2xl mx-auto">
-        <div className="flex items-center gap-3">
-          <a href="/" className="text-gray-500 hover:text-white transition-colors text-sm">← Zurück</a>
-        </div>
-        <div className="text-center">
-          <h1 className="font-bold text-lg">🐔 Bitch des Monats</h1>
-        </div>
-        <div className="w-16" />
-      </header>
+      <PageHeader title="🐔 Bitch des Monats" />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* Month navigation */}

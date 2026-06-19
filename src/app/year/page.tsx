@@ -1,4 +1,5 @@
 'use client';
+import PageHeader from '@/components/PageHeader';
 
 import { useEffect, useState } from 'react';
 
@@ -169,15 +170,13 @@ export default function YearPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <header className="border-b border-[#1a1a1a] px-4 py-4 flex items-center justify-between max-w-2xl mx-auto">
-        <a href="/" className="text-gray-500 hover:text-white transition-colors text-sm">← Zurück</a>
-        <h1 className="font-bold text-lg">📊 Jahresauswertung</h1>
+      <PageHeader title="📊 Jahr" action={
         <div className="flex items-center gap-1">
-          <button onClick={() => setYear(y => y - 1)} className="p-1.5 hover:bg-[#1a1a1a] rounded text-gray-500 hover:text-white text-sm">←</button>
-          <span className="text-sm font-semibold w-12 text-center">{year}</span>
-          <button onClick={() => setYear(y => y + 1)} disabled={year >= currentYear} className="p-1.5 hover:bg-[#1a1a1a] rounded text-gray-500 hover:text-white text-sm disabled:opacity-30">→</button>
+          <button onClick={() => setYear(y => y - 1)} className="p-1.5 hover:bg-white/5 rounded text-[var(--muted)] hover:text-white text-sm">←</button>
+          <span className="text-sm font-semibold w-10 text-center tnum">{year}</span>
+          <button onClick={() => setYear(y => y + 1)} disabled={year >= currentYear} className="p-1.5 hover:bg-white/5 rounded text-[var(--muted)] hover:text-white text-sm disabled:opacity-30">→</button>
         </div>
-      </header>
+      } />
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
         <div className="text-xs text-gray-600 text-center">Stand: {lastUpdate} · Aktualisiert sich jeden 1. des Monats</div>

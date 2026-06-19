@@ -1,4 +1,5 @@
 'use client';
+import PageHeader from '@/components/PageHeader';
 
 import { useEffect, useState } from 'react';
 import { format, differenceInDays } from 'date-fns';
@@ -199,16 +200,13 @@ export default function CompetitionsPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <header className="border-b border-[#1a1a1a] px-4 py-4 flex items-center justify-between max-w-2xl mx-auto">
-        <a href="/" className="text-gray-500 hover:text-white transition-colors text-sm">← Zurück</a>
-        <h1 className="font-bold text-lg">🏆 Wettkämpfe</h1>
-        <button
-          onClick={() => setShowForm(f => !f)}
-          className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition-colors font-medium"
-        >
-          + Eintragen
+      <PageHeader title="🏆 Wettkämpfe" action={
+        <button onClick={() => setShowForm(f => !f)}
+          className="w-11 h-11 grid place-items-center text-white rounded-xl transition-all font-bold text-xl active:scale-95"
+          style={{ background: 'var(--accent)' }}>
+          +
         </button>
-      </header>
+      } />
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* Add form */}
