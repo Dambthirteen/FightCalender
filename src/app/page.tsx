@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { startOfWeek, addWeeks, subWeeks, format, addDays, getDaysInMonth } from 'date-fns';
+import { startOfWeek, addWeeks, subWeeks, format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useUser } from '@/components/UserProvider';
 import { getNRWHolidays } from '@/lib/holidays';
+import NavMenu from '@/components/NavMenu';
 import type { GymClass, AttendanceRecord } from '@/lib/db';
 
 // Kursfarbe → Hex (für Dots, Badges, Ränder)
@@ -13,15 +14,10 @@ const COLOR_HEX: Record<string, string> = {
 };
 const hex = (c: string) => COLOR_HEX[c] ?? COLOR_HEX.red;
 
-const DAY_NAMES_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const DAY_NAMES_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
 function getWeekStart(date: Date) {
   return format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-}
-function isVotingWindow() {
-  const now = new Date();
-  return now.getDate() >= getDaysInMonth(now) - 2;
 }
 
 type Step = 'loading' | 'schedule' | 'done';
@@ -44,8 +40,6 @@ export default function Home() {
   const [excuseDate, setExcuseDate] = useState<string | null>(null);
   const [excuseText, setExcuseText] = useState('');
   const [submittingExcuse, setSubmittingExcuse] = useState(false);
-
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const weekStart = getWeekStart(currentWeek);
 
@@ -79,9 +73,10 @@ export default function Home() {
       ]);
       const [classData, profileData] = await Promise.all([classRes.json(), profileRes.json()]);
       setAllClasses(Array.isArray(classData) ? classData : []);
+      const planEdit = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('plan') === '1';
       if (Array.isArray(profileData) && profileData.length > 0) {
         setSelectedIds(new Set(profileData));
-        setStep('done');
+        setStep(planEdit ? 'schedule' : 'done');
       } else {
         setStep('schedule');
       }
@@ -153,15 +148,10 @@ export default function Home() {
     }
   }
 
-  async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/login';
-  }
-
   // --- LOADING ---
   if (userLoading || step === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center text-[var(--faint)] text-sm anim-in">
+      <div className="min-h-screen flex items-center justify-center anim-in">
         <span className="font-display text-2xl tracking-widest text-[var(--muted)]">LADEN…</span>
       </div>
     );
@@ -249,7 +239,7 @@ export default function Home() {
     <div className="min-h-screen text-[var(--text)]">
       {/* Excuse Modal */}
       {excuseDate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md px-4 anim-in">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/75 backdrop-blur-md px-4 anim-in">
           <div className="card anim-pop p-6 w-full max-w-sm shadow-2xl">
             <div className="text-2xl mb-1">🐔</div>
             <h2 className="font-display text-2xl tracking-wide mb-1">Begründung</h2>
@@ -285,48 +275,7 @@ export default function Home() {
             <p className="text-[var(--muted)] text-[11px] mt-1 uppercase tracking-[0.18em]">Wer kommt diese Woche?</p>
           </div>
         </div>
-        <div className="relative">
-          <button onClick={() => setMenuOpen(o => !o)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <rect y="2" width="18" height="2" rx="1" fill="currentColor" />
-              <rect y="8" width="18" height="2" rx="1" fill="currentColor" />
-              <rect y="14" width="18" height="2" rx="1" fill="currentColor" />
-            </svg>
-          </button>
-          {menuOpen && (
-            <div className="fixed inset-0 z-50 anim-in" onClick={() => setMenuOpen(false)}>
-              <div onClick={(e) => e.stopPropagation()}
-                className="absolute right-4 w-[260px] max-h-[78vh] overflow-y-auto card anim-pop shadow-2xl shadow-black/60"
-                style={{ top: 'calc(env(safe-area-inset-top) + 4.75rem)' }}>
-                <div className="px-4 py-3 border-b border-[var(--border-soft)]">
-                  <div className="text-[10px] text-[var(--faint)] uppercase tracking-[0.18em]">Eingeloggt als</div>
-                  <div className="font-display text-lg tracking-wide">{userName}</div>
-                </div>
-                <button onClick={() => { setMenuOpen(false); setStep('schedule'); fetch('/api/classes').then(r => r.json()).then(d => setAllClasses(d)); fetch(`/api/profile?user=${encodeURIComponent(userName)}`).then(r => r.json()).then(d => setSelectedIds(new Set(d))); }}
-                  className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors">
-                  <span>📋</span> Meinen Plan ändern
-                </button>
-                <div className="border-t border-[var(--border-soft)]" />
-                <a href="/account" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>🏥</span> Mein Status</a>
-                <a href="/competitions" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>🏆</span> Wettkämpfe</a>
-                <div className="border-t border-[var(--border-soft)]" />
-                <a href="/year" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>📊</span> Jahresauswertung</a>
-                <a href="/macher" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>💪</span> Macher des Monats</a>
-                <a href="/bitch" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>🐔</span> Bitch des Monats</a>
-                <a href="/vote" className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-white/5"
-                  style={{ color: isVotingWindow() ? 'var(--bitch)' : 'var(--text)' }}>
-                  <span>🗳️</span> Ausreden-Gericht {isVotingWindow() && <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,197,24,0.16)', color: 'var(--bitch)' }}>offen</span>}
-                </a>
-                <div className="border-t border-[var(--border-soft)]" />
-                <a href="/admin" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--faint)] hover:bg-white/5 hover:text-white transition-colors"><span>⚙️</span> Admin</a>
-                <button onClick={logout} className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-[var(--faint)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors border-t border-[var(--border-soft)]">
-                  <span>🚪</span> Ausloggen
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <NavMenu />
       </header>
 
       {/* Week Navigation */}
@@ -409,7 +358,7 @@ export default function Home() {
                               {classAttendance.map(a => {
                                 const mine = a.user_name === userName;
                                 return (
-                                  <span key={a.user_name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white"
+                                  <span key={a.user_name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                                     style={{ background: mine ? c : 'rgba(255,255,255,0.09)', color: mine ? '#fff' : 'var(--muted)' }}>
                                     {a.user_name}
                                   </span>
