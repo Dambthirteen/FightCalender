@@ -46,6 +46,7 @@ export default function Home() {
   const [userColors, setUserColors] = useState<Record<string, string | null>>({});
   const [bitchAnim, setBitchAnim] = useState(false);
   const audioRef = useRef<AudioContext | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
 
   const weekStart = getWeekStart(currentWeek);
 
@@ -143,6 +144,31 @@ export default function Home() {
     }
   }
 
+  // Fallback-Sound (synthetisches „Gock gock"), falls die MP3 nicht spielt.
+  function playSynth() {
+    const ctx = audioRef.current;
+    if (!ctx) return;
+    try {
+      void ctx.resume?.();
+      const cluck = (t0: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, t0);
+        osc.frequency.exponentialRampToValueAtTime(360, t0 + 0.07);
+        osc.frequency.exponentialRampToValueAtTime(640, t0 + 0.12);
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.3, t0 + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.15);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t0); osc.stop(t0 + 0.17);
+      };
+      const now = ctx.currentTime;
+      cluck(now);
+      cluck(now + 0.2);
+    } catch { /* egal */ }
+  }
+
   function unlockAudio() {
     try {
       if (!audioRef.current) {
@@ -150,34 +176,33 @@ export default function Home() {
         if (Ctx) audioRef.current = new Ctx();
       }
       void audioRef.current?.resume?.();
+      if (!audioElRef.current) {
+        const el = new Audio('/chicken.mp3');
+        el.preload = 'auto';
+        audioElRef.current = el;
+      }
+      // iOS: stummes Play/Pause innerhalb der Tipp-Geste schaltet die Wiedergabe frei.
+      const el = audioElRef.current;
+      el.muted = true;
+      el.play().then(() => { el.pause(); el.currentTime = 0; el.muted = false; }).catch(() => { el.muted = false; });
     } catch { /* egal */ }
   }
 
   function celebrateBitch() {
-    const ctx = audioRef.current;
-    if (ctx) {
+    const el = audioElRef.current;
+    let usedMp3 = false;
+    if (el) {
       try {
-        void ctx.resume?.();
-        const cluck = (t0: number) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(880, t0);
-          osc.frequency.exponentialRampToValueAtTime(360, t0 + 0.07);
-          osc.frequency.exponentialRampToValueAtTime(640, t0 + 0.12);
-          gain.gain.setValueAtTime(0.0001, t0);
-          gain.gain.exponentialRampToValueAtTime(0.3, t0 + 0.015);
-          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.15);
-          osc.connect(gain); gain.connect(ctx.destination);
-          osc.start(t0); osc.stop(t0 + 0.17);
-        };
-        const now = ctx.currentTime;
-        cluck(now);        // gock
-        cluck(now + 0.2);  // gock
-      } catch { /* egal */ }
+        el.muted = false;
+        el.currentTime = 0;
+        const p = el.play();
+        usedMp3 = true;
+        if (p && typeof p.catch === 'function') p.catch(() => playSynth());
+      } catch { usedMp3 = false; }
     }
+    if (!usedMp3) playSynth();
     setBitchAnim(true);
-    setTimeout(() => setBitchAnim(false), 1100);
+    setTimeout(() => setBitchAnim(false), 3100);
   }
 
   function openExcuseModal(dateStr: string) {
