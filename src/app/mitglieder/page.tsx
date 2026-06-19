@@ -7,11 +7,11 @@ import { colorFor, initials } from '@/lib/avatar';
 
 export default function MitgliederPage() {
   const { userName } = useUser();
-  const [users, setUsers] = useState<{ user_name: string; color?: string | null }[]>([]);
+  const [users, setUsers] = useState<{ user_name: string; color?: string | null; avatar?: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/users')
+    fetch('/api/users?avatars=1')
       .then((r) => r.json())
       .then((d) => setUsers(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false));
@@ -37,10 +37,15 @@ export default function MitgliederPage() {
                 <a key={u.user_name} href={`/profil/${encodeURIComponent(u.user_name)}`}
                   className="card anim-up flex items-center gap-3 px-3.5 py-3 active:scale-[0.99] transition-transform"
                   style={{ animationDelay: `${i * 40}ms` }}>
-                  <span className="w-11 h-11 rounded-full grid place-items-center font-display text-xl shrink-0"
-                    style={{ background: `${c}22`, color: c, border: `1.5px solid ${c}` }}>
-                    {initials(u.user_name)}
-                  </span>
+                  {u.avatar ? (
+                    <img src={u.avatar} alt={u.user_name} className="w-11 h-11 rounded-full object-cover shrink-0"
+                      style={{ border: `1.5px solid ${c}` }} />
+                  ) : (
+                    <span className="w-11 h-11 rounded-full grid place-items-center font-display text-xl shrink-0"
+                      style={{ background: `${c}22`, color: c, border: `1.5px solid ${c}` }}>
+                      {initials(u.user_name)}
+                    </span>
+                  )}
                   <span className="font-semibold flex-1 min-w-0 truncate">{u.user_name}</span>
                   {me && <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>Du</span>}
                   <span className="text-[var(--faint)]">›</span>
