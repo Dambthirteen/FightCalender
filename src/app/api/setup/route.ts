@@ -109,6 +109,19 @@ export async function POST() {
         UNIQUE(class_id, notify_date, kind)
       )
     `;
+    // Profil-Felder (Phase 4) — additiv, bestehende Daten bleiben erhalten.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS color VARCHAR(20)`;
+    // Benachrichtigungs-Einstellungen pro Nutzer
+    await sql`
+      CREATE TABLE IF NOT EXISTS notification_prefs (
+        user_name VARCHAR(100) PRIMARY KEY,
+        class_reminders BOOLEAN NOT NULL DEFAULT TRUE,
+        court_open BOOLEAN NOT NULL DEFAULT TRUE,
+        court_result BOOLEAN NOT NULL DEFAULT TRUE
+      )
+    `;
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });

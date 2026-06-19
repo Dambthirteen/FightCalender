@@ -11,6 +11,6 @@ export async function GET() {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const sql = getSql();
-  const rows = await sql`SELECT user_name FROM users ORDER BY LOWER(user_name)`;
+  const rows = await sql`SELECT user_name, color FROM users ORDER BY LOWER(user_name)`;
   return NextResponse.json(rows);
 }

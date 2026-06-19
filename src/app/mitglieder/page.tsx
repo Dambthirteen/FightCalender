@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import NavMenu from '@/components/NavMenu';
-import { userColor, initials } from '@/lib/avatar';
+import { colorFor, initials } from '@/lib/avatar';
 
 export default function MitgliederPage() {
   const { userName } = useUser();
-  const [users, setUsers] = useState<{ user_name: string }[]>([]);
+  const [users, setUsers] = useState<{ user_name: string; color?: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function MitgliederPage() {
         ) : (
           <div className="space-y-2">
             {users.map((u, i) => {
-              const c = userColor(u.user_name);
+              const c = colorFor(u.user_name, u.color);
               const me = u.user_name === userName;
               return (
                 <a key={u.user_name} href={`/profil/${encodeURIComponent(u.user_name)}`}

@@ -91,13 +91,13 @@ export default function VotePage() {
   const othersExcuses = excuses.filter(e => e.user_name !== userName);
 
   function ExcuseCard({ e, canVote }: { e: Excuse; canVote: boolean }) {
-    const rejected = e.reject_count > e.accept_count;
+    const accepted = e.accept_count > e.reject_count; // Punkt nur weg, wenn mehr „gilt" als „gilt nicht"
     const total = e.accept_count + e.reject_count;
     const statusCfg = e.user_status_type ? STATUS_LABELS[e.user_status_type] : null;
     const isOwn = e.user_name === userName;
 
     return (
-      <div className={`bg-[#111] border rounded-xl p-4 ${e.is_exempt ? 'border-[#1a1a1a]' : rejected && info.isPast ? 'border-red-900/40' : 'border-[#1a1a1a]'}`}>
+      <div className={`bg-[#111] border rounded-xl p-4 ${e.is_exempt ? 'border-[#1a1a1a]' : !accepted && info.isPast ? 'border-red-900/40' : 'border-[#1a1a1a]'}`}>
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
           <div>
@@ -123,8 +123,8 @@ export default function VotePage() {
               </span>
             )}
             {!e.is_exempt && info.isPast && (
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${rejected ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
-                {rejected ? '❌ Abgelehnt' : '✅ Angenommen'}
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${!accepted ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
+                {accepted ? '✅ Ausrede gilt' : '❌ Bitch bleibt'}
               </span>
             )}
           </div>
@@ -156,7 +156,7 @@ export default function VotePage() {
               ) : !info.isPast ? (
                 <span className="text-xs text-gray-700">Wird im Voting bewertet</span>
               ) : (
-                <span className="text-xs text-gray-700">Keine Votes — gilt als angenommen</span>
+                <span className="text-xs text-gray-700">Keine Votes — Bitch bleibt</span>
               )
             )}
           </div>

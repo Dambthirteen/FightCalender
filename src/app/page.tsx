@@ -7,6 +7,7 @@ import { useUser } from '@/components/UserProvider';
 import { getNRWHolidays } from '@/lib/holidays';
 import NavMenu from '@/components/NavMenu';
 import { CUTOVER } from '@/lib/bitch-scoring';
+import { colorFor } from '@/lib/avatar';
 import type { GymClass, AttendanceRecord } from '@/lib/db';
 
 // Kursfarbe → Hex (für Dots, Badges, Ränder)
@@ -41,6 +42,7 @@ export default function Home() {
   const [excuseDate, setExcuseDate] = useState<string | null>(null);
   const [excuseText, setExcuseText] = useState('');
   const [submittingExcuse, setSubmittingExcuse] = useState(false);
+  const [userColors, setUserColors] = useState<Record<string, string | null>>({});
 
   const weekStart = getWeekStart(currentWeek);
 
@@ -68,12 +70,18 @@ export default function Home() {
     if (!userName) { window.location.href = '/login'; return; }
 
     async function init() {
-      const [classRes, profileRes] = await Promise.all([
+      const [classRes, profileRes, usersRes] = await Promise.all([
         fetch('/api/classes'),
         fetch(`/api/profile?user=${encodeURIComponent(userName)}`),
+        fetch('/api/users'),
       ]);
-      const [classData, profileData] = await Promise.all([classRes.json(), profileRes.json()]);
+      const [classData, profileData, usersData] = await Promise.all([classRes.json(), profileRes.json(), usersRes.json()]);
       setAllClasses(Array.isArray(classData) ? classData : []);
+      if (Array.isArray(usersData)) {
+        const map: Record<string, string | null> = {};
+        for (const u of usersData) map[u.user_name] = u.color ?? null;
+        setUserColors(map);
+      }
       const planEdit = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('plan') === '1';
       if (Array.isArray(profileData) && profileData.length > 0) {
         setSelectedIds(new Set(profileData));
@@ -362,10 +370,11 @@ export default function Home() {
                           {classAttendance.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               {classAttendance.map(a => {
+                                const uc = colorFor(a.user_name, userColors[a.user_name]);
                                 const mine = a.user_name === userName;
                                 return (
                                   <span key={a.user_name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                                    style={{ background: mine ? c : 'rgba(255,255,255,0.09)', color: mine ? '#fff' : 'var(--muted)' }}>
+                                    style={{ background: uc, color: '#fff', boxShadow: mine ? '0 0 0 1.5px rgba(255,255,255,0.6)' : 'none' }}>
                                     {a.user_name}
                                   </span>
                                 );

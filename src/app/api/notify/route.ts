@@ -66,6 +66,13 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     SELECT user_name, endpoint, p256dh, auth FROM push_subscriptions
   `) as SubRow[];
 
+  // Wer Kurs-Erinnerungen abgeschaltet hat (Tabelle evtl. noch nicht angelegt → tolerant).
+  let optOut = new Set<string>();
+  try {
+    const rows = (await sql`SELECT user_name FROM notification_prefs WHERE class_reminders = false`) as { user_name: string }[];
+    optOut = new Set(rows.map((r) => r.user_name));
+  } catch { /* notification_prefs noch nicht vorhanden */ }
+
   const summary: { class: string; start: string; attendees: number; sent: number }[] = [];
   let totalSent = 0;
 
@@ -89,7 +96,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
 
     // 5) Empfänger = Zugesagte mit Push-Abo.
     const attendeeSet = new Set(attendeeNames);
-    const recipientSubs = allSubs.filter((s) => attendeeSet.has(s.user_name));
+    const recipientSubs = allSubs.filter((s) => attendeeSet.has(s.user_name) && !optOut.has(s.user_name));
     if (recipientSubs.length === 0) continue; // keiner abonniert → nächster Lauf prüft erneut
 
     // 6) Genau einmal pro Kurs/Tag "claimen": nur wenn der Log-Eintrag neu entsteht.

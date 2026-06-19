@@ -23,6 +23,7 @@ export default function NotificationsToggle() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
+  const [prefs, setPrefs] = useState({ class_reminders: true, court_open: true, court_result: true });
 
   useEffect(() => {
     const supp = 'serviceWorker' in navigator && 'PushManager' in window;
@@ -33,6 +34,7 @@ export default function NotificationsToggle() {
         // iOS Safari nutzt navigator.standalone
         (window.navigator as unknown as { standalone?: boolean }).standalone === true
     );
+    fetch('/api/push/prefs').then((r) => r.json()).then((d) => { if (d && !d.error) setPrefs(d); }).catch(() => {});
     if (!supp) return;
     navigator.serviceWorker
       .register('/sw.js', { scope: '/', updateViaCache: 'none' })
@@ -102,6 +104,14 @@ export default function NotificationsToggle() {
     }
   }
 
+  async function togglePref(key: 'class_reminders' | 'court_open' | 'court_result') {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    await fetch('/api/push/prefs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next),
+    }).catch(() => {});
+  }
+
   async function sendTest() {
     setBusy(true);
     setError('');
@@ -148,22 +158,29 @@ export default function NotificationsToggle() {
               {busy ? 'Moment…' : 'Benachrichtigungen aktivieren'}
             </button>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={sendTest}
-                disabled={busy}
-                className="bg-[#1a1a1a] border border-[#333] hover:border-[#555] disabled:opacity-40 text-white font-medium px-4 py-2.5 rounded-lg transition-colors text-sm"
-              >
-                Test senden
-              </button>
-              <button
-                onClick={unsubscribe}
-                disabled={busy}
-                className="text-gray-500 hover:text-red-500 disabled:opacity-40 font-medium px-4 py-2.5 rounded-lg transition-colors text-sm"
-              >
-                Deaktivieren
-              </button>
-            </div>
+            <>
+              <div className="space-y-1.5">
+                {([['class_reminders', 'Kurs-Erinnerungen (2 Std vorher)'], ['court_open', 'Ausreden-Gericht geöffnet'], ['court_result', 'Gericht-Ergebnis']] as const).map(([key, label]) => (
+                  <button key={key} onClick={() => togglePref(key)}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm" style={{ background: 'var(--surface-2)' }}>
+                    <span>{label}</span>
+                    <span className="w-9 h-5 rounded-full relative shrink-0 transition-colors" style={{ background: prefs[key] ? 'var(--accent)' : 'var(--border)' }}>
+                      <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: prefs[key] ? '18px' : '2px' }} />
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button onClick={sendTest} disabled={busy}
+                  className="border border-[var(--border)] hover:border-[var(--faint)] disabled:opacity-40 text-white font-medium px-4 py-2.5 rounded-lg transition-colors text-sm" style={{ background: 'var(--surface-2)' }}>
+                  Test senden
+                </button>
+                <button onClick={unsubscribe} disabled={busy}
+                  className="text-[var(--faint)] hover:text-[var(--accent)] disabled:opacity-40 font-medium px-4 py-2.5 rounded-lg transition-colors text-sm">
+                  Deaktivieren
+                </button>
+              </div>
+            </>
           )}
           {msg && <p className="text-green-500 text-sm">{msg}</p>}
           {error && <p className="text-red-500 text-sm">{error}</p>}
