@@ -306,7 +306,7 @@ export default function Home() {
             <div className="text-2xl mb-1">🐔</div>
             <h2 className="font-display text-2xl tracking-wide mb-1">Begründung</h2>
             <p className="text-[var(--muted)] text-sm mb-4">
-              Warum warst du am <span className="text-white">{DAY_NAMES_FULL[new Date(excuseDate + 'T12:00').getDay() === 0 ? 6 : new Date(excuseDate + 'T12:00').getDay() - 1]}</span> nicht da?
+              Warum {excuseDate < todayStr ? 'warst' : 'bist'} du am <span className="text-white">{DAY_NAMES_FULL[new Date(excuseDate + 'T12:00').getDay() === 0 ? 6 : new Date(excuseDate + 'T12:00').getDay() - 1]}</span> nicht da?
             </p>
             <textarea
               className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--bitch)] resize-none mb-4"
@@ -449,20 +449,25 @@ export default function Home() {
                     })}
                   </div>
 
-                  {/* No-Show / Bitch row */}
-                  {(isNoShow || daySkippers.length > 0) && (
+                  {/* Bitch / Ausrede row — auf jedem geplanten Tag (wenn nicht anwesend) */}
+                  {((isPlanned && !attendedAny) || daySkippers.length > 0) && (
                     <div className="px-3 pb-3">
-                      {isNoShow && (
+                      {isPlanned && !attendedAny && (
                         myExcuse ? (
-                          <div className="w-full text-[11px] font-semibold py-2 px-3 rounded-xl border text-center"
+                          <button onClick={() => openExcuseModal(dateStr)}
+                            className="w-full text-[11px] font-semibold py-2 px-3 rounded-xl border transition-all active:scale-[0.99]"
                             style={{ background: 'rgba(245,197,24,0.12)', borderColor: 'rgba(245,197,24,0.35)', color: 'var(--bitch)' }}>
-                            🐔 Verpasst · Ausrede eingereicht ✓
-                          </div>
+                            🐔 Ausrede eingereicht ✓ · tippen zum Entfernen
+                          </button>
                         ) : daysLeft >= 0 ? (
                           <button onClick={() => openExcuseModal(dateStr)}
                             className="w-full text-[11px] font-semibold py-2 px-3 rounded-xl border transition-all active:scale-[0.99]"
-                            style={{ background: 'rgba(245,197,24,0.12)', borderColor: 'rgba(245,197,24,0.4)', color: 'var(--bitch)' }}>
-                            🐔 Verpasst — Ausrede eintragen ({daysLeft === 0 ? 'heute letzte Chance' : `noch ${daysLeft} Tag${daysLeft === 1 ? '' : 'e'}`})
+                            style={isNoShow
+                              ? { background: 'rgba(245,197,24,0.12)', borderColor: 'rgba(245,197,24,0.4)', color: 'var(--bitch)' }
+                              : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)', color: 'var(--faint)' }}>
+                            {isNoShow
+                              ? `🐔 Verpasst — Ausrede eintragen (${daysLeft === 0 ? 'heute letzte Chance' : `noch ${daysLeft} Tag${daysLeft === 1 ? '' : 'e'}`})`
+                              : '🐔 Ich bin eine Bitch — Ausrede vorab eintragen'}
                           </button>
                         ) : (
                           <div className="w-full text-[11px] font-medium py-2 px-3 rounded-xl border text-center"
