@@ -33,23 +33,31 @@ export default function LoginPage() {
     }
   }
 
+  const inputCls =
+    'w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)] transition-colors';
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4">
+    <div className="min-h-screen text-[var(--text)] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🥊</div>
-          <h1 className="text-2xl font-bold">Fight Calendar</h1>
-          <p className="text-gray-500 text-sm mt-1">NFT Köln</p>
+        <div className="text-center mb-7 anim-up">
+          <img src="/icon-192.png" alt="Fight Calendar"
+            className="w-20 h-20 rounded-[22px] mx-auto mb-4 ring-1 ring-white/10 shadow-2xl shadow-black/50" />
+          <h1 className="font-display text-4xl tracking-wide leading-none">Fight Calendar</h1>
+          <p className="text-[var(--muted)] text-[11px] mt-2 uppercase tracking-[0.22em]">NFT Köln · Wer kommt diese Woche?</p>
         </div>
 
-        <div className="bg-[#111] border border-[#1a1a1a] rounded-2xl overflow-hidden shadow-2xl">
+        <div className="card overflow-hidden shadow-2xl shadow-black/40 anim-up" style={{ animationDelay: '70ms' }}>
           {/* Tabs */}
-          <div className="flex border-b border-[#1a1a1a]">
+          <div className="flex border-b border-[var(--border-soft)]">
             {(['login', 'register'] as const).map(t => (
               <button
                 key={t}
                 onClick={() => { setTab(t); setError(''); }}
-                className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === t ? 'text-white border-b-2 border-red-600' : 'text-gray-500 hover:text-gray-300'}`}
+                className="flex-1 py-3.5 text-sm font-semibold transition-colors"
+                style={{
+                  color: tab === t ? 'var(--text)' : 'var(--faint)',
+                  boxShadow: tab === t ? 'inset 0 -2px 0 var(--accent)' : 'none',
+                }}
               >
                 {t === 'login' ? 'Anmelden' : 'Registrieren'}
               </button>
@@ -58,10 +66,10 @@ export default function LoginPage() {
 
           <div className="p-6 space-y-4">
             <div>
-              <label className="text-xs text-gray-500 mb-1.5 block">Name</label>
+              <label className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-1.5 block">Name</label>
               <input
-                className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 transition-colors"
-                placeholder="Dein Name..."
+                className={inputCls}
+                placeholder="Dein Name…"
                 value={userName}
                 onChange={e => setUserName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && submit()}
@@ -69,11 +77,11 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1.5 block">Passwort</label>
+              <label className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-1.5 block">Passwort</label>
               <input
                 type="password"
-                className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 transition-colors"
-                placeholder="Passwort..."
+                className={inputCls}
+                placeholder="Passwort…"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && submit()}
@@ -81,11 +89,11 @@ export default function LoginPage() {
             </div>
             {tab === 'register' && (
               <div>
-                <label className="text-xs text-gray-500 mb-1.5 block">Passwort wiederholen</label>
+                <label className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-1.5 block">Passwort wiederholen</label>
                 <input
                   type="password"
-                  className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-600 transition-colors"
-                  placeholder="Passwort wiederholen..."
+                  className={inputCls}
+                  placeholder="Passwort wiederholen…"
                   value={confirm}
                   onChange={e => setConfirm(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && submit()}
@@ -94,7 +102,7 @@ export default function LoginPage() {
             )}
 
             {error && (
-              <div className="bg-red-600/10 border border-red-600/30 rounded-lg px-4 py-2.5 text-red-400 text-sm">
+              <div className="rounded-xl px-4 py-2.5 text-sm" style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255,59,48,0.3)', color: 'var(--accent)' }}>
                 {error}
               </div>
             )}
@@ -102,15 +110,17 @@ export default function LoginPage() {
             <button
               onClick={submit}
               disabled={loading || !userName.trim() || !password}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors"
+              className="w-full text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: 'var(--accent)' }}
             >
-              {loading ? '...' : tab === 'login' ? 'Anmelden' : 'Account erstellen'}
+              {loading ? '…' : tab === 'login' ? 'Anmelden' : 'Account erstellen'}
             </button>
           </div>
         </div>
-        <p className="text-center text-xs text-gray-700 mt-4">
+
+        <p className="text-center text-xs text-[var(--faint)] mt-4 anim-in" style={{ animationDelay: '140ms' }}>
           {tab === 'login' ? 'Noch kein Account?' : 'Schon registriert?'}{' '}
-          <button onClick={() => { setTab(tab === 'login' ? 'register' : 'login'); setError(''); }} className="text-gray-500 hover:text-white transition-colors underline">
+          <button onClick={() => { setTab(tab === 'login' ? 'register' : 'login'); setError(''); }} className="text-[var(--muted)] hover:text-white transition-colors underline">
             {tab === 'login' ? 'Registrieren' : 'Anmelden'}
           </button>
         </p>
