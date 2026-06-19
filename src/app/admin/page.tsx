@@ -1,16 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import PageHeader from '@/components/PageHeader';
 import type { GymClass } from '@/lib/db';
 
 const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 const COLORS = ['red', 'blue', 'green', 'orange', 'purple'];
-const COLOR_PREVIEWS: Record<string, string> = {
-  red: 'bg-red-600',
-  blue: 'bg-blue-500',
-  green: 'bg-green-500',
-  orange: 'bg-orange-500',
-  purple: 'bg-purple-500',
+const COLOR_HEX: Record<string, string> = {
+  red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7',
 };
 
 export default function AdminPage() {
@@ -162,74 +159,76 @@ export default function AdminPage() {
     }
   }
 
+  const inputCls = 'w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)] transition-colors';
+  const labelCls = 'text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-1.5 block';
+
+  // --- LOGIN GATE ---
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4">
-        <div className="bg-[#111] border border-[#222] rounded-2xl p-8 w-full max-w-sm shadow-2xl">
-          <div className="text-3xl mb-1">🔒</div>
-          <h2 className="text-xl font-bold mb-1">Admin-Bereich</h2>
-          <p className="text-gray-400 text-sm mb-6">Nur für den Gym-Admin.</p>
+      <div className="min-h-screen text-[var(--text)] flex items-center justify-center px-4">
+        <div className="card p-7 w-full max-w-sm shadow-2xl shadow-black/40 anim-up">
+          <div className="text-3xl mb-2">🔒</div>
+          <h2 className="font-display text-3xl tracking-wide mb-1">Admin-Bereich</h2>
+          <p className="text-[var(--muted)] text-sm mb-6">Nur für den Gym-Admin.</p>
           <input
             type="password"
-            className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-600 mb-2"
-            placeholder="Passwort..."
+            className={`${inputCls} mb-2`}
+            placeholder="Passwort…"
             value={password}
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && login()}
             autoFocus
           />
-          {authError && <p className="text-red-500 text-xs mb-3">{authError}</p>}
+          {authError && <p className="text-[var(--accent)] text-xs mb-3">{authError}</p>}
           <button
             onClick={login}
             disabled={authLoading || !password}
-            className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-semibold py-3 rounded-lg transition-colors"
+            className="w-full text-white font-bold py-3 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40"
+            style={{ background: 'var(--accent)' }}
           >
-            {authLoading ? 'Prüfe...' : 'Einloggen'}
+            {authLoading ? 'Prüfe…' : 'Einloggen'}
           </button>
-          <a href="/" className="block text-center text-xs text-gray-600 hover:text-gray-400 mt-4 transition-colors">← Zurück</a>
+          <a href="/" className="block text-center text-xs text-[var(--faint)] hover:text-white mt-4 transition-colors">← Zurück</a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <header className="border-b border-[#1a1a1a] px-4 py-4 flex items-center justify-between max-w-3xl mx-auto">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">⚙️</span>
-          <h1 className="font-bold text-lg">Admin</h1>
-        </div>
-        <div className="flex gap-3">
-          <button onClick={seedSchedule} className="text-xs text-gray-300 hover:text-white px-3 py-1.5 rounded-lg border border-red-900/50 hover:border-red-600 bg-red-600/10 transition-colors">
-            📋 NFT Stundenplan laden
+    <div className="min-h-screen text-[var(--text)]">
+      <PageHeader title="⚙️ Admin" />
+
+      <main className="max-w-md mx-auto px-4 pb-16 space-y-6">
+        {/* Tools */}
+        <div className="flex gap-2 anim-up">
+          <button onClick={seedSchedule}
+            className="flex-1 text-xs font-semibold px-3 py-2.5 rounded-xl border transition-colors"
+            style={{ background: 'var(--accent-soft)', borderColor: 'rgba(255,59,48,0.3)', color: 'var(--accent)' }}>
+            📋 NFT-Stundenplan laden
           </button>
-          <button onClick={initDb} className="text-xs text-gray-500 hover:text-white px-3 py-1.5 rounded-lg border border-[#222] hover:border-[#333] transition-colors">
+          <button onClick={initDb}
+            className="text-xs font-medium px-3 py-2.5 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-white transition-colors">
             DB Init
           </button>
-          <a href="/" className="text-xs text-gray-500 hover:text-white px-3 py-1.5 rounded-lg border border-[#222] hover:border-[#333] transition-colors">
-            ← Kalender
-          </a>
         </div>
-      </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-8">
         {/* Add Class Form */}
-        <section className="bg-[#111] border border-[#1a1a1a] rounded-2xl p-6">
-          <h2 className="font-semibold text-base mb-5">Kurs hinzufügen</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="text-xs text-gray-500 mb-1.5 block">Kursname</label>
+        <section className="card p-5 anim-up" style={{ animationDelay: '40ms' }}>
+          <h2 className="font-display text-xl tracking-wide mb-4">Kurs hinzufügen</h2>
+          <div className="space-y-4">
+            <div>
+              <label className={labelCls}>Kursname</label>
               <input
-                className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-red-600"
-                placeholder="z.B. BJJ, Kickboxen, MMA..."
+                className={inputCls}
+                placeholder="z.B. BJJ, Kickboxen, MMA…"
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1.5 block">Wochentag</label>
+              <label className={labelCls}>Wochentag</label>
               <select
-                className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-600"
+                className={inputCls}
                 value={form.dayOfWeek}
                 onChange={e => setForm(f => ({ ...f, dayOfWeek: parseInt(e.target.value) }))}
               >
@@ -237,68 +236,62 @@ export default function AdminPage() {
               </select>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1.5 block">Farbe</label>
-              <div className="flex gap-2">
+              <label className={labelCls}>Farbe</label>
+              <div className="flex gap-2.5">
                 {COLORS.map(c => (
                   <button
                     key={c}
                     onClick={() => setForm(f => ({ ...f, color: c }))}
-                    className={`w-7 h-7 rounded-full ${COLOR_PREVIEWS[c]} transition-all ${form.color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1a]' : 'opacity-60 hover:opacity-100'}`}
+                    className="w-8 h-8 rounded-full transition-transform active:scale-90"
+                    style={{ background: COLOR_HEX[c], outline: form.color === c ? '2px solid #fff' : 'none', outlineOffset: '2px' }}
                   />
                 ))}
               </div>
             </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1.5 block">Von</label>
-              <input
-                type="time"
-                className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-600"
-                value={form.startTime}
-                onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1.5 block">Bis</label>
-              <input
-                type="time"
-                className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-600"
-                value={form.endTime}
-                onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Von</label>
+                <input type="time" className={inputCls} value={form.startTime}
+                  onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} />
+              </div>
+              <div>
+                <label className={labelCls}>Bis</label>
+                <input type="time" className={inputCls} value={form.endTime}
+                  onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} />
+              </div>
             </div>
           </div>
-          {saveError && <p className="text-red-500 text-xs mt-3">{saveError}</p>}
+          {saveError && <p className="text-[var(--accent)] text-xs mt-3">{saveError}</p>}
           <button
             onClick={addClass}
             disabled={saving || !form.name.trim()}
-            className="mt-5 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors"
+            className="mt-5 w-full text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40"
+            style={{ background: 'var(--accent)' }}
           >
-            {saving ? 'Speichern...' : '+ Kurs hinzufügen'}
+            {saving ? 'Speichern…' : '+ Kurs hinzufügen'}
           </button>
         </section>
 
         {/* Class List */}
-        <section>
-          <h2 className="font-semibold text-base mb-4">Alle Kurse ({classes.length})</h2>
+        <section className="anim-up" style={{ animationDelay: '80ms' }}>
+          <h2 className="text-[11px] uppercase tracking-[0.2em] text-[var(--faint)] mb-3">Alle Kurse ({classes.length})</h2>
           {dataLoading ? (
-            <div className="text-gray-600 text-sm py-8 text-center">Laden...</div>
+            <div className="text-[var(--faint)] text-sm py-8 text-center">Laden…</div>
           ) : classes.length === 0 ? (
-            <div className="text-gray-600 text-sm py-8 text-center">Noch keine Kurse.</div>
+            <div className="text-[var(--faint)] text-sm py-8 text-center">Noch keine Kurse.</div>
           ) : (
             <div className="space-y-2">
               {classes.map(cls => (
-                <div key={cls.id} className="bg-[#111] border border-[#1a1a1a] rounded-xl px-4 py-3 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${COLOR_PREVIEWS[cls.color] ?? 'bg-red-600'}`} />
-                    <div>
-                      <div className="font-medium text-sm">{cls.name}</div>
-                      <div className="text-xs text-gray-500">{DAY_NAMES[cls.day_of_week - 1]} · {cls.start_time} – {cls.end_time}</div>
+                <div key={cls.id} className="card px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLOR_HEX[cls.color] ?? COLOR_HEX.red }} />
+                    <div className="min-w-0">
+                      <div className="font-semibold text-sm truncate">{cls.name}</div>
+                      <div className="text-xs text-[var(--muted)] tnum">{DAY_NAMES[cls.day_of_week - 1]} · {cls.start_time} – {cls.end_time}</div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => deleteClass(cls.id)}
-                    className="text-gray-600 hover:text-red-500 transition-colors text-sm px-2 py-1 rounded hover:bg-red-500/10"
-                  >
+                  <button onClick={() => deleteClass(cls.id)}
+                    className="text-[var(--faint)] hover:text-[var(--accent)] transition-colors text-xs px-2 py-1 rounded shrink-0">
                     Löschen
                   </button>
                 </div>
@@ -308,43 +301,35 @@ export default function AdminPage() {
         </section>
 
         {/* Users */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-base">Registrierte Nutzer ({users.length})</h2>
-            <button onClick={loadUsers} className="text-xs text-gray-500 hover:text-white px-3 py-1.5 rounded-lg border border-[#222] hover:border-[#333] transition-colors">
-              ↻ Aktualisieren
+        <section className="anim-up" style={{ animationDelay: '120ms' }}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[11px] uppercase tracking-[0.2em] text-[var(--faint)]">Nutzer ({users.length})</h2>
+            <button onClick={loadUsers} className="text-xs text-[var(--faint)] hover:text-white px-2 py-1 rounded-lg border border-[var(--border)] transition-colors">
+              ↻
             </button>
           </div>
           {usersLoading ? (
-            <div className="text-gray-600 text-sm py-8 text-center">Laden...</div>
+            <div className="text-[var(--faint)] text-sm py-8 text-center">Laden…</div>
           ) : users.length === 0 ? (
-            <div className="text-gray-600 text-sm py-8 text-center">Noch keine Nutzer registriert.</div>
+            <div className="text-[var(--faint)] text-sm py-8 text-center">Noch keine Nutzer.</div>
           ) : (
-            <div className="bg-[#111] border border-[#1a1a1a] rounded-2xl overflow-hidden">
-              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-4 py-2 border-b border-[#1a1a1a] text-[11px] text-gray-500 uppercase tracking-widest">
-                <span>Name</span>
-                <span className="text-center">Plan</span>
-                <span className="text-center">💪</span>
-                <span className="text-center">🐔</span>
-                <span />
-              </div>
-              {users.map((u, i) => (
-                <div key={u.user_name} className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 items-center px-4 py-3 ${i < users.length - 1 ? 'border-b border-[#1a1a1a]' : ''}`}>
-                  <div>
-                    <div className="font-medium text-sm">{u.user_name}</div>
-                    <div className="text-[11px] text-gray-600">
-                      {new Date(u.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+            <div className="space-y-2">
+              {users.map((u) => (
+                <div key={u.user_name} className="card px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm truncate">{u.user_name}</div>
+                    <div className="text-[11px] text-[var(--faint)] tnum">
+                      {new Date(u.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })} · {u.schedule_count} Kurse
                     </div>
                   </div>
-                  <span className="text-xs text-gray-500 text-center">{u.schedule_count} Kurse</span>
-                  <span className="text-xs text-green-600 text-center font-medium">{u.attend_count}×</span>
-                  <span className="text-xs text-yellow-600 text-center font-medium">{u.skip_count}×</span>
-                  <button
-                    onClick={() => deleteUser(u.user_name)}
-                    className="text-gray-700 hover:text-red-500 transition-colors text-xs px-2 py-1 rounded hover:bg-red-500/10"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-3 shrink-0 tnum">
+                    <span className="text-xs font-semibold" style={{ color: 'var(--gold)' }}>💪 {u.attend_count}</span>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--bitch)' }}>🐔 {u.skip_count}</span>
+                    <button onClick={() => deleteUser(u.user_name)}
+                      className="text-[var(--faint)] hover:text-[var(--accent)] transition-colors text-sm px-1">
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
