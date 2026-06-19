@@ -6,6 +6,7 @@ import { de } from 'date-fns/locale';
 import { useUser } from '@/components/UserProvider';
 import { getNRWHolidays } from '@/lib/holidays';
 import NavMenu from '@/components/NavMenu';
+import { CUTOVER } from '@/lib/bitch-scoring';
 import type { GymClass, AttendanceRecord } from '@/lib/db';
 
 // Kursfarbe → Hex (für Dots, Badges, Ränder)
@@ -244,7 +245,7 @@ export default function Home() {
             <div className="text-2xl mb-1">🐔</div>
             <h2 className="font-display text-2xl tracking-wide mb-1">Begründung</h2>
             <p className="text-[var(--muted)] text-sm mb-4">
-              Warum kommst du am <span className="text-white">{DAY_NAMES_FULL[new Date(excuseDate + 'T12:00').getDay() === 0 ? 6 : new Date(excuseDate + 'T12:00').getDay() - 1]}</span> nicht?
+              Warum warst du am <span className="text-white">{DAY_NAMES_FULL[new Date(excuseDate + 'T12:00').getDay() === 0 ? 6 : new Date(excuseDate + 'T12:00').getDay() - 1]}</span> nicht da?
             </p>
             <textarea
               className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--bitch)] resize-none mb-4"
@@ -306,8 +307,13 @@ export default function Home() {
               const dateStr = format(dayDate, 'yyyy-MM-dd');
               const isToday = dateStr === todayStr;
               const daySkippers = skipping.filter(s => s.date === dateStr);
-              const iSkipping = daySkippers.some(s => s.user_name === userName);
               const holiday = holidayMap.get(dateStr) ?? null;
+              const isPast = dateStr < todayStr;
+              const isPlanned = dayClasses.some(c => selectedIds.has(c.id));
+              const attendedAny = dayClasses.some(c => attendance.some(a => a.class_id === c.id && a.user_name === userName));
+              const isNoShow = isPast && isPlanned && !attendedAny && dateStr >= CUTOVER && !holiday;
+              const myExcuse = skipping.find(s => s.date === dateStr && s.user_name === userName);
+              const daysLeft = 3 - Math.round((Date.parse(todayStr) - Date.parse(dateStr)) / 86400000);
               return (
                 <section key={day} className="card overflow-hidden anim-up" style={{ animationDelay: `${idx * 55}ms` }}>
                   {/* Day header */}
@@ -371,28 +377,40 @@ export default function Home() {
                     })}
                   </div>
 
-                  {/* Bitch row */}
-                  <div className="px-3 pb-3">
-                    <button onClick={() => openExcuseModal(dateStr)}
-                      className="w-full text-[11px] font-semibold py-2 px-3 rounded-xl border transition-all active:scale-[0.99]"
-                      style={{
-                        background: iSkipping ? 'rgba(245,197,24,0.14)' : 'var(--surface-2)',
-                        borderColor: iSkipping ? 'rgba(245,197,24,0.4)' : 'var(--border-soft)',
-                        color: iSkipping ? 'var(--bitch)' : 'var(--faint)',
-                      }}>
-                      🐔 Ich bin eine Bitch
-                    </button>
-                    {daySkippers.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {daySkippers.map(s => (
-                          <span key={s.user_name} title={s.excuse} className="text-[10px] px-2 py-0.5 rounded-full cursor-help"
-                            style={{ background: 'rgba(245,197,24,0.1)', color: 'var(--bitch)', border: '1px solid rgba(245,197,24,0.22)' }}>
-                            {s.user_name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  {/* No-Show / Bitch row */}
+                  {(isNoShow || daySkippers.length > 0) && (
+                    <div className="px-3 pb-3">
+                      {isNoShow && (
+                        myExcuse ? (
+                          <div className="w-full text-[11px] font-semibold py-2 px-3 rounded-xl border text-center"
+                            style={{ background: 'rgba(245,197,24,0.12)', borderColor: 'rgba(245,197,24,0.35)', color: 'var(--bitch)' }}>
+                            🐔 Verpasst · Ausrede eingereicht ✓
+                          </div>
+                        ) : daysLeft >= 0 ? (
+                          <button onClick={() => openExcuseModal(dateStr)}
+                            className="w-full text-[11px] font-semibold py-2 px-3 rounded-xl border transition-all active:scale-[0.99]"
+                            style={{ background: 'rgba(245,197,24,0.12)', borderColor: 'rgba(245,197,24,0.4)', color: 'var(--bitch)' }}>
+                            🐔 Verpasst — Ausrede eintragen ({daysLeft === 0 ? 'heute letzte Chance' : `noch ${daysLeft} Tag${daysLeft === 1 ? '' : 'e'}`})
+                          </button>
+                        ) : (
+                          <div className="w-full text-[11px] font-medium py-2 px-3 rounded-xl border text-center"
+                            style={{ background: 'var(--surface-2)', borderColor: 'var(--border-soft)', color: 'var(--faint)' }}>
+                            🐔 Verpasst · 🔒 Frist abgelaufen
+                          </div>
+                        )
+                      )}
+                      {daySkippers.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {daySkippers.map(s => (
+                            <span key={s.user_name} title={s.excuse} className="text-[10px] px-2 py-0.5 rounded-full cursor-help"
+                              style={{ background: 'rgba(245,197,24,0.1)', color: 'var(--bitch)', border: '1px solid rgba(245,197,24,0.22)' }}>
+                              {s.user_name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </section>
               );
             })}

@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
+import { berlinNow } from '@/lib/berlin-time';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -38,6 +39,11 @@ export async function POST(req: NextRequest) {
       // Toggle on — require excuse
       if (!excuse?.trim()) {
         return NextResponse.json({ error: 'Begründung fehlt' }, { status: 400 });
+      }
+      // Neues Modell: Ausrede nur innerhalb von 3 Tagen nach dem verpassten Tag.
+      const diff = Math.round((Date.parse(berlinNow().date) - Date.parse(date)) / 86400000);
+      if (diff > 3) {
+        return NextResponse.json({ error: 'Frist abgelaufen — Ausrede nur bis 3 Tage nach dem Tag möglich.' }, { status: 400 });
       }
       await sql`
         INSERT INTO skipping (date, user_name, excuse) VALUES (${date}, ${userName.trim()}, ${excuse.trim()})
