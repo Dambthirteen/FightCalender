@@ -1,0 +1,19 @@
+name: Kurs-Erinnerungen
+
+# Ruft alle 15 Min den Benachrichtigungs-Endpoint auf. Der Endpoint selbst
+# entscheidet, ob gerade ein Kurs in ~2 Std startet und verschickt dann Push.
+# Geschützt über das Repo-Secret CRON_SECRET (Settings → Secrets → Actions).
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {} # erlaubt manuelles Auslösen über den Actions-Tab
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/notify
+        run: |
+          curl -fsS -X POST https://fight-calender.vercel.app/api/notify \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

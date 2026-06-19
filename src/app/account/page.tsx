@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import NotificationsToggle from '@/components/NotificationsToggle';
 
 const STATUS_CONFIG = {
   sick:     { label: 'Krank',    icon: '🤒', color: 'border-orange-500/40 bg-orange-500/10 text-orange-400' },
@@ -82,6 +83,9 @@ export default function AccountPage() {
         <div className="bg-[#111] border border-[#1a1a1a] rounded-xl px-4 py-3 text-sm text-gray-400">
           Status-Zeiträume werden automatisch von der Bitch-Wertung ausgenommen und im Ausreden-Gericht markiert.
         </div>
+
+        {/* Push-Benachrichtigungen */}
+        <NotificationsToggle />
 
         {/* Active statuses */}
         {active.length > 0 && (

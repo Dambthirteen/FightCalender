@@ -86,6 +86,29 @@ export async function POST() {
         UNIQUE(skip_id, voter_name)
       )
     `;
+    // Push-Abos: ein Eintrag pro Gerät (endpoint ist eindeutig); ein Nutzer kann mehrere Geräte haben.
+    await sql`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    // Protokoll bereits verschickter Benachrichtigungen — verhindert Doppel-Versand
+    // bei mehrfachem Cron-Aufruf (UNIQUE über Kurs + Datum + Art).
+    await sql`
+      CREATE TABLE IF NOT EXISTS notification_log (
+        id SERIAL PRIMARY KEY,
+        class_id INTEGER NOT NULL,
+        notify_date DATE NOT NULL,
+        kind VARCHAR(40) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(class_id, notify_date, kind)
+      )
+    `;
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
