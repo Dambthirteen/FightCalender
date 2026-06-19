@@ -1,10 +1,101 @@
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
+/* ============================================================
+   FIGHT NIGHT — Design-System
+   ============================================================ */
+:root {
+  --bg: #08080a;
+  --bg-elev: #0d0d10;
+  --surface: #121216;
+  --surface-2: #17171c;
+  --border: #26262e;
+  --border-soft: #1c1c22;
+  --text: #f4f4f6;
+  --muted: #8b8b96;
+  --faint: #5a5a64;
+
+  --accent: #ff3b30;          /* fight red */
+  --accent-2: #ff6a3d;        /* ember */
+  --accent-soft: rgba(255, 59, 48, 0.13);
+  --gold: #ffc24b;            /* Macher */
+  --bitch: #f5c518;           /* Bitch */
+  --teal: #1ec7da;            /* aus dem Logo */
+  --good: #3ddc84;
 }
 
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
 body {
-  background: #0a0a0a;
-  color: #ffffff;
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--text);
+  background-color: var(--bg);
+  /* atmosphärischer, geschichteter Hintergrund */
+  background-image:
+    radial-gradient(1100px 640px at 86% -10%, rgba(255, 59, 48, 0.14), transparent 60%),
+    radial-gradient(820px 520px at -14% 4%, rgba(30, 199, 218, 0.07), transparent 55%),
+    radial-gradient(900px 760px at 50% 118%, rgba(255, 194, 75, 0.05), transparent 60%);
+  background-attachment: fixed;
+  min-height: 100svh;
+  /* Safe-Area: nicht mehr unter der iPhone-Kamera / Home-Indicator */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* feine Vignette für Tiefe */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow: inset 0 0 220px 40px rgba(0, 0, 0, 0.55);
+}
+body > * { position: relative; z-index: 1; }
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.035em;
+  font-weight: 400;
+}
+
+/* Zahlen-/Stat-Optik */
+.tnum { font-variant-numeric: tabular-nums; }
+
+::selection { background: var(--accent); color: #fff; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ===================== Motion ===================== */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: none; } }
+
+.anim-up { animation: fadeUp 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.anim-in { animation: fadeIn 0.5s ease both; }
+.anim-pop { animation: popIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-up, .anim-in, .anim-pop { animation: none !important; }
+}
+
+/* ===================== Bausteine ===================== */
+.card {
+  background: linear-gradient(180deg, var(--surface) 0%, var(--bg-elev) 100%);
+  border: 1px solid var(--border-soft);
+  border-radius: 1rem;
+}
+
+/* dünner Akzent-Strich (Fight-Tape-Feeling) */
+.tape-accent { position: relative; }
+.tape-accent::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 14%; bottom: 14%;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--accent);
 }

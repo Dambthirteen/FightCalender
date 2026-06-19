@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Bebas_Neue, Sora } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/components/UserProvider";
 
-const geist = Geist({ subsets: ["latin"] });
+// Display: Fight-Poster-Optik (kondensiert, wuchtig). Body: Sora (eigenständig, klar).
+const display = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-display" });
+const sans = Sora({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Fight Calendar",
@@ -29,8 +31,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={geist.className}>
-      <body className="min-h-screen bg-[#0a0a0a]">
+    <html lang="de" className={`${display.variable} ${sans.variable}`}>
+      <body className="min-h-screen">
         <UserProvider>{children}</UserProvider>
       </body>
     </html>

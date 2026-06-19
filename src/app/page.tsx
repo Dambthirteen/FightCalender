@@ -7,19 +7,12 @@ import { useUser } from '@/components/UserProvider';
 import { getNRWHolidays } from '@/lib/holidays';
 import type { GymClass, AttendanceRecord } from '@/lib/db';
 
-const CLASS_COLORS: Record<string, string> = {
-  red: 'border-red-600 bg-red-600/10', blue: 'border-blue-500 bg-blue-500/10',
-  green: 'border-green-500 bg-green-500/10', orange: 'border-orange-500 bg-orange-500/10',
-  purple: 'border-purple-500 bg-purple-500/10',
+// Kursfarbe → Hex (für Dots, Badges, Ränder)
+const COLOR_HEX: Record<string, string> = {
+  red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7',
 };
-const BADGE_COLORS: Record<string, string> = {
-  red: 'bg-red-600', blue: 'bg-blue-500', green: 'bg-green-500',
-  orange: 'bg-orange-500', purple: 'bg-purple-500',
-};
-const DOT_COLORS: Record<string, string> = {
-  red: 'bg-red-600', blue: 'bg-blue-500', green: 'bg-green-500',
-  orange: 'bg-orange-500', purple: 'bg-purple-500',
-};
+const hex = (c: string) => COLOR_HEX[c] ?? COLOR_HEX.red;
+
 const DAY_NAMES_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const DAY_NAMES_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
@@ -75,7 +68,6 @@ export default function Home() {
     }
   }, []);
 
-  // After user loads, determine step
   useEffect(() => {
     if (userLoading) return;
     if (!userName) { window.location.href = '/login'; return; }
@@ -168,7 +160,11 @@ export default function Home() {
 
   // --- LOADING ---
   if (userLoading || step === 'loading') {
-    return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-gray-600 text-sm">Laden...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-[var(--faint)] text-sm anim-in">
+        <span className="font-display text-2xl tracking-widest text-[var(--muted)]">LADEN…</span>
+      </div>
+    );
   }
 
   // --- SCHEDULE STEP ---
@@ -176,34 +172,40 @@ export default function Home() {
     const byDay: Record<number, GymClass[]> = {};
     for (let d = 1; d <= 7; d++) byDay[d] = allClasses.filter(c => c.day_of_week === d);
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white">
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          <div className="mb-6">
-            <div className="text-3xl mb-1">📋</div>
-            <h2 className="text-xl font-bold mb-1">Dein normaler Stundenplan</h2>
-            <p className="text-gray-400 text-sm">Welche Kurse besuchst du normalerweise? Nur diese zählen für die Bitch-Wertung.</p>
+      <div className="min-h-screen text-[var(--text)]">
+        <div className="max-w-md mx-auto px-4 py-8">
+          <div className="mb-7 anim-up">
+            <div className="text-3xl mb-2">📋</div>
+            <h2 className="font-display text-3xl tracking-wide mb-1">Dein Stundenplan</h2>
+            <p className="text-[var(--muted)] text-sm">Welche Kurse besuchst du normalerweise? Nur diese zählen für die Wertung.</p>
           </div>
           {allClasses.length === 0 ? (
-            <div className="text-gray-600 text-sm py-8 text-center">Noch keine Kurse. <a href="/admin" className="text-red-600 hover:underline">Admin →</a></div>
+            <div className="text-[var(--faint)] text-sm py-8 text-center">Noch keine Kurse. <a href="/admin" className="text-[var(--accent)] hover:underline">Admin →</a></div>
           ) : (
-            <div className="space-y-4 mb-8">
-              {[1,2,3,4,5,6,7].map(day => {
+            <div className="space-y-5 mb-8">
+              {[1, 2, 3, 4, 5, 6, 7].map((day, di) => {
                 const dayCls = byDay[day] ?? [];
                 if (!dayCls.length) return null;
                 return (
-                  <div key={day}>
-                    <div className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-2">{DAY_NAMES_FULL[day-1]}</div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div key={day} className="anim-up" style={{ animationDelay: `${di * 50}ms` }}>
+                    <div className="text-[11px] text-[var(--faint)] uppercase tracking-[0.2em] font-semibold mb-2">{DAY_NAMES_FULL[day - 1]}</div>
+                    <div className="grid grid-cols-1 gap-2">
                       {dayCls.map(cls => {
                         const checked = selectedIds.has(cls.id);
+                        const c = hex(cls.color);
                         return (
                           <button key={cls.id} onClick={() => setSelectedIds(prev => { const n = new Set(prev); checked ? n.delete(cls.id) : n.add(cls.id); return n; })}
-                            className={`text-left rounded-xl border p-3 transition-all ${checked ? `${CLASS_COLORS[cls.color]??CLASS_COLORS.red} ring-1 ring-current` : 'border-[#222] bg-[#111] hover:border-[#333]'}`}>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${DOT_COLORS[cls.color]??DOT_COLORS.red}`} />
+                            className="text-left rounded-xl border p-3.5 transition-all active:scale-[0.99]"
+                            style={{
+                              borderColor: checked ? c : 'var(--border-soft)',
+                              background: checked ? `${c}1a` : 'var(--surface)',
+                              boxShadow: checked ? `inset 0 0 0 1px ${c}55` : 'none',
+                            }}>
+                            <div className="flex items-center gap-2.5">
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
                               <span className="text-sm font-semibold">{cls.name}</span>
                             </div>
-                            <div className="text-xs text-gray-500 mt-0.5 ml-4">{cls.start_time} – {cls.end_time}</div>
+                            <div className="text-xs text-[var(--muted)] mt-1 ml-5 tnum">{cls.start_time} – {cls.end_time}</div>
                           </button>
                         );
                       })}
@@ -213,13 +215,14 @@ export default function Home() {
               })}
             </div>
           )}
-          <div className="flex gap-3">
+          <div className="flex gap-3 anim-up" style={{ animationDelay: '120ms' }}>
             <button onClick={saveSchedule} disabled={savingSchedule}
-              className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-semibold py-3 rounded-lg transition-colors">
-              {savingSchedule ? 'Speichern...' : `${selectedIds.size} Kurse speichern`}
+              className="flex-1 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40"
+              style={{ background: 'var(--accent)' }}>
+              {savingSchedule ? 'Speichern…' : `${selectedIds.size} Kurse speichern`}
             </button>
-            <button onClick={() => { fetch('/api/profile', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({userName, classIds: []}) }); setStep('done'); }}
-              className="px-4 py-3 rounded-lg border border-[#333] text-gray-500 hover:text-white text-sm transition-colors">
+            <button onClick={() => { fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName, classIds: [] }) }); setStep('done'); }}
+              className="px-4 py-3.5 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-white text-sm transition-colors">
               Überspringen
             </button>
           </div>
@@ -233,37 +236,40 @@ export default function Home() {
   const classesByDay: Record<number, GymClass[]> = {};
   for (let d = 1; d <= 7; d++) classesByDay[d] = classes.filter(c => c.day_of_week === d);
 
-  // Holidays for this week
   const weekYear = weekMonday.getFullYear();
   const allHolidays = getNRWHolidays(weekYear);
   if (addDays(weekMonday, 6).getFullYear() !== weekYear)
     allHolidays.push(...getNRWHolidays(weekYear + 1));
   const holidayMap = new Map(allHolidays.map(h => [h.date, h.name]));
 
+  const activeDays = [1, 2, 3, 4, 5, 6, 7].filter(day => (classesByDay[day] ?? []).length > 0);
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen text-[var(--text)]">
       {/* Excuse Modal */}
       {excuseDate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="bg-[#111] border border-[#222] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md px-4 anim-in">
+          <div className="card anim-pop p-6 w-full max-w-sm shadow-2xl">
             <div className="text-2xl mb-1">🐔</div>
-            <h2 className="text-lg font-bold mb-1">Begründung</h2>
-            <p className="text-gray-400 text-sm mb-4">
+            <h2 className="font-display text-2xl tracking-wide mb-1">Begründung</h2>
+            <p className="text-[var(--muted)] text-sm mb-4">
               Warum kommst du am <span className="text-white">{DAY_NAMES_FULL[new Date(excuseDate + 'T12:00').getDay() === 0 ? 6 : new Date(excuseDate + 'T12:00').getDay() - 1]}</span> nicht?
             </p>
             <textarea
-              className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-600 resize-none mb-4"
-              placeholder="Deine Ausrede..."
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--bitch)] resize-none mb-4"
+              placeholder="Deine Ausrede…"
               rows={3}
               value={excuseText}
               onChange={e => setExcuseText(e.target.value)}
               autoFocus
             />
             <div className="flex gap-2">
-              <button onClick={() => setExcuseDate(null)} className="flex-1 py-2.5 rounded-lg border border-[#333] text-gray-400 hover:text-white text-sm transition-colors">Abbrechen</button>
+              <button onClick={() => setExcuseDate(null)} className="flex-1 py-2.5 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-white text-sm transition-colors">Abbrechen</button>
               <button onClick={() => submitSkip(excuseDate, excuseText)} disabled={!excuseText.trim() || submittingExcuse}
-                className="flex-1 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-40 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
-                {submittingExcuse ? '...' : 'Einreichen'}
+                className="flex-1 text-black font-bold py-2.5 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40 text-sm"
+                style={{ background: 'var(--bitch)' }}>
+                {submittingExcuse ? '…' : 'Einreichen'}
               </button>
             </div>
           </div>
@@ -271,141 +277,178 @@ export default function Home() {
       )}
 
       {/* Header */}
-      <header className="border-b border-[#1a1a1a] px-4 py-4 flex items-center justify-between max-w-6xl mx-auto">
+      <header className="px-4 pt-5 pb-3 flex items-center justify-between max-w-md mx-auto anim-in">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">🥊</span>
+          <img src="/icon-192.png" alt="Fight Calendar" className="w-11 h-11 rounded-[13px] ring-1 ring-white/10 shadow-lg shadow-black/40" />
           <div>
-            <h1 className="font-bold text-lg leading-none">Fight Calendar</h1>
-            <p className="text-gray-500 text-xs mt-0.5">Wer kommt diese Woche?</p>
+            <h1 className="font-display text-2xl leading-none tracking-wide">Fight Calendar</h1>
+            <p className="text-[var(--muted)] text-[11px] mt-1 uppercase tracking-[0.18em]">Wer kommt diese Woche?</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <button onClick={() => setMenuOpen(o => !o)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#1a1a1a] transition-colors text-gray-400 hover:text-white">
-              <span className="text-sm hidden sm:block">{userName}</span>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <rect y="2" width="18" height="2" rx="1" fill="currentColor"/>
-                <rect y="8" width="18" height="2" rx="1" fill="currentColor"/>
-                <rect y="14" width="18" height="2" rx="1" fill="currentColor"/>
-              </svg>
-            </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-full mt-2 z-40 bg-[#111] border border-[#222] rounded-xl shadow-2xl overflow-hidden min-w-[210px]">
-                  <div className="px-4 py-3 border-b border-[#1a1a1a]">
-                    <div className="text-xs text-gray-500">Eingeloggt als</div>
-                    <div className="font-semibold text-sm">{userName}</div>
-                  </div>
-                  <button onClick={() => { setMenuOpen(false); setStep('schedule'); fetch('/api/classes').then(r => r.json()).then(d => setAllClasses(d)); fetch(`/api/profile?user=${encodeURIComponent(userName)}`).then(r=>r.json()).then(d=>setSelectedIds(new Set(d))); }}
-                    className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors">
-                    <span>📋</span> Meinen Plan ändern
-                  </button>
-                  <div className="border-t border-[#1a1a1a]" />
-                  <a href="/account" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>🏥</span> Mein Status</a>
-                  <a href="/competitions" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>🏆</span> Wettkämpfe</a>
-                  <div className="border-t border-[#1a1a1a]" />
-                  <a href="/year" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>📊</span> Jahresauswertung</a>
-                  <a href="/macher" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>💪</span> Macher des Monats</a>
-                  <a href="/bitch" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>🐔</span> Bitch des Monats</a>
-                  <a href="/vote" className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${isVotingWindow() ? 'text-yellow-400 hover:bg-yellow-500/10' : 'text-gray-300 hover:bg-[#1a1a1a] hover:text-white'}`}>
-                    <span>🗳️</span> Ausreden-Gericht {isVotingWindow() && <span className="ml-auto text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full">offen</span>}
-                  </a>
-                  <div className="border-t border-[#1a1a1a]" />
-                  <a href="/admin" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-500 hover:bg-[#1a1a1a] hover:text-white transition-colors"><span>⚙️</span> Admin</a>
-                  <button onClick={logout} className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-gray-500 hover:bg-red-600/10 hover:text-red-400 transition-colors border-t border-[#1a1a1a]">
-                    <span>🚪</span> Ausloggen
-                  </button>
+        <div className="relative">
+          <button onClick={() => setMenuOpen(o => !o)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect y="2" width="18" height="2" rx="1" fill="currentColor" />
+              <rect y="8" width="18" height="2" rx="1" fill="currentColor" />
+              <rect y="14" width="18" height="2" rx="1" fill="currentColor" />
+            </svg>
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-full mt-2 z-40 card anim-pop shadow-2xl overflow-hidden min-w-[230px]">
+                <div className="px-4 py-3 border-b border-[var(--border-soft)]">
+                  <div className="text-[10px] text-[var(--faint)] uppercase tracking-[0.18em]">Eingeloggt als</div>
+                  <div className="font-display text-lg tracking-wide">{userName}</div>
                 </div>
-              </>
-            )}
-          </div>
+                <button onClick={() => { setMenuOpen(false); setStep('schedule'); fetch('/api/classes').then(r => r.json()).then(d => setAllClasses(d)); fetch(`/api/profile?user=${encodeURIComponent(userName)}`).then(r => r.json()).then(d => setSelectedIds(new Set(d))); }}
+                  className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors">
+                  <span>📋</span> Meinen Plan ändern
+                </button>
+                <div className="border-t border-[var(--border-soft)]" />
+                <a href="/account" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>🏥</span> Mein Status</a>
+                <a href="/competitions" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>🏆</span> Wettkämpfe</a>
+                <div className="border-t border-[var(--border-soft)]" />
+                <a href="/year" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>📊</span> Jahresauswertung</a>
+                <a href="/macher" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>💪</span> Macher des Monats</a>
+                <a href="/bitch" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--text)] hover:bg-white/5 transition-colors"><span>🐔</span> Bitch des Monats</a>
+                <a href="/vote" className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-white/5"
+                  style={{ color: isVotingWindow() ? 'var(--bitch)' : 'var(--text)' }}>
+                  <span>🗳️</span> Ausreden-Gericht {isVotingWindow() && <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,197,24,0.16)', color: 'var(--bitch)' }}>offen</span>}
+                </a>
+                <div className="border-t border-[var(--border-soft)]" />
+                <a href="/admin" className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--faint)] hover:bg-white/5 hover:text-white transition-colors"><span>⚙️</span> Admin</a>
+                <button onClick={logout} className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-[var(--faint)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] transition-colors border-t border-[var(--border-soft)]">
+                  <span>🚪</span> Ausloggen
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </header>
 
       {/* Week Navigation */}
-      <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        <button onClick={() => setCurrentWeek(w => subWeeks(w, 1))} className="p-2 hover:bg-[#1a1a1a] rounded-lg text-gray-400 hover:text-white text-sm">← Vorherige</button>
+      <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between anim-in">
+        <button onClick={() => setCurrentWeek(w => subWeeks(w, 1))} className="w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</button>
         <div className="text-center">
-          <div className="font-semibold text-sm">{format(weekMonday, 'd. MMM', { locale: de })} – {format(addDays(weekMonday, 6), 'd. MMM yyyy', { locale: de })}</div>
-          <div className="text-xs text-gray-500">KW {format(weekMonday, 'w')}</div>
+          <div className="font-semibold text-sm">{format(weekMonday, 'd. MMM', { locale: de })} – {format(addDays(weekMonday, 6), 'd. MMM', { locale: de })}</div>
+          <div className="text-[11px] text-[var(--faint)] uppercase tracking-[0.16em]">KW {format(weekMonday, 'w')} · {format(weekMonday, 'yyyy')}</div>
         </div>
-        <button onClick={() => setCurrentWeek(w => addWeeks(w, 1))} className="p-2 hover:bg-[#1a1a1a] rounded-lg text-gray-400 hover:text-white text-sm">Nächste →</button>
+        <button onClick={() => setCurrentWeek(w => addWeeks(w, 1))} className="w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">→</button>
       </div>
 
-      {/* Schedule Grid */}
-      <main className="max-w-6xl mx-auto px-4 pb-12">
+      {/* Day list (iPhone-first vertical) */}
+      <main className="max-w-md mx-auto px-4 pb-16">
         {loading ? (
-          <div className="flex items-center justify-center py-24 text-gray-600 text-sm">Laden...</div>
+          <div className="flex items-center justify-center py-24 text-[var(--faint)] text-sm">Laden…</div>
         ) : classes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-600 gap-2">
+          <div className="flex flex-col items-center justify-center py-24 text-[var(--faint)] gap-2">
             <div className="text-4xl">📋</div>
             <div className="text-sm">Noch keine Kurse eingetragen.</div>
-            <a href="/admin" className="text-red-600 text-sm hover:underline mt-1">Kurse hinzufügen →</a>
+            <a href="/admin" className="text-[var(--accent)] text-sm hover:underline mt-1">Kurse hinzufügen →</a>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
-            {[1,2,3,4,5,6,7].map(day => {
+          <div className="space-y-3">
+            {activeDays.map((day, idx) => {
               const dayClasses = classesByDay[day] ?? [];
               const dayDate = addDays(weekMonday, day - 1);
               const dateStr = format(dayDate, 'yyyy-MM-dd');
-              const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
+              const isToday = dateStr === todayStr;
               const daySkippers = skipping.filter(s => s.date === dateStr);
               const iSkipping = daySkippers.some(s => s.user_name === userName);
               const holiday = holidayMap.get(dateStr) ?? null;
               return (
-                <div key={day} className={`rounded-xl border ${holiday ? 'border-purple-900/40' : isToday ? 'border-red-900/50' : 'border-[#1a1a1a]'} overflow-hidden flex flex-col`}>
-                  <div className={`px-3 py-2 text-xs font-semibold uppercase tracking-widest flex justify-between items-center ${holiday ? 'bg-purple-600/20 text-purple-400' : isToday ? 'bg-red-600/20 text-red-400' : 'bg-[#111] text-gray-500'}`}>
-                    <span>{DAY_NAMES_SHORT[day-1]}</span>
-                    <span className="text-[10px] font-normal">{format(dayDate, 'd.M.')}</span>
+                <section key={day} className="card overflow-hidden anim-up" style={{ animationDelay: `${idx * 55}ms` }}>
+                  {/* Day header */}
+                  <div className="flex items-center justify-between px-4 py-2.5 border-b"
+                    style={{
+                      borderColor: 'var(--border-soft)',
+                      background: holiday ? 'rgba(168,85,247,0.12)' : isToday ? 'var(--accent-soft)' : 'transparent',
+                    }}>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-display text-xl tracking-wide" style={{ color: holiday ? '#c084fc' : isToday ? 'var(--accent)' : 'var(--text)' }}>
+                        {DAY_NAMES_FULL[day - 1]}
+                      </span>
+                      {isToday && <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'var(--accent)', color: '#fff' }}>Heute</span>}
+                    </div>
+                    <span className="text-xs text-[var(--faint)] tnum">{format(dayDate, 'd.M.')}</span>
                   </div>
+
                   {holiday && (
-                    <div className="px-2 py-1 bg-purple-600/10 border-b border-purple-900/30 text-[10px] text-purple-400 text-center truncate">
+                    <div className="px-4 py-1.5 text-[11px] text-center" style={{ background: 'rgba(168,85,247,0.08)', color: '#c084fc' }}>
                       🎄 {holiday}
                     </div>
                   )}
-                  <div className="p-2 flex flex-col gap-2 flex-1">
-                    {dayClasses.length === 0 ? (
-                      <div className="text-[11px] text-gray-700 text-center py-3">–</div>
-                    ) : dayClasses.map(cls => {
+
+                  {/* Classes */}
+                  <div className="p-3 flex flex-col gap-2">
+                    {dayClasses.map(cls => {
                       const classAttendance = attendance.filter(a => a.class_id === cls.id);
                       const isAttending = classAttendance.some(a => a.user_name === userName);
                       const isLoading = toggling === cls.id;
+                      const c = hex(cls.color);
                       return (
                         <button key={cls.id} onClick={() => toggleAttendance(cls.id)} disabled={isLoading}
-                          className={`w-full text-left rounded-lg border p-2 transition-all ${isAttending ? `${CLASS_COLORS[cls.color]??CLASS_COLORS.red} ring-1 ring-current` : 'border-[#222] bg-[#111] hover:border-[#333]'} ${isLoading?'opacity-60':''}`}>
-                          <div className="text-[11px] font-bold text-white leading-tight">{cls.name}</div>
-                          <div className="text-[10px] text-gray-500 mt-0.5">{cls.start_time} – {cls.end_time}</div>
+                          className={`w-full text-left rounded-xl border p-3 transition-all active:scale-[0.99] ${isLoading ? 'opacity-60' : ''}`}
+                          style={{
+                            borderColor: isAttending ? c : 'var(--border-soft)',
+                            background: isAttending ? `${c}14` : 'var(--surface-2)',
+                            boxShadow: isAttending ? `inset 0 0 0 1px ${c}55` : 'none',
+                          }}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c }} />
+                              <span className="text-sm font-bold truncate">{cls.name}</span>
+                            </div>
+                            <span className="text-[11px] text-[var(--muted)] tnum shrink-0">{cls.start_time}–{cls.end_time}</span>
+                          </div>
                           {classAttendance.length > 0 && (
-                            <div className="mt-1.5 flex flex-wrap gap-1">
-                              {classAttendance.map(a => (
-                                <span key={a.user_name} className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full text-white ${a.user_name===userName?(BADGE_COLORS[cls.color]??'bg-red-600'):'bg-[#333]'}`}>{a.user_name}</span>
-                              ))}
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {classAttendance.map(a => {
+                                const mine = a.user_name === userName;
+                                return (
+                                  <span key={a.user_name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white"
+                                    style={{ background: mine ? c : 'rgba(255,255,255,0.09)', color: mine ? '#fff' : 'var(--muted)' }}>
+                                    {a.user_name}
+                                  </span>
+                                );
+                              })}
                             </div>
                           )}
                         </button>
                       );
                     })}
                   </div>
-                  <div className="px-2 pb-2 pt-1 border-t border-[#1a1a1a]">
+
+                  {/* Bitch row */}
+                  <div className="px-3 pb-3">
                     <button onClick={() => openExcuseModal(dateStr)}
-                      className={`w-full text-[10px] font-medium py-1.5 px-2 rounded-lg transition-all ${iSkipping ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-600/40' : 'bg-[#111] text-gray-600 border border-[#222] hover:text-gray-400 hover:border-[#333]'}`}>
+                      className="w-full text-[11px] font-semibold py-2 px-3 rounded-xl border transition-all active:scale-[0.99]"
+                      style={{
+                        background: iSkipping ? 'rgba(245,197,24,0.14)' : 'var(--surface-2)',
+                        borderColor: iSkipping ? 'rgba(245,197,24,0.4)' : 'var(--border-soft)',
+                        color: iSkipping ? 'var(--bitch)' : 'var(--faint)',
+                      }}>
                       🐔 Ich bin eine Bitch
                     </button>
                     {daySkippers.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1.5">
+                      <div className="flex flex-wrap gap-1.5 mt-2">
                         {daySkippers.map(s => (
-                          <span key={s.user_name} title={s.excuse} className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-600 border border-yellow-600/20 cursor-help">{s.user_name}</span>
+                          <span key={s.user_name} title={s.excuse} className="text-[10px] px-2 py-0.5 rounded-full cursor-help"
+                            style={{ background: 'rgba(245,197,24,0.1)', color: 'var(--bitch)', border: '1px solid rgba(245,197,24,0.22)' }}>
+                            {s.user_name}
+                          </span>
                         ))}
                       </div>
                     )}
                   </div>
-                </div>
+                </section>
               );
             })}
+            <p className="text-center text-[11px] text-[var(--faint)] pt-2">Tippe auf einen Kurs, um dich ein- oder auszutragen.</p>
           </div>
         )}
-        {classes.length > 0 && <div className="mt-6 text-center text-xs text-gray-600">Klicke auf einen Kurs um dich ein- oder auszutragen.</div>}
       </main>
     </div>
   );
