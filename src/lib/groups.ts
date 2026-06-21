@@ -54,6 +54,28 @@ export async function getRole(userName: string, groupId: number): Promise<string
   }
 }
 
+/** Darf `viewer` das Profil von `target` sehen? (private | group | public) */
+export async function canViewProfile(viewer: string | null, target: string): Promise<boolean> {
+  if (!viewer) return false;
+  if (viewer === target) return true;
+  try {
+    const sql = getSql();
+    const u = await sql`SELECT profile_visibility AS v, profile_visibility_group AS g FROM users WHERE user_name = ${target}`;
+    const vis = (u[0]?.v as string) ?? 'public';
+    if (vis === 'public') return true;
+    if (vis === 'private') return false;
+    if (vis === 'group') {
+      const gid = u[0]?.g as number | null;
+      if (!gid) return false;
+      const m = await sql`SELECT 1 FROM group_members WHERE group_id = ${gid} AND user_name = ${viewer} AND status = 'active'`;
+      return m.length > 0;
+    }
+    return false;
+  } catch {
+    return true; // Spalten evtl. noch nicht angelegt → öffentlich behandeln
+  }
+}
+
 export function makeInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // ohne verwechselbare 0/O/1/I
   let s = '';

@@ -2,6 +2,8 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getBitchCounts } from '@/lib/bitch-scoring';
 import { berlinNow } from '@/lib/berlin-time';
+import { getCurrentUser } from '@/lib/auth';
+import { canViewProfile } from '@/lib/groups';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -19,6 +21,8 @@ export async function GET(req: NextRequest) {
   try {
     const user = req.nextUrl.searchParams.get('user');
     if (!user) return NextResponse.json({ error: 'Missing user' }, { status: 400 });
+    const me = await getCurrentUser();
+    if (!(await canViewProfile(me, user))) return NextResponse.json({ private: true });
     const sql = getSql();
 
     // Tage ausgefallen (krank/verletzt)

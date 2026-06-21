@@ -55,6 +55,7 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<{ macherTitles: number; bitchTitles: number; daysOut: number } | null>(null);
   const [arts, setArts] = useState<MartialArtEntry[]>([]);
   const [skills, setSkills] = useState<Skills>({});
+  const [priv, setPriv] = useState(false);
   const [savingBio, setSavingBio] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -64,9 +65,13 @@ export default function ProfilePage() {
   useEffect(() => {
     fetch(`/api/profile-info?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
       if (d && !d.error) {
-        setAvatar(d.avatar ?? null); setBio(d.bio ?? ''); setBioEdit(d.bio ?? ''); setColor(d.color ?? null);
-        setArts(Array.isArray(d.martial_arts) ? d.martial_arts : []);
-        setSkills(d.skills && typeof d.skills === 'object' ? d.skills : {});
+        setPriv(d.private === true);
+        setAvatar(d.avatar ?? null); setColor(d.color ?? null);
+        if (!d.private) {
+          setBio(d.bio ?? ''); setBioEdit(d.bio ?? '');
+          setArts(Array.isArray(d.martial_arts) ? d.martial_arts : []);
+          setSkills(d.skills && typeof d.skills === 'object' ? d.skills : {});
+        }
       }
     }).catch(() => {});
     fetch(`/api/profile-stats?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
@@ -184,6 +189,14 @@ export default function ProfilePage() {
           )}
         </div>
 
+        {priv ? (
+          <div className="card p-7 text-center anim-up">
+            <div className="text-3xl mb-2">🔒</div>
+            <div className="font-display text-xl tracking-wide">Privates Profil</div>
+            <p className="text-sm text-[var(--muted)] mt-1">Diese Person teilt ihr Profil nicht mit dir.</p>
+          </div>
+        ) : (
+          <>
         {/* Kampfsport */}
         {(isSelf || arts.length > 0) && (
           <div className="card px-4 py-4 anim-up" style={{ animationDelay: '30ms' }}>
@@ -294,6 +307,8 @@ export default function ProfilePage() {
           <Stat value={macherYear ?? '–'} label="Macher-Punkte (Jahr)" color="var(--gold)" />
           <Stat value={bitchYear ?? '–'} label="Bitch-Punkte (Jahr)" color="var(--bitch)" />
         </div>
+          </>
+        )}
 
       </main>
     </div>
