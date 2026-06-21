@@ -20,9 +20,11 @@ export interface AttendanceRecord {
   user_name: string;
 }
 
-export async function getClasses(): Promise<GymClass[]> {
+export async function getClasses(groupId?: number): Promise<GymClass[]> {
   const sql = getSql();
-  const rows = await sql`SELECT * FROM classes ORDER BY day_of_week, start_time`;
+  const rows = groupId
+    ? await sql`SELECT * FROM classes WHERE group_id = ${groupId} ORDER BY day_of_week, start_time`
+    : await sql`SELECT * FROM classes ORDER BY day_of_week, start_time`;
   return rows as GymClass[];
 }
 
@@ -71,12 +73,13 @@ export async function createClass(
   dayOfWeek: number,
   startTime: string,
   endTime: string,
-  color: string
+  color: string,
+  groupId?: number
 ): Promise<GymClass> {
   const sql = getSql();
   const rows = await sql`
-    INSERT INTO classes (name, day_of_week, start_time, end_time, color)
-    VALUES (${name}, ${dayOfWeek}, ${startTime}, ${endTime}, ${color})
+    INSERT INTO classes (name, day_of_week, start_time, end_time, color, group_id)
+    VALUES (${name}, ${dayOfWeek}, ${startTime}, ${endTime}, ${color}, ${groupId ?? null})
     RETURNING *
   `;
   return rows[0] as GymClass;

@@ -18,9 +18,16 @@ export default function NavMenu() {
   const { userName } = useUser();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [groupName, setGroupName] = useState('');
   const pathname = usePathname();
 
   useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    fetch('/api/groups').then((r) => r.json()).then((d) => {
+      const cur = (d.groups ?? []).find((g: { id: number; name: string }) => g.id === d.current);
+      if (cur) setGroupName(cur.name);
+    }).catch(() => {});
+  }, []);
   // Menü bei Routenwechsel schließen
   useEffect(() => setOpen(false), [pathname]);
   // Body-Scroll sperren, solange offen
@@ -35,7 +42,10 @@ export default function NavMenu() {
 
   const me = encodeURIComponent(userName ?? '');
   const groups: Group[] = [
-    { items: [{ icon: '👥', label: 'Mitglieder', href: '/mitglieder' }] },
+    { items: [
+      { icon: '🏠', label: 'Gruppen', href: '/gruppen' },
+      { icon: '👥', label: 'Mitglieder', href: '/mitglieder' },
+    ] },
     {
       cat: 'Profil', items: [
         { icon: '👤', label: 'Mein Profil', href: `/profil/${me}` },
@@ -64,6 +74,11 @@ export default function NavMenu() {
         <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)' }}>
           <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--faint)' }}>Eingeloggt als</div>
           <div className="font-display text-xl tracking-wide">{userName}</div>
+          {groupName && (
+            <a href="/gruppen" className="mt-1.5 flex items-center gap-1.5 text-xs" style={{ color: 'var(--teal)' }}>
+              <span>🏠</span> {groupName} <span style={{ color: 'var(--faint)' }}>· wechseln ›</span>
+            </a>
+          )}
         </div>
 
         {groups.map((g, gi) => (

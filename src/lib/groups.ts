@@ -17,13 +17,17 @@ export interface MyGroup {
 
 /** Alle aktiven Gruppen des Nutzers. */
 export async function getMyGroups(userName: string): Promise<MyGroup[]> {
-  const sql = getSql();
-  return (await sql`
-    SELECT g.id, g.name, g.invite_code, gm.role
-    FROM group_members gm JOIN groups g ON g.id = gm.group_id
-    WHERE gm.user_name = ${userName} AND gm.status = 'active'
-    ORDER BY LOWER(g.name)
-  `) as MyGroup[];
+  try {
+    const sql = getSql();
+    return (await sql`
+      SELECT g.id, g.name, g.invite_code, gm.role
+      FROM group_members gm JOIN groups g ON g.id = gm.group_id
+      WHERE gm.user_name = ${userName} AND gm.status = 'active'
+      ORDER BY LOWER(g.name)
+    `) as MyGroup[];
+  } catch {
+    return []; // Tabellen evtl. noch nicht angelegt → App läuft ungescoped weiter
+  }
 }
 
 /** Aktuelle Gruppe = Cookie (falls Mitglied), sonst erste Gruppe. */
@@ -38,12 +42,16 @@ export async function getCurrentGroupId(userName: string): Promise<number | null
 
 /** Rolle des Nutzers in einer Gruppe ('admin' | 'member') oder null, wenn kein aktives Mitglied. */
 export async function getRole(userName: string, groupId: number): Promise<string | null> {
-  const sql = getSql();
-  const rows = await sql`
-    SELECT role FROM group_members
-    WHERE user_name = ${userName} AND group_id = ${groupId} AND status = 'active'
-  `;
-  return (rows[0]?.role as string) ?? null;
+  try {
+    const sql = getSql();
+    const rows = await sql`
+      SELECT role FROM group_members
+      WHERE user_name = ${userName} AND group_id = ${groupId} AND status = 'active'
+    `;
+    return (rows[0]?.role as string) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function makeInviteCode(): string {
