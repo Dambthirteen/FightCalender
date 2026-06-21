@@ -6,6 +6,7 @@ import { useUser } from '@/components/UserProvider';
 import NavMenu from '@/components/NavMenu';
 import NotificationsToggle from '@/components/NotificationsToggle';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
+import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
 
 interface YearRow { user_name: string; total: number }
 
@@ -54,6 +55,8 @@ export default function ProfilePage() {
   const [macherYear, setMacherYear] = useState<number | null>(null);
   const [bitchYear, setBitchYear] = useState<number | null>(null);
   const [stats, setStats] = useState<{ macherTitles: number; bitchTitles: number; daysOut: number } | null>(null);
+  const [arts, setArts] = useState<MartialArtEntry[]>([]);
+  const [skills, setSkills] = useState<Skills>({});
   const [savingBio, setSavingBio] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -62,7 +65,11 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetch(`/api/profile-info?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
-      if (d && !d.error) { setAvatar(d.avatar ?? null); setBio(d.bio ?? ''); setBioEdit(d.bio ?? ''); setColor(d.color ?? null); }
+      if (d && !d.error) {
+        setAvatar(d.avatar ?? null); setBio(d.bio ?? ''); setBioEdit(d.bio ?? ''); setColor(d.color ?? null);
+        setArts(Array.isArray(d.martial_arts) ? d.martial_arts : []);
+        setSkills(d.skills && typeof d.skills === 'object' ? d.skills : {});
+      }
     }).catch(() => {});
     fetch(`/api/profile-stats?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
       if (d && !d.error) setStats(d);
@@ -111,6 +118,27 @@ export default function ProfilePage() {
     });
   }
 
+  async function saveArts(next: MartialArtEntry[]) {
+    setArts(next);
+    await fetch('/api/profile-info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ martial_arts: next }) }).catch(() => {});
+  }
+  function toggleArt(key: string) {
+    const exists = arts.some((m) => m.art === key);
+    saveArts(exists ? arts.filter((m) => m.art !== key) : [...arts, { art: key, belt: null }]);
+  }
+  function setBelt(key: string, belt: string | null) {
+    saveArts(arts.map((m) => (m.art === key ? { ...m, belt } : m)));
+  }
+  async function saveSkills(next: Skills) {
+    setSkills(next);
+    await fetch('/api/profile-info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ skills: next }) }).catch(() => {});
+  }
+  function setSkill(key: string, level: number) {
+    const cur = Number(skills[key as keyof Skills] ?? 0);
+    const val = cur === level * 20 ? (level - 1) * 20 : level * 20; // gleichen Balken nochmal tippen → einen runter
+    saveSkills({ ...skills, [key]: val });
+  }
+
   return (
     <div className="min-h-screen text-[var(--text)]">
       <header className="max-w-md mx-auto px-4 pt-5 pb-3 flex items-center justify-between anim-in">
@@ -157,6 +185,89 @@ export default function ProfilePage() {
             bio && <p className="text-sm text-[var(--muted)] mt-2 max-w-xs">{bio}</p>
           )}
         </div>
+
+        {/* Kampfsport */}
+        {(isSelf || arts.length > 0) && (
+          <div className="card px-4 py-4 anim-up" style={{ animationDelay: '30ms' }}>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-2.5">Kampfsport</div>
+            {isSelf ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {ARTS.map((a) => {
+                    const active = arts.some((m) => m.art === a.key);
+                    return (
+                      <button key={a.key} onClick={() => toggleArt(a.key)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-all active:scale-95"
+                        style={active
+                          ? { background: `${c}1f`, borderColor: c, color: '#fff' }
+                          : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)', color: 'var(--muted)' }}>
+                        {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {arts.filter((m) => artBelts(m.art)).map((m) => (
+                  <div key={m.art} className="mt-3">
+                    <div className="text-[11px] text-[var(--muted)] mb-1.5">{artLabel(m.art)} — Gürtel</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {artBelts(m.art)!.map((b) => (
+                        <button key={b} onClick={() => setBelt(m.art, m.belt === b ? null : b)}
+                          className="flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-lg border transition-all"
+                          style={{ borderColor: m.belt === b ? (BELT_COLORS[b] ?? c) : 'var(--border-soft)', background: m.belt === b ? `${BELT_COLORS[b] ?? c}22` : 'transparent', color: 'var(--text)' }}>
+                          <span className="w-3 h-3 rounded-full" style={{ background: BELT_COLORS[b] ?? '#888', border: '1px solid rgba(255,255,255,0.2)' }} />
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {arts.map((m) => (
+                  <span key={m.art} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: `${c}1f`, border: `1px solid ${c}` }}>
+                    {artLabel(m.art)}
+                    {m.belt && <span className="flex items-center gap-1 opacity-90"><span className="w-2.5 h-2.5 rounded-full" style={{ background: BELT_COLORS[m.belt] ?? '#888' }} />{m.belt}</span>}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Skilltree */}
+        {(isSelf || Object.values(skills).some((v) => Number(v) > 0)) && (() => {
+          const rating = overallRating(skills);
+          return (
+            <div className="card px-4 py-4 anim-up" style={{ animationDelay: '50ms' }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)]">Skills</div>
+                <span className="font-display text-base tracking-wide px-2.5 py-0.5 rounded-full"
+                  style={{ color: rating.color, border: `1px solid ${rating.color}`, background: `${rating.color}1a` }}>
+                  {rating.label}
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                {SKILLS.map((s) => {
+                  const level = Math.round(Number(skills[s.key] ?? 0) / 20);
+                  return (
+                    <div key={s.key} className="flex items-center gap-3">
+                      <span className="text-xs font-medium w-28 shrink-0">{s.label}</span>
+                      <div className="flex gap-1 flex-1">
+                        {[1, 2, 3, 4, 5].map((seg) => (
+                          <button key={seg} onClick={() => isSelf && setSkill(s.key, seg)} disabled={!isSelf}
+                            className="h-3 flex-1 rounded-sm transition-all"
+                            style={{ background: level >= seg ? c : 'var(--surface-2)', border: '1px solid var(--border-soft)', cursor: isSelf ? 'pointer' : 'default' }} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {isSelf && <p className="text-[10px] text-[var(--faint)] mt-3">Tippe die Balken (0–5). Daraus ergibt sich dein Gesamtwert: Single Discipline → Allrounder.</p>}
+            </div>
+          );
+        })()}
 
         {/* Color picker (self) */}
         {isSelf && (

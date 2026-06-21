@@ -113,6 +113,8 @@ export async function POST() {
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT ''`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS color VARCHAR(20)`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS martial_arts JSONB NOT NULL DEFAULT '[]'::jsonb`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '{}'::jsonb`;
     // Benachrichtigungs-Einstellungen pro Nutzer
     await sql`
       CREATE TABLE IF NOT EXISTS notification_prefs (
