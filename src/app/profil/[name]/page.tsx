@@ -198,7 +198,7 @@ export default function ProfilePage() {
         ) : (
           <>
         {/* Kampfsport */}
-        {(isSelf || arts.length > 0) && (
+        {(
           <div className="card px-4 py-4 anim-up" style={{ animationDelay: '30ms' }}>
             <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-2.5">Kampfsport</div>
             {isSelf ? (
@@ -233,6 +233,8 @@ export default function ProfilePage() {
                   </div>
                 ))}
               </>
+            ) : arts.length === 0 ? (
+              <div className="text-sm text-[var(--faint)]">Noch keine Kampfsportart angegeben.</div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {arts.map((m) => (
@@ -247,7 +249,7 @@ export default function ProfilePage() {
         )}
 
         {/* Skilltree */}
-        {(isSelf || Object.values(skills).some((v) => Number(v) > 0)) && (() => {
+        {(() => {
           const rating = overallRating(skills);
           return (
             <div className="card px-4 py-4 anim-up" style={{ animationDelay: '50ms' }}>
