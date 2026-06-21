@@ -46,10 +46,11 @@ export default function GroupsPage() {
 
   async function createGroup() {
     if (!newName.trim()) return;
-    setBusy(true);
+    setBusy(true); setMsg('');
     try {
       const res = await fetch('/api/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
       if (res.ok) { setNewName(''); window.location.href = '/gruppen'; }
+      else { const d = await res.json().catch(() => ({})); setMsg(d.error ?? 'Konnte Gruppe nicht erstellen — schon deployt & /api/setup gelaufen?'); }
     } finally { setBusy(false); }
   }
   async function joinGroup() {
