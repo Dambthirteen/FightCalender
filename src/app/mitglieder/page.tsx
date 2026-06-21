@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
-import NavMenu from '@/components/NavMenu';
 import { colorFor, initials } from '@/lib/avatar';
 
 export default function MitgliederPage() {
@@ -20,9 +19,9 @@ export default function MitgliederPage() {
   return (
     <div className="min-h-screen text-[var(--text)]">
       <header className="max-w-md mx-auto px-4 pt-5 pb-3 flex items-center justify-between anim-in">
-        <a href="/" className="w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
+        <a href="/start" className="w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
         <h1 className="font-display text-2xl tracking-wide">👥 Mitglieder</h1>
-        <NavMenu />
+        <span className="w-11" />
       </header>
 
       <main className="max-w-md mx-auto px-4 pb-16">

@@ -5,9 +5,9 @@ import { startOfWeek, addWeeks, subWeeks, format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useUser } from '@/components/UserProvider';
 import { getNRWHolidays } from '@/lib/holidays';
-import NavMenu from '@/components/NavMenu';
 import { CUTOVER } from '@/lib/bitch-scoring';
 import { colorFor } from '@/lib/avatar';
+import LoadingScreen from '@/components/LoadingScreen';
 import type { GymClass, AttendanceRecord } from '@/lib/db';
 
 // Kursfarbe → Hex (für Dots, Badges, Ränder)
@@ -236,11 +236,7 @@ export default function Home() {
 
   // --- LOADING ---
   if (userLoading || step === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center anim-in">
-        <span className="font-display text-2xl tracking-widest text-[var(--muted)]">LADEN…</span>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // --- SCHEDULE STEP ---
@@ -369,7 +365,6 @@ export default function Home() {
             <p className="text-[var(--muted)] text-[11px] mt-1 uppercase tracking-[0.18em]">Wer kommt diese Woche?</p>
           </div>
         </div>
-        <NavMenu />
       </header>
 
       {/* Week Navigation */}

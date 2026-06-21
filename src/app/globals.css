@@ -39,7 +39,7 @@ body {
   min-height: 100svh;
   /* Safe-Area: nicht mehr unter der iPhone-Kamera / Home-Indicator */
   padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 3.6rem); /* Platz für die Footer-Tab-Leiste */
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
   text-rendering: optimizeLegibility;
@@ -82,6 +82,19 @@ h1, h2, h3, .font-display {
   100% { transform: scale(2.7) rotate(0deg);   opacity: 0; }
 }
 .chicken-pop { animation: chickenPop 3.1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+
+/* Ladebildschirm: pulsierendes Logo + animierte Punkte */
+@keyframes logoPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 59, 48, 0)); }
+  50% { transform: scale(1.07); filter: drop-shadow(0 0 26px rgba(255, 59, 48, 0.4)); }
+}
+@keyframes ldots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75%, 100% { content: '...'; }
+}
+.loading-dots::after { content: ''; animation: ldots 1.3s steps(1, end) infinite; }
 
 /* ===================== Bausteine ===================== */
 .card {

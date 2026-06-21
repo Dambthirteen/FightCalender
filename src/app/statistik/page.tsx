@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import NavMenu from '@/components/NavMenu';
 
 interface Row { user_name: string; n: number }
 const MEDAL = ['🥇', '🥈', '🥉'];
@@ -57,9 +56,9 @@ export default function StatistikPage() {
   return (
     <div className="min-h-screen text-[var(--text)]">
       <header className="max-w-md mx-auto px-4 pt-5 pb-3 flex items-center justify-between anim-in">
-        <a href="/" className="w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
+        <a href="/start" className="w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
         <h1 className="font-display text-2xl tracking-wide">📊 Statistiken</h1>
-        <NavMenu />
+        <span className="w-11" />
       </header>
 
       <main className="max-w-md mx-auto px-4 pb-16 space-y-6">

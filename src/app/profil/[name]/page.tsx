@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
-import NavMenu from '@/components/NavMenu';
-import NotificationsToggle from '@/components/NotificationsToggle';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
 
@@ -142,9 +140,9 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen text-[var(--text)]">
       <header className="max-w-md mx-auto px-4 pt-5 pb-3 flex items-center justify-between anim-in">
-        <a href="/mitglieder" className="w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
+        <a href="/start" className="w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
         <h1 className="font-display text-2xl tracking-wide">{isSelf ? 'Mein Profil' : 'Profil'}</h1>
-        <NavMenu />
+        <span className="w-11" />
       </header>
 
       <main className="max-w-md mx-auto px-4 pb-16 space-y-5">
@@ -297,12 +295,6 @@ export default function ProfilePage() {
           <Stat value={bitchYear ?? '–'} label="Bitch-Punkte (Jahr)" color="var(--bitch)" />
         </div>
 
-        {/* Notifications (self) */}
-        {isSelf && (
-          <div className="anim-up" style={{ animationDelay: '160ms' }}>
-            <NotificationsToggle />
-          </div>
-        )}
       </main>
     </div>
   );
