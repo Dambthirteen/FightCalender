@@ -1,0 +1,43 @@
+import { neon } from '@neondatabase/serverless';
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth';
+import { getMyGroups, getCurrentGroupId, makeInviteCode, GROUP_COOKIE } from '@/lib/groups';
+
+function getSql() {
+  return neon(process.env.DATABASE_URL!);
+}
+
+/** Meine Gruppen + aktuelle Gruppe. */
+export async function GET() {
+  const me = await getCurrentUser();
+  if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const groups = await getMyGroups(me);
+  const current = await getCurrentGroupId(me);
+  return NextResponse.json({ groups, current });
+}
+
+/** Neue Gruppe erstellen → Ersteller wird Admin, wird zur aktuellen Gruppe. */
+export async function POST(req: NextRequest) {
+  const me = await getCurrentUser();
+  if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { name } = await req.json();
+  if (!name || !String(name).trim()) return NextResponse.json({ error: 'Name fehlt' }, { status: 400 });
+
+  const sql = getSql();
+  let code = makeInviteCode();
+  for (let i = 0; i < 6; i++) {
+    const ex = await sql`SELECT 1 FROM groups WHERE invite_code = ${code}`;
+    if (ex.length === 0) break;
+    code = makeInviteCode();
+  }
+  const rows = await sql`
+    INSERT INTO groups (name, invite_code, created_by)
+    VALUES (${String(name).trim().slice(0, 100)}, ${code}, ${me}) RETURNING id
+  `;
+  const gid = rows[0].id as number;
+  await sql`INSERT INTO group_members (group_id, user_name, role, status) VALUES (${gid}, ${me}, 'admin', 'active')`;
+
+  const res = NextResponse.json({ ok: true, id: gid, invite_code: code });
+  res.cookies.set(GROUP_COOKIE, String(gid), { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
+  return res;
+}

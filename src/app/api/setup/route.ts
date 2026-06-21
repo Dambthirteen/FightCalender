@@ -136,6 +136,53 @@ export async function POST() {
         UNIQUE(user_name, notify_date, kind)
       )
     `;
+    // --- Multi-Gruppen (Phase 1): Schema ---
+    await sql`
+      CREATE TABLE IF NOT EXISTS groups (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        invite_code VARCHAR(12) NOT NULL UNIQUE,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS group_members (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        user_name VARCHAR(100) NOT NULL,
+        role VARCHAR(10) NOT NULL DEFAULT 'member',     -- 'admin' | 'member'
+        status VARCHAR(10) NOT NULL DEFAULT 'active',   -- 'active' | 'pending'
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(group_id, user_name)
+      )
+    `;
+    await sql`ALTER TABLE classes ADD COLUMN IF NOT EXISTS group_id INTEGER`;
+    await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS group_id INTEGER`;
+    await sql`ALTER TABLE competitions ADD COLUMN IF NOT EXISTS group_id INTEGER`;
+
+    // --- Einmalige, GESCHÜTZTE Migration: bestehende Daten → Standard-Gruppe „NFT Köln" ---
+    // Läuft nur, solange es ≤ 1 Gruppe gibt → kann nie Daten anderer Gruppen überschreiben.
+    await sql`
+      INSERT INTO groups (name, invite_code, created_by)
+      SELECT 'NFT Köln', 'NFTKOELN', (SELECT user_name FROM users ORDER BY created_at LIMIT 1)
+      WHERE NOT EXISTS (SELECT 1 FROM groups)
+    `;
+    await sql`UPDATE classes SET group_id = (SELECT MIN(id) FROM groups) WHERE group_id IS NULL AND (SELECT COUNT(*) FROM groups) = 1`;
+    await sql`UPDATE skipping SET group_id = (SELECT MIN(id) FROM groups) WHERE group_id IS NULL AND (SELECT COUNT(*) FROM groups) = 1`;
+    await sql`UPDATE competitions SET group_id = (SELECT MIN(id) FROM groups) WHERE group_id IS NULL AND (SELECT COUNT(*) FROM groups) = 1`;
+    await sql`
+      INSERT INTO group_members (group_id, user_name, role, status)
+      SELECT (SELECT MIN(id) FROM groups), u.user_name, 'member', 'active'
+      FROM users u WHERE (SELECT COUNT(*) FROM groups) = 1
+      ON CONFLICT (group_id, user_name) DO NOTHING
+    `;
+    await sql`
+      UPDATE group_members SET role = 'admin'
+      WHERE group_id = (SELECT MIN(id) FROM groups)
+        AND user_name = (SELECT user_name FROM users ORDER BY created_at LIMIT 1)
+        AND (SELECT COUNT(*) FROM groups) = 1
+    `;
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
