@@ -19,7 +19,7 @@ export default function AdminPage() {
   const [classes, setClasses] = useState<GymClass[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
 
-  interface UserRow { user_name: string; created_at: string; attend_count: number; skip_count: number; schedule_count: number; }
+  interface UserRow { user_name: string; created_at: string | null; has_account: boolean; attend_count: number; skip_count: number; schedule_count: number; }
   const [users, setUsers] = useState<UserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
@@ -93,7 +93,7 @@ export default function AdminPage() {
   }
 
   async function deleteUser(userName: string) {
-    if (!confirm(`Nutzer "${userName}" wirklich löschen? Alle Daten gehen verloren.`)) return;
+    if (!confirm(`Nutzer "${userName}" wirklich löschen? ALLE Daten (Anwesenheiten, Ausreden, Votes, Wettkämpfe, Gruppen-Mitgliedschaft …) werden unwiderruflich entfernt.`)) return;
     await fetch('/api/admin/users', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -317,9 +317,21 @@ export default function AdminPage() {
               {users.map((u) => (
                 <div key={u.user_name} className="card px-4 py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate">{u.user_name}</div>
+                    <div className="font-semibold text-sm truncate flex items-center gap-2">
+                      {u.user_name}
+                      {!u.has_account && (
+                        <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded"
+                          style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+                          title="Datenreste ohne Login — z.B. nach einer früheren Löschung">
+                          verwaist
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[11px] text-[var(--faint)] tnum">
-                      {new Date(u.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })} · {u.schedule_count} Kurse
+                      {u.created_at
+                        ? `${new Date(u.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })} · `
+                        : 'Kein Login · '}
+                      {u.schedule_count} Kurse
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 tnum">
