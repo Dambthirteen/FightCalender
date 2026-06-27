@@ -37,15 +37,32 @@ export default function StartPage() {
   const courtOpen = isVotingWindow();
   const courtAlert = courtOpen && pendingVotes > 0; // offen UND noch nicht fertig abgestimmt
 
-  const items = [
-    { icon: '🔔', label: 'Benachrichtigungen', href: '/benachrichtigungen', count: unread },
-    { icon: '📊', label: 'Statistiken', href: '/statistik' },
-    { icon: '🗳️', label: 'Ausreden-Gericht', href: '/vote', badge: courtOpen, alert: courtAlert },
-    { icon: '👥', label: 'Mitglieder', href: '/mitglieder' },
-    { icon: '🏆', label: 'Wettkämpfe', href: '/competitions' },
-    { icon: '🏥', label: 'Mein Status', href: '/account' },
-    { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },
-    { icon: '⚙️', label: 'Einstellungen', href: '/settings' },
+  type HubItem = { icon: string; label: string; href: string; badge?: boolean; alert?: boolean; count?: number };
+  // In Kategorien gruppiert und nach Wichtigkeit sortiert.
+  const categories: { title: string; items: HubItem[] }[] = [
+    {
+      title: 'Wettkampf & Wertung',
+      items: [
+        { icon: '📊', label: 'Statistiken', href: '/statistik' },
+        { icon: '🗳️', label: 'Ausreden-Gericht', href: '/vote', badge: courtOpen, alert: courtAlert },
+        { icon: '🏆', label: 'Wettkämpfe', href: '/competitions' },
+      ],
+    },
+    {
+      title: 'Community',
+      items: [
+        { icon: '👥', label: 'Mitglieder', href: '/mitglieder' },
+        { icon: '🔔', label: 'Benachrichtigungen', href: '/benachrichtigungen', count: unread },
+      ],
+    },
+    {
+      title: 'Mein Bereich',
+      items: [
+        { icon: '🏥', label: 'Mein Status', href: '/account' },
+        { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },
+        { icon: '⚙️', label: 'Einstellungen', href: '/settings' },
+      ],
+    },
   ];
 
   return (
@@ -58,23 +75,27 @@ export default function StartPage() {
         </button>
       </header>
 
-      <main className="max-w-md mx-auto px-4 pb-28">
-        <div className="grid grid-cols-2 gap-3">
-          {items.map((it, i) => (
-            <a key={it.label} href={it.href}
-              className={`card anim-up flex flex-col items-start gap-2 p-4 active:scale-[0.98] transition-transform ${it.alert ? 'court-alert' : ''}`}
-              style={{ animationDelay: `${i * 40}ms` }}>
-              <span className="text-2xl">{it.icon}</span>
-              <span className="text-sm font-semibold flex items-center gap-1.5">
-                {it.label}
-                {it.badge && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(245,197,24,0.16)', color: 'var(--bitch)' }}>offen</span>}
-                {!!it.count && it.count > 0 && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: 'var(--accent)' }}>{it.count}</span>
-                )}
-              </span>
-            </a>
-          ))}
-        </div>
+      <main className="max-w-md mx-auto px-4 pb-28 space-y-6">
+        {categories.map((cat, ci) => (
+          <section key={cat.title} className="anim-up" style={{ animationDelay: `${ci * 60}ms` }}>
+            <h2 className="text-[11px] uppercase tracking-[0.2em] text-[var(--faint)] mb-2.5 px-0.5">{cat.title}</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {cat.items.map((it) => (
+                <a key={it.label} href={it.href}
+                  className={`card flex flex-col items-start gap-2 p-4 active:scale-[0.98] transition-transform ${it.alert ? 'court-alert' : ''}`}>
+                  <span className="text-2xl">{it.icon}</span>
+                  <span className="text-sm font-semibold flex items-center gap-1.5">
+                    {it.label}
+                    {it.badge && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(245,197,24,0.16)', color: 'var(--bitch)' }}>offen</span>}
+                    {!!it.count && it.count > 0 && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: 'var(--accent)' }}>{it.count}</span>
+                    )}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </section>
+        ))}
         <button onClick={logout}
           className="mt-3 w-full card p-4 flex items-center gap-3 text-sm font-semibold active:scale-[0.99]" style={{ color: 'var(--faint)' }}>
           🚪 Ausloggen
