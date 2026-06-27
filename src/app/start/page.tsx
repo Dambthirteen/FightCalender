@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getDaysInMonth } from 'date-fns';
+import { useUser } from '@/components/UserProvider';
 
 function isVotingWindow() {
   const n = new Date();
@@ -9,7 +10,9 @@ function isVotingWindow() {
 }
 
 export default function StartPage() {
+  const { userName } = useUser();
   const [groupName, setGroupName] = useState('');
+  const [pendingVotes, setPendingVotes] = useState(0);
 
   useEffect(() => {
     fetch('/api/groups').then((r) => r.json()).then((d) => {
@@ -18,14 +21,23 @@ export default function StartPage() {
     }).catch(() => {});
   }, []);
 
+  // Wie viele Ausreden muss ich noch bewerten? Treibt Glühen+Wackeln des Gericht-Widgets.
+  useEffect(() => {
+    if (!userName) return;
+    fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {});
+  }, [userName]);
+
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
   }
 
+  const courtOpen = isVotingWindow();
+  const courtAlert = courtOpen && pendingVotes > 0; // offen UND noch nicht fertig abgestimmt
+
   const items = [
     { icon: '📊', label: 'Statistiken', href: '/statistik' },
-    { icon: '🗳️', label: 'Ausreden-Gericht', href: '/vote', badge: isVotingWindow() },
+    { icon: '🗳️', label: 'Ausreden-Gericht', href: '/vote', badge: courtOpen, alert: courtAlert },
     { icon: '👥', label: 'Mitglieder', href: '/mitglieder' },
     { icon: '🏆', label: 'Wettkämpfe', href: '/competitions' },
     { icon: '🏥', label: 'Mein Status', href: '/account' },
@@ -48,7 +60,7 @@ export default function StartPage() {
         <div className="grid grid-cols-2 gap-3">
           {items.map((it, i) => (
             <a key={it.label} href={it.href}
-              className="card anim-up flex flex-col items-start gap-2 p-4 active:scale-[0.98] transition-transform"
+              className={`card anim-up flex flex-col items-start gap-2 p-4 active:scale-[0.98] transition-transform ${it.alert ? 'court-alert' : ''}`}
               style={{ animationDelay: `${i * 40}ms` }}>
               <span className="text-2xl">{it.icon}</span>
               <span className="text-sm font-semibold flex items-center gap-1.5">

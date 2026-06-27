@@ -13,6 +13,15 @@ function monthLabel(ym: string): string {
   return `${MONTHS[m - 1]} ${y}`;
 }
 
+/** Letzter abgeschlossener Monat als 'YYYY-MM' (nur für die Vorschau). */
+function previewMonth(): string {
+  const d = new Date();
+  const m = d.getMonth(); // 0-basiert: aktueller Monat → Vormonat ist m (1-basiert)
+  const pm = m === 0 ? 12 : m;
+  const py = m === 0 ? d.getFullYear() - 1 : d.getFullYear();
+  return `${py}-${String(pm).padStart(2, '0')}`;
+}
+
 const META: Record<Kind, { emoji: string; label: string; color: string; soft: string; voteQ: string }> = {
   macher: { emoji: '🏆', label: 'Macher des Monats', color: 'var(--gold)', soft: 'rgba(255,194,75,0.13)', voteQ: 'Wer war am fleißigsten?' },
   bitch: { emoji: '🐔', label: 'Bitch des Monats', color: 'var(--bitch)', soft: 'rgba(245,197,24,0.13)', voteQ: 'Wer hat am meisten geschwänzt?' },
@@ -33,7 +42,27 @@ export default function AwardPopup() {
   const loadedFor = useRef('');
 
   useEffect(() => {
-    if (loading || !userName || loadedFor.current === userName) return;
+    if (loading) return;
+
+    // Vorschau-Modus zum Testen: ?awardpreview=1 an die URL hängen → zeigt beide
+    // Popup-Arten mit Beispiel-Daten, OHNE etwas zu speichern (groupId === -1).
+    const preview = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('awardpreview') === '1';
+    if (preview) {
+      if (loadedFor.current === '__preview__') return;
+      loadedFor.current = '__preview__';
+      const month = previewMonth();
+      setVotes([
+        { groupId: -1, groupName: 'Test-Gym', month, kind: 'macher', candidates: ['Angelo', 'Max', 'Tim'] },
+        { groupId: -1, groupName: 'Test-Gym', month, kind: 'bitch', candidates: ['Niklas', 'Tom'] },
+      ]);
+      setCongrats([
+        { groupId: -1, groupName: 'Test-Gym', month, kind: 'macher' },
+        { groupId: -1, groupName: 'Test-Gym', month, kind: 'bitch' },
+      ]);
+      return;
+    }
+
+    if (!userName || loadedFor.current === userName) return;
     loadedFor.current = userName;
     fetch('/api/awards')
       .then((r) => r.json())
@@ -50,13 +79,15 @@ export default function AwardPopup() {
   async function submitVote() {
     if (!vote || !choice || busy) return;
     setBusy(true);
-    try {
-      await fetch('/api/awards/vote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: vote.groupId, month: vote.month, kind: vote.kind, choice }),
-      });
-    } catch { /* offline → Popup einfach schließen, Stimme geht verloren */ }
+    if (vote.groupId !== -1) { // -1 = Vorschau: nichts speichern
+      try {
+        await fetch('/api/awards/vote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ groupId: vote.groupId, month: vote.month, kind: vote.kind, choice }),
+        });
+      } catch { /* offline → Popup einfach schließen, Stimme geht verloren */ }
+    }
     setBusy(false);
     setChoice('');
     setVotes((v) => v.slice(1));
@@ -65,13 +96,15 @@ export default function AwardPopup() {
   async function dismissCongrat() {
     if (!congrat || busy) return;
     setBusy(true);
-    try {
-      await fetch('/api/awards/ack', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: congrat.groupId, month: congrat.month, kind: congrat.kind }),
-      });
-    } catch { /* offline → später erneut */ }
+    if (congrat.groupId !== -1) { // -1 = Vorschau: nichts speichern
+      try {
+        await fetch('/api/awards/ack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ groupId: congrat.groupId, month: congrat.month, kind: congrat.kind }),
+        });
+      } catch { /* offline → später erneut */ }
+    }
     setBusy(false);
     setCongrats((c) => c.slice(1));
   }
