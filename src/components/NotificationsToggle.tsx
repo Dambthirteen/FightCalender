@@ -131,14 +131,14 @@ export default function NotificationsToggle() {
   }
 
   return (
-    <section className="bg-[#111] border border-[#1a1a1a] rounded-2xl p-6">
-      <h2 className="font-semibold text-base mb-1">🔔 Benachrichtigungen</h2>
-      <p className="text-sm text-gray-400 mb-5">
+    <section className="card p-5">
+      <h2 className="font-display text-xl tracking-wide mb-1">Benachrichtigungen</h2>
+      <p className="text-sm text-[var(--muted)] mb-5">
         Erhalte ~2 Std vor deinen zugesagten Kursen eine Erinnerung, wer noch dabei ist.
       </p>
 
       {!supported ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-[var(--muted)]">
           Dieses Gerät / dieser Browser unterstützt keine Push-Benachrichtigungen.
         </p>
       ) : isIOS && !isStandalone ? (
@@ -150,11 +150,7 @@ export default function NotificationsToggle() {
       ) : (
         <div className="space-y-3">
           {!subscribed ? (
-            <button
-              onClick={subscribe}
-              disabled={busy}
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors"
-            >
+            <button onClick={subscribe} disabled={busy} className="btn btn-primary">
               {busy ? 'Moment…' : 'Benachrichtigungen aktivieren'}
             </button>
           ) : (

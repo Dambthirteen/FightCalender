@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 // Sorgt im WebView/Simulator für App-Feeling: volle Gerätebreite,
 // kein Pinch-Zoom, Inhalte bis unter die Notch (Safe-Area).
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  themeColor: "#08080a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
