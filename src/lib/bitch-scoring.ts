@@ -35,9 +35,16 @@ function holidaysFor(start: string, endExclusive: string): string[] {
 export interface BitchScore { user_name: string; count: number }
 
 /**
- * Bitch-Punkte je Nutzer für [start, endExclusive) (yyyy-MM-dd).
+ * Bitch-Punkte je Nutzer für [start, endExclusive) (yyyy-MM-dd) — NUR innerhalb
+ * der angegebenen Gruppe (Anwesenheit/Skips/Stundenplan werden über die Kurse
+ * dieser Gruppe gefiltert). Alles ist gruppenbasiert, nichts global.
  */
-export async function getBitchCounts(sql: Sql, start: string, endExclusive: string): Promise<BitchScore[]> {
+export async function getBitchCounts(
+  sql: Sql,
+  start: string,
+  endExclusive: string,
+  groupId: number
+): Promise<BitchScore[]> {
   const today = berlinNow().date; // Berlin: „heute" — bis hierher (exklusiv) sind Tage vorbei
   const counts = new Map<string, number>();
   const add = (u: string, n: number) => counts.set(u, (counts.get(u) ?? 0) + n);
@@ -50,10 +57,12 @@ export async function getBitchCounts(sql: Sql, start: string, endExclusive: stri
       SELECT s.user_name, COUNT(*)::int AS n
       FROM skipping s
       WHERE s.date >= ${start}::date AND s.date < ${aEnd}::date
+        AND s.group_id = ${groupId}
         AND s.excuse != ''
         AND EXISTS (
           SELECT 1 FROM user_schedule us JOIN classes c ON c.id = us.class_id
           WHERE us.user_name = s.user_name AND c.day_of_week = EXTRACT(ISODOW FROM s.date)::int
+            AND c.group_id = ${groupId}
         )
         AND NOT (s.date::text = ANY(${holidays}))
         AND NOT EXISTS (
@@ -77,6 +86,7 @@ export async function getBitchCounts(sql: Sql, start: string, endExclusive: stri
     const scheduleRows = (await sql`
       SELECT us.user_name, c.day_of_week::int AS dow
       FROM user_schedule us JOIN classes c ON c.id = us.class_id
+      WHERE c.group_id = ${groupId}
     `) as { user_name: string; dow: number }[];
     const userDows = new Map<string, Set<number>>();
     for (const r of scheduleRows) {
@@ -88,12 +98,14 @@ export async function getBitchCounts(sql: Sql, start: string, endExclusive: stri
       SELECT a.user_name, (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
       FROM attendance a JOIN classes c ON c.id = a.class_id
       WHERE a.week_start >= ${weekStartOf(bStart)}::date AND a.week_start < ${bEnd}::date
+        AND c.group_id = ${groupId}
     `) as { user_name: string; d: string }[];
     const present = new Set(presentRows.map((r) => `${r.user_name}|${r.d}`));
 
     const skipRows = (await sql`
       SELECT s.id, s.date::text AS date, s.user_name, s.excuse
       FROM skipping s WHERE s.date >= ${bStart}::date AND s.date < ${bEnd}::date
+        AND s.group_id = ${groupId}
     `) as { id: number; date: string; user_name: string; excuse: string }[];
     const skipByKey = new Map<string, { id: number; excuse: string }>();
     for (const s of skipRows) skipByKey.set(`${s.user_name}|${s.date}`, { id: s.id, excuse: s.excuse });

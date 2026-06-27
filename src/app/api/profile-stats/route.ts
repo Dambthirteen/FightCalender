@@ -1,19 +1,11 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
-import { getBitchCounts } from '@/lib/bitch-scoring';
-import { berlinNow } from '@/lib/berlin-time';
 import { getCurrentUser } from '@/lib/auth';
-import { canViewProfile } from '@/lib/groups';
+import { canViewProfile, getMyGroups } from '@/lib/groups';
+import { resolveTitle, currentYm, ymNext } from '@/lib/awards';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
-}
-
-function nextMonth(ym: string): string {
-  let [y, m] = ym.split('-').map(Number);
-  m++;
-  if (m > 12) { m = 1; y++; }
-  return `${y}-${String(m).padStart(2, '0')}`;
 }
 
 /** Profil-Statistik: X× Macher des Monats, X× Bitch des Monats, Tage ausgefallen. */
@@ -32,35 +24,33 @@ export async function GET(req: NextRequest) {
     `;
     const daysOut = daysRows[0]?.days ?? 0;
 
-    // Macher-Titel: Monate als #1 nach Anwesenheit
-    const macherRows = await sql`
-      WITH m AS (
-        SELECT user_name, to_char(week_start, 'YYYY-MM') AS ym, COUNT(*) AS n,
-          RANK() OVER (PARTITION BY to_char(week_start, 'YYYY-MM') ORDER BY COUNT(*) DESC) AS r
-        FROM attendance GROUP BY user_name, to_char(week_start, 'YYYY-MM')
-      )
-      SELECT COUNT(*)::int AS titles FROM m WHERE user_name = ${user} AND r = 1
-    `;
-    const macherTitles = macherRows[0]?.titles ?? 0;
-
-    // Bitch-Titel: Monate als #1 in der neuen Hybrid-Wertung
+    // „des Monats"-Titel: gruppenbasiert über ALLE Gruppen des Nutzers und NUR für
+    // abgeschlossene Monate (Gericht ausgewertet, am 1. verliehen; Gleichstand erst
+    // nach dem Gruppen-Voting). resolveTitle ist die einzige Wahrheitsquelle.
     const rangeRows = await sql`
       SELECT to_char(MIN(d), 'YYYY-MM') AS first FROM (
         SELECT week_start AS d FROM attendance UNION ALL SELECT date FROM skipping
       ) t
     `;
+    let macherTitles = 0;
     let bitchTitles = 0;
     const firstYm = rangeRows[0]?.first as string | null;
     if (firstYm) {
-      const current = berlinNow().date.slice(0, 7);
-      let ym = firstYm;
-      let guard = 0;
-      while (ym <= current && guard < 60) {
-        const counts = await getBitchCounts(sql, `${ym}-01`, `${nextMonth(ym)}-01`);
-        const max = counts[0]?.count ?? 0;
-        if (max > 0 && counts.some((c) => c.user_name === user && c.count === max)) bitchTitles++;
-        ym = nextMonth(ym);
-        guard++;
+      const groups = await getMyGroups(user);
+      const cur = currentYm();
+      for (const g of groups) {
+        let ym = firstYm;
+        let guard = 0;
+        while (ym < cur && guard < 120) {
+          for (const kind of ['macher', 'bitch'] as const) {
+            const st = await resolveTitle(sql, g.id, ym, kind);
+            if (st.status === 'final' && st.winner === user) {
+              if (kind === 'macher') macherTitles++; else bitchTitles++;
+            }
+          }
+          ym = ymNext(ym);
+          guard++;
+        }
       }
     }
 

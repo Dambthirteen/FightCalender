@@ -2,6 +2,8 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getBitchCounts } from '@/lib/bitch-scoring';
 import { berlinNow } from '@/lib/berlin-time';
+import { getCurrentUser } from '@/lib/auth';
+import { getCurrentGroupId } from '@/lib/groups';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -17,11 +19,14 @@ function nextMonthStart(monthStart: string): string {
 export async function GET(req: NextRequest) {
   try {
     const sql = getSql();
+    const me = await getCurrentUser();
+    const gid = me ? await getCurrentGroupId(me) : null;
+    if (!gid) return NextResponse.json([]); // alles gruppenbasiert: ohne Gruppe nichts
     const monthParam = req.nextUrl.searchParams.get('month'); // "2026-06"
     const monthStr = monthParam ?? berlinNow().date.slice(0, 7);
     const monthStart = `${monthStr}-01`;
 
-    const counts = await getBitchCounts(sql, monthStart, nextMonthStart(monthStart));
+    const counts = await getBitchCounts(sql, monthStart, nextMonthStart(monthStart), gid);
     // beide Feldnamen mitliefern (Seiten nutzen teils skip_count, teils bitch_count)
     return NextResponse.json(
       counts.map((c) => ({ user_name: c.user_name, bitch_count: c.count, skip_count: c.count }))

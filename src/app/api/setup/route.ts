@@ -185,6 +185,51 @@ export async function POST() {
         AND user_name = (SELECT user_name FROM users ORDER BY created_at LIMIT 1)
         AND (SELECT COUNT(*) FROM groups) = 1
     `;
+    // --- „des Monats"-Titel + Gleichstand-Voting (gruppenbasiert) ---
+    // monthly_titles: nur bei GLEICHSTAND angelegt (friert Kandidaten ein, hält
+    // Voting-Status + späteren Sieger). Eindeutige Sieger werden nicht gespeichert
+    // (jederzeit neu berechenbar).
+    await sql`
+      CREATE TABLE IF NOT EXISTS monthly_titles (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL,
+        month VARCHAR(7) NOT NULL,            -- 'YYYY-MM' (der ausgewertete Monat)
+        kind VARCHAR(10) NOT NULL,            -- 'macher' | 'bitch'
+        candidates JSONB NOT NULL DEFAULT '[]'::jsonb,
+        winner VARCHAR(100),                  -- NULL solange Voting läuft
+        status VARCHAR(10) NOT NULL DEFAULT 'voting', -- 'voting' | 'final'
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        resolved_at TIMESTAMP WITH TIME ZONE,
+        UNIQUE(group_id, month, kind)
+      )
+    `;
+    // title_votes: eine Stimme pro Nutzer je Gleichstand.
+    await sql`
+      CREATE TABLE IF NOT EXISTS title_votes (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL,
+        month VARCHAR(7) NOT NULL,
+        kind VARCHAR(10) NOT NULL,
+        voter_name VARCHAR(100) NOT NULL,
+        choice VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(group_id, month, kind, voter_name)
+      )
+    `;
+    // title_awards_seen: merkt, wer welches Verleihungs-Popup schon gesehen hat
+    // (Popup erscheint genau einmal, geräteübergreifend).
+    await sql`
+      CREATE TABLE IF NOT EXISTS title_awards_seen (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL,
+        user_name VARCHAR(100) NOT NULL,
+        award_month VARCHAR(7) NOT NULL,
+        kind VARCHAR(10) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(group_id, user_name, award_month, kind)
+      )
+    `;
+
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
