@@ -244,7 +244,7 @@ export default function ProfilePage() {
       const d = await res.json().catch(() => ({}));
       if (res.ok) {
         setPraiseStatus((s) => (praiseKind === 'gigalob' ? { ...s, gigalob: false } : { ...s, lob: false }));
-        setPraiseKind(null); setPraiseReason(''); setPraiseMsg('Gesendet! 🎉');
+        setPraiseKind(null); setPraiseReason(''); setPraiseMsg('Gesendet!');
       } else {
         setPraiseMsg(d.error ?? 'Fehler');
       }
@@ -400,7 +400,7 @@ export default function ProfilePage() {
               <button onClick={openChallenge}
                 className="w-full text-sm font-semibold py-2.5 rounded-xl border transition-colors active:scale-[0.99]"
                 style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}>
-                ⚔️ Skilltree anfechten
+                Skilltree anfechten
               </button>
             ) : (
               <>
@@ -441,7 +441,7 @@ export default function ProfilePage() {
         {/* Offene Anfechtungen (eigenes Profil) — Übernehmen/Ablehnen */}
         {isSelf && challenges.length > 0 && (
           <div className="card px-4 py-4 anim-up" style={{ animationDelay: '55ms' }}>
-            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-2.5">⚔️ Anfechtungen ({challenges.length})</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-2.5">Anfechtungen ({challenges.length})</div>
             <div className="space-y-3">
               {challenges.map((ch) => (
                 <div key={ch.id} className="rounded-xl border border-[var(--border-soft)] p-3" style={{ background: 'var(--surface-2)' }}>
@@ -459,8 +459,8 @@ export default function ProfilePage() {
                   </div>
                   {ch.note && <p className="text-xs text-[var(--muted)] italic mb-2">„{ch.note}“</p>}
                   <div className="flex gap-2">
-                    <button onClick={() => resolveChallenge(ch.id, 'accept')} className="flex-1 text-xs font-bold py-2 rounded-lg text-black" style={{ background: 'var(--good)' }}>✅ Übernehmen</button>
-                    <button onClick={() => resolveChallenge(ch.id, 'reject')} className="flex-1 text-xs font-bold py-2 rounded-lg border border-[var(--border)] text-[var(--muted)]">❌ Ablehnen</button>
+                    <button onClick={() => resolveChallenge(ch.id, 'accept')} className="flex-1 text-xs font-bold py-2 rounded-lg text-black" style={{ background: 'var(--good)' }}>Übernehmen</button>
+                    <button onClick={() => resolveChallenge(ch.id, 'reject')} className="flex-1 text-xs font-bold py-2 rounded-lg border border-[var(--border)] text-[var(--muted)]">Ablehnen</button>
                   </div>
                 </div>
               ))}
@@ -477,17 +477,17 @@ export default function ProfilePage() {
                 <button onClick={() => setPraiseKind('lob')} disabled={!praiseStatus.lob}
                   className="flex-1 text-sm font-bold py-2.5 rounded-xl border disabled:opacity-40"
                   style={{ background: 'rgba(255,194,75,0.12)', borderColor: 'var(--gold)', color: 'var(--gold)' }}>
-                  👏 Lob
+                  Lob
                 </button>
                 <button onClick={() => setPraiseKind('gigalob')} disabled={!praiseStatus.gigalob}
                   className="flex-1 text-sm font-bold py-2.5 rounded-xl border disabled:opacity-40"
                   style={{ background: 'rgba(255,59,48,0.12)', borderColor: 'var(--accent)', color: 'var(--accent)' }}>
-                  🌟 Gigalob
+                  Gigalob
                 </button>
               </div>
             ) : (
               <>
-                <div className="text-sm font-semibold mb-2">{praiseKind === 'gigalob' ? '🌟 Gigalob' : '👏 Lob'} an {name}</div>
+                <div className="text-sm font-semibold mb-2">{praiseKind === 'gigalob' ? 'Gigalob' : 'Lob'} an {name}</div>
                 <textarea value={praiseReason} onChange={(e) => setPraiseReason(e.target.value)} rows={2} maxLength={300}
                   placeholder="Warum hat die Person es verdient?"
                   className="w-full bg-[var(--surface-2)] border border-[var(--border-soft)] rounded-xl px-3 py-2 text-sm text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)] resize-none" />
@@ -502,7 +502,7 @@ export default function ProfilePage() {
             )}
             {praiseMsg && <p className="text-xs mt-2 text-[var(--muted)]">{praiseMsg}</p>}
             <p className="text-[10px] text-[var(--faint)] mt-2">
-              👏 Lob: 1×/Woche {praiseStatus.lob ? '· frei' : '· diese Woche vergeben'} &nbsp;·&nbsp; 🌟 Gigalob: 1×/Monat {praiseStatus.gigalob ? '· frei' : '· diesen Monat vergeben'}
+              Lob: 1×/Woche {praiseStatus.lob ? '· frei' : '· diese Woche vergeben'} &nbsp;·&nbsp; Gigalob: 1×/Monat {praiseStatus.gigalob ? '· frei' : '· diesen Monat vergeben'}
             </p>
           </div>
         )}
@@ -515,7 +515,7 @@ export default function ProfilePage() {
               {praises.map((p) => (
                 <div key={p.id} className="rounded-xl border border-[var(--border-soft)] p-3" style={{ background: 'var(--surface-2)' }}>
                   <div className="text-sm font-semibold">
-                    {p.kind === 'gigalob' ? '🌟 Gigalob' : '👏 Lob'} <span className="text-[var(--muted)] font-normal">von {p.from_user}</span>
+                    {p.kind === 'gigalob' ? 'Gigalob' : 'Lob'} <span className="text-[var(--muted)] font-normal">von {p.from_user}</span>
                   </div>
                   {p.show_comment && p.reason && <p className="text-xs text-[var(--muted)] italic mt-1">„{p.reason}“</p>}
                 </div>
@@ -546,7 +546,7 @@ export default function ProfilePage() {
           <a href="/admin"
             className="card px-4 py-3 anim-up flex items-center gap-2.5 text-sm font-semibold active:scale-[0.99]"
             style={{ animationDelay: '90ms', color: 'var(--muted)' }}>
-            🛠️ Admin-Bereich
+            Admin-Bereich
           </a>
         )}
 
@@ -563,7 +563,7 @@ export default function ProfilePage() {
 
         {/* Kommentare */}
         <div className="card px-4 py-4 anim-up" style={{ animationDelay: '140ms' }}>
-          <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-3">💬 Kommentare ({comments.length})</div>
+          <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-3">Kommentare ({comments.length})</div>
           {comments.length === 0 ? (
             <div className="text-sm text-[var(--faint)] mb-3">Noch keine Kommentare.</div>
           ) : (

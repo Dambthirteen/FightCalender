@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         user: ch[0].challenger_name,
         type: 'challenge_result',
         actor: me,
-        body: `${me} hat deine Skilltree-Anfechtung übernommen ✅`,
+        body: `${me} hat deine Skilltree-Anfechtung übernommen.`,
         link: `/profil/${encodeURIComponent(me)}`,
         push: { title: '✅ Anfechtung übernommen', body: `${me} hat deine Skill-Werte übernommen.` },
       });
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         user: ch[0].challenger_name,
         type: 'challenge_result',
         actor: me,
-        body: `${me} hat deine Skilltree-Anfechtung abgelehnt ❌`,
+        body: `${me} hat deine Skilltree-Anfechtung abgelehnt.`,
         link: `/profil/${encodeURIComponent(me)}`,
         push: { title: '❌ Anfechtung abgelehnt', body: `${me} bleibt bei den eigenen Werten.` },
       });

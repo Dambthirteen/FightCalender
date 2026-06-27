@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    const label = kind === 'gigalob' ? '🌟 Gigalob' : '👏 Lob';
+    const label = kind === 'gigalob' ? 'Gigalob' : 'Lob';
+    const emoji = kind === 'gigalob' ? '🌟' : '👏';
     await createNotification(sql, {
       user: to,
       type: 'praise',
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
       body: `${me} hat dir ein ${label} gegeben!`,
       link: '/benachrichtigungen',
       refId: ins[0].id as number,
-      push: { title: `${label} erhalten!`, body: `${me} findet: du hast es verdient.` },
+      push: { title: `${emoji} ${label} erhalten!`, body: `${me} findet: du hast es verdient.` },
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
