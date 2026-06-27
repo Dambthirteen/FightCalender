@@ -83,7 +83,6 @@ export default function CompetitionsPage() {
         body: JSON.stringify(form),
       });
       if (!res.ok) { const d = await res.json(); setError(d.error); return; }
-      const comp = await res.json();
       // Re-fetch to get user_classes populated
       const all = await fetch('/api/competitions').then(r => r.json());
       setCompetitions(Array.isArray(all) ? all : []);
@@ -114,47 +113,45 @@ export default function CompetitionsPage() {
     const isOwn = c.user_name === userName;
 
     return (
-      <div className={`bg-[#111] border rounded-2xl p-5 ${isPast ? 'border-[#1a1a1a] opacity-60' : 'border-[#222]'}`}>
+      <div className={`card p-5 ${isPast ? 'opacity-60' : ''}`}>
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">🏆</span>
-              <h3 className="font-bold text-base">{c.name}</h3>
+          <div className="min-w-0">
+            <h3 className="font-display text-xl tracking-wide truncate">{c.name}</h3>
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className="chip">{c.user_name}</span>
+              {c.location && <span className="chip">{c.location}</span>}
+              {c.weight_class && <span className="chip">{c.weight_class}</span>}
             </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-              <span className="font-medium text-gray-400">{c.user_name}</span>
-              {c.location && <span>📍 {c.location}</span>}
-              {c.weight_class && <span>⚖️ {c.weight_class}</span>}
-            </div>
-            <div className="text-xs text-gray-600 mt-1">
+            <div className="text-xs text-[var(--faint)] mt-2">
               {format(compDate, 'EEEE, d. MMMM yyyy', { locale: de })}
             </div>
           </div>
           {isOwn && !isPast && (
-            <button onClick={() => remove(c.id)} className="text-gray-700 hover:text-red-500 transition-colors text-xs px-2 py-1 rounded hover:bg-red-500/10 flex-shrink-0">✕</button>
+            <button onClick={() => remove(c.id)} className="shrink-0 text-[var(--faint)] hover:text-[var(--accent)] transition-colors text-sm px-1">✕</button>
           )}
         </div>
 
         {/* Countdown */}
         {!isPast && (
-          <div className="flex items-center gap-4 mb-4 py-3 px-4 bg-[#1a1a1a] rounded-xl">
+          <div className="flex items-center gap-4 mb-4 py-3 px-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
             <div className="text-center">
-              <div className={`text-4xl font-bold leading-none ${days <= 14 ? 'text-red-500' : days <= 30 ? 'text-orange-400' : 'text-white'}`}>
+              <div className="font-display text-4xl leading-none tnum"
+                style={{ color: days <= 14 ? 'var(--accent)' : days <= 30 ? 'var(--accent-2)' : 'var(--text)' }}>
                 {days}
               </div>
-              <div className="text-[11px] text-gray-500 mt-1">Tage noch</div>
+              <div className="text-[11px] text-[var(--faint)] mt-1">Tage noch</div>
             </div>
-            <div className="flex-1 h-px bg-[#333]" />
-            <div className="text-right text-xs text-gray-500">
+            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            <div className="text-right text-xs text-[var(--muted)] tnum">
               <div>{format(compDate, 'd. MMM', { locale: de })}</div>
-              <div className="text-gray-700">{format(compDate, 'yyyy')}</div>
+              <div className="text-[var(--faint)]">{format(compDate, 'yyyy')}</div>
             </div>
           </div>
         )}
 
         {isPast && (
-          <div className="text-xs text-gray-600 py-2">
+          <div className="text-xs text-[var(--faint)] py-2">
             Stattgefunden am {format(compDate, 'd. MMMM yyyy', { locale: de })}
           </div>
         )}
@@ -162,16 +159,17 @@ export default function CompetitionsPage() {
         {/* Class countdown */}
         {grouped.length > 0 && (
           <div>
-            <div className="text-[11px] text-gray-600 uppercase tracking-widest mb-2">Vorbereitungskurse bis dahin</div>
+            <div className="section-label mb-2">Vorbereitungskurse bis dahin</div>
             <div className="flex flex-wrap gap-2">
               {grouped.map(g => (
-                <div key={g.name} className="flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2">
-                  <span className={`text-lg font-bold leading-none ${g.total <= 3 ? 'text-red-500' : g.total <= 6 ? 'text-orange-400' : 'text-green-500'}`}>
+                <div key={g.name} className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)' }}>
+                  <span className="font-display text-lg leading-none tnum"
+                    style={{ color: g.total <= 3 ? 'var(--accent)' : g.total <= 6 ? 'var(--accent-2)' : 'var(--good)' }}>
                     {g.total}×
                   </span>
                   <div>
-                    <div className="text-xs font-medium text-white leading-tight">{g.name}</div>
-                    <div className="text-[10px] text-gray-600">
+                    <div className="text-xs font-medium leading-tight">{g.name}</div>
+                    <div className="text-[10px] text-[var(--faint)]">
                       {g.days.map(d => `${DAY_SHORT[d.day]} (${d.count}×)`).join(' · ')}
                     </div>
                   </div>
@@ -182,7 +180,7 @@ export default function CompetitionsPage() {
         )}
 
         {!isPast && grouped.length === 0 && c.user_classes.length === 0 && (
-          <div className="text-xs text-gray-700 mt-2">
+          <div className="text-xs text-[var(--faint)] mt-2">
             {c.user_name === userName
               ? '→ Lege deinen Stundenplan fest um die verbleibenden Kurse zu sehen.'
               : `${c.user_name} hat noch keinen Plan hinterlegt.`}
@@ -190,7 +188,7 @@ export default function CompetitionsPage() {
         )}
 
         {c.notes && (
-          <div className="mt-3 text-xs text-gray-600 italic border-t border-[#1a1a1a] pt-3">
+          <div className="mt-3 text-xs text-[var(--muted)] italic border-t border-[var(--border-soft)] pt-3">
             &ldquo;{c.notes}&rdquo;
           </div>
         )}
@@ -199,7 +197,7 @@ export default function CompetitionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen text-[var(--text)]">
       <PageHeader title="🏆 Wettkämpfe" action={
         <button onClick={() => setShowForm(f => !f)}
           className="w-11 h-11 grid place-items-center text-white rounded-xl transition-all font-bold text-xl active:scale-95"
@@ -208,53 +206,46 @@ export default function CompetitionsPage() {
         </button>
       } />
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-md mx-auto px-4 pb-24 space-y-6">
         {/* Add form */}
         {showForm && (
-          <div className="bg-[#111] border border-[#222] rounded-2xl p-5">
-            <h2 className="font-semibold text-base mb-4">Meinen Wettkampf eintragen</h2>
+          <div className="card p-5 anim-up">
+            <h2 className="font-display text-xl tracking-wide mb-4">Meinen Wettkampf eintragen</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-500 mb-1.5 block">Wettkampf / Veranstaltung *</label>
+                <label className="section-label mb-1.5 block">Wettkampf / Veranstaltung *</label>
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-red-600"
-                  placeholder="z.B. WAKO Kickboxen NRW Meisterschaft" />
+                  className="field" placeholder="z.B. WAKO Kickboxen NRW Meisterschaft" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">Datum *</label>
+                  <label className="section-label mb-1.5 block">Datum *</label>
                   <input type="date" min={today()} value={form.competitionDate}
-                    onChange={e => setForm(f => ({ ...f, competitionDate: e.target.value }))}
-                    className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-red-600" />
+                    onChange={e => setForm(f => ({ ...f, competitionDate: e.target.value }))} className="field" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">Gewichtsklasse</label>
+                  <label className="section-label mb-1.5 block">Gewichtsklasse</label>
                   <input value={form.weightClass} onChange={e => setForm(f => ({ ...f, weightClass: e.target.value }))}
-                    className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-red-600"
-                    placeholder="z.B. -67 kg" />
+                    className="field" placeholder="z.B. -67 kg" />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-500 mb-1.5 block">Ort</label>
+                <label className="section-label mb-1.5 block">Ort</label>
                 <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                  className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-red-600"
-                  placeholder="z.B. Dortmund" />
+                  className="field" placeholder="z.B. Dortmund" />
               </div>
               <div>
-                <label className="text-xs text-gray-500 mb-1.5 block">Notiz</label>
+                <label className="section-label mb-1.5 block">Notiz</label>
                 <input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                  className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-red-600"
-                  placeholder="z.B. Erster Wettkampf, Punkte-Turnier..." />
+                  className="field" placeholder="z.B. Erster Wettkampf, Punkte-Turnier…" />
               </div>
             </div>
-            {error && <p className="text-red-500 text-xs mt-3">{error}</p>}
+            {error && <p className="text-[var(--accent)] text-xs mt-3">{error}</p>}
             <div className="flex gap-2 mt-4">
-              <button onClick={save} disabled={saving}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-semibold py-2.5 rounded-lg transition-colors">
-                {saving ? 'Speichern...' : 'Wettkampf eintragen'}
+              <button onClick={save} disabled={saving} className="btn btn-primary flex-1">
+                {saving ? 'Speichern…' : 'Wettkampf eintragen'}
               </button>
-              <button onClick={() => { setShowForm(false); setError(''); }}
-                className="px-4 py-2.5 rounded-lg border border-[#333] text-gray-400 hover:text-white text-sm transition-colors">
+              <button onClick={() => { setShowForm(false); setError(''); }} className="btn btn-ghost">
                 Abbrechen
               </button>
             </div>
@@ -262,12 +253,12 @@ export default function CompetitionsPage() {
         )}
 
         {loading ? (
-          <div className="text-center text-gray-600 py-16">Laden...</div>
+          <div className="text-center text-[var(--faint)] py-16">Lädt…</div>
         ) : upcoming.length === 0 && past.length === 0 ? (
-          <div className="text-center py-16">
+          <div className="card p-10 text-center anim-up">
             <div className="text-5xl mb-3">🥊</div>
-            <div className="text-gray-500 text-sm">Noch keine Wettkämpfe eingetragen.</div>
-            <button onClick={() => setShowForm(true)} className="mt-3 text-red-600 hover:underline text-sm">
+            <div className="text-[var(--muted)] text-sm">Noch keine Wettkämpfe eingetragen.</div>
+            <button onClick={() => setShowForm(true)} className="mt-3 text-sm font-semibold" style={{ color: 'var(--accent)' }}>
               Ersten eintragen →
             </button>
           </div>
@@ -280,7 +271,7 @@ export default function CompetitionsPage() {
             )}
             {past.length > 0 && (
               <section>
-                <h3 className="text-xs text-gray-600 uppercase tracking-widest mb-3">Vergangene Wettkämpfe</h3>
+                <h3 className="section-label mb-3">Vergangene Wettkämpfe</h3>
                 <div className="space-y-3">
                   {[...past].reverse().map(c => <CompCard key={c.id} c={c} />)}
                 </div>

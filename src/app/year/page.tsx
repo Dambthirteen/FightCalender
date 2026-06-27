@@ -21,11 +21,10 @@ const PODEST_STYLES = [
   'bg-orange-700/20 border-orange-700/40 text-orange-400',
 ];
 
-function Podest({ data, title, icon, colorClass }: {
-  data: Entry[]; title: string; icon: string; colorClass: (i: number) => string;
-}) {
+function Podest({ data, title }: { data: Entry[]; title: string }) {
   if (data.length === 0) return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-2xl p-6 text-center text-gray-600 text-sm py-10">
+    <div className="card p-8 text-center text-[var(--faint)] text-sm">
+      <div className="section-label mb-2">{title}</div>
       Noch keine Daten für dieses Jahr
     </div>
   );
@@ -34,50 +33,46 @@ function Podest({ data, title, icon, colorClass }: {
   const rest = data.slice(3);
 
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-2xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-[#1a1a1a] flex items-center gap-2">
-        <span className="text-xl">{icon}</span>
-        <h3 className="font-bold text-base">{title}</h3>
+    <div className="card overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-[var(--border-soft)]">
+        <h3 className="font-display text-lg tracking-wide">{title}</h3>
       </div>
 
       {/* Podest */}
       <div className="flex items-end justify-center gap-3 px-5 pt-6 pb-4">
-        {/* Silver (2nd) */}
         {top3[1] && (
-          <div className={`flex-1 rounded-xl border p-3 text-center ${PODEST_STYLES[1]}`} style={{ marginBottom: '0px', height: '110px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div className={`flex-1 rounded-xl border p-3 text-center ${PODEST_STYLES[1]}`} style={{ height: '110px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             <div className="text-xl mb-1">{MEDALS[1]}</div>
             <div className="font-semibold text-sm leading-tight">{top3[1].user_name}</div>
-            <div className="text-xs opacity-70 mt-0.5">{top3[1].total}×</div>
+            <div className="text-xs opacity-70 mt-0.5 tnum">{top3[1].total}×</div>
           </div>
         )}
-        {/* Gold (1st) */}
         {top3[0] && (
           <div className={`flex-1 rounded-xl border p-3 text-center ${PODEST_STYLES[0]}`} style={{ height: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             <div className="text-2xl mb-1">{MEDALS[0]}</div>
             <div className="font-bold text-sm leading-tight">{top3[0].user_name}</div>
-            <div className="text-xs opacity-70 mt-0.5">{top3[0].total}×</div>
+            <div className="text-xs opacity-70 mt-0.5 tnum">{top3[0].total}×</div>
           </div>
         )}
-        {/* Bronze (3rd) */}
         {top3[2] && (
           <div className={`flex-1 rounded-xl border p-3 text-center ${PODEST_STYLES[2]}`} style={{ height: '90px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             <div className="text-xl mb-1">{MEDALS[2]}</div>
             <div className="font-semibold text-sm leading-tight">{top3[2].user_name}</div>
-            <div className="text-xs opacity-70 mt-0.5">{top3[2].total}×</div>
+            <div className="text-xs opacity-70 mt-0.5 tnum">{top3[2].total}×</div>
           </div>
         )}
       </div>
 
       {/* Rest of the list */}
       {rest.length > 0 && (
-        <div className="border-t border-[#1a1a1a]">
+        <div className="border-t border-[var(--border-soft)]">
           {rest.map((e, i) => (
-            <div key={e.user_name} className={`flex items-center justify-between px-5 py-3 ${i < rest.length - 1 ? 'border-b border-[#1a1a1a]' : ''}`}>
+            <div key={e.user_name} className={`flex items-center justify-between px-5 py-3 ${i < rest.length - 1 ? 'border-b border-[var(--border-soft)]' : ''}`}>
               <div className="flex items-center gap-3">
-                <span className="text-gray-600 text-sm w-5 text-right">#{i + 4}</span>
-                <span className="text-sm text-gray-300">{e.user_name}</span>
+                <span className="text-[var(--faint)] text-sm w-5 text-right tnum">#{i + 4}</span>
+                <span className="text-sm">{e.user_name}</span>
               </div>
-              <span className="text-sm text-gray-500">{e.total}×</span>
+              <span className="text-sm text-[var(--muted)] tnum">{e.total}×</span>
             </div>
           ))}
         </div>
@@ -100,16 +95,16 @@ function MiniBarChart({ data, users }: { data: MonthlyEntry[]; users: string[] }
   const maxVal = Math.max(...data.map(d => d.count), 1);
 
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-2xl p-5">
-      <h3 className="font-bold text-base mb-1">📈 Anwesenheit nach Monat</h3>
-      <p className="text-xs text-gray-600 mb-4">Kumuliert seit Januar</p>
+    <div className="card p-5">
+      <h3 className="font-display text-lg tracking-wide">Anwesenheit nach Monat</h3>
+      <p className="text-xs text-[var(--faint)] mb-4">Kumuliert seit Januar</p>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 mb-4">
         {users.slice(0, 5).map((u, i) => (
           <div key={u} className="flex items-center gap-1.5">
             <div className={`w-2.5 h-2.5 rounded-full ${colors[i % colors.length]}`} />
-            <span className="text-xs text-gray-400">{u}</span>
+            <span className="text-xs text-[var(--muted)]">{u}</span>
           </div>
         ))}
       </div>
@@ -137,7 +132,7 @@ function MiniBarChart({ data, users }: { data: MonthlyEntry[]; users: string[] }
                   );
                 })}
               </div>
-              <span className={`text-[9px] ${isFuture ? 'text-gray-700' : 'text-gray-500'}`}>{m}</span>
+              <span className={`text-[9px] ${isFuture ? 'text-[var(--faint)]' : 'text-[var(--muted)]'}`}>{m}</span>
             </div>
           );
         })}
@@ -169,30 +164,30 @@ export default function YearPage() {
   const allUsers = data ? [...new Set([...data.macher.map(m => m.user_name), ...data.macherMonthly.map(m => m.user_name)])] : [];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen text-[var(--text)]">
       <PageHeader title="📊 Jahr" action={
-        <div className="flex items-center gap-1">
-          <button onClick={() => setYear(y => y - 1)} className="p-1.5 hover:bg-white/5 rounded text-[var(--muted)] hover:text-white text-sm">←</button>
+        <div className="seg">
+          <button onClick={() => setYear(y => y - 1)} className="seg-btn" aria-label="Jahr zurück">‹</button>
           <span className="text-sm font-semibold w-10 text-center tnum">{year}</span>
-          <button onClick={() => setYear(y => y + 1)} disabled={year >= currentYear} className="p-1.5 hover:bg-white/5 rounded text-[var(--muted)] hover:text-white text-sm disabled:opacity-30">→</button>
+          <button onClick={() => setYear(y => y + 1)} disabled={year >= currentYear} className="seg-btn disabled:opacity-30" aria-label="Jahr vor">›</button>
         </div>
       } />
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-        <div className="text-xs text-gray-600 text-center">Stand: {lastUpdate} · Aktualisiert sich jeden 1. des Monats</div>
+      <main className="max-w-md mx-auto px-4 pb-24 space-y-5">
+        <div className="text-xs text-[var(--faint)] text-center">Stand: {lastUpdate} · Aktualisiert sich jeden 1. des Monats</div>
 
         {loading ? (
-          <div className="text-center text-gray-600 py-16">Laden...</div>
+          <div className="text-center text-[var(--faint)] py-16">Lädt…</div>
         ) : !data ? (
-          <div className="text-center text-gray-600 py-16">Fehler beim Laden</div>
+          <div className="text-center text-[var(--faint)] py-16">Fehler beim Laden</div>
         ) : (
           <>
-            <Podest data={data.macher} title="Macher des Jahres" icon="💪" colorClass={i => ''} />
-            <Podest data={data.bitch} title="Bitch des Jahres" icon="🐔" colorClass={i => ''} />
+            <Podest data={data.macher} title="Macher des Jahres" />
+            <Podest data={data.bitch} title="Bitch des Jahres" />
             <MiniBarChart data={data.macherMonthly} users={allUsers} />
 
-            <div className="bg-[#111] border border-[#1a1a1a] rounded-xl px-4 py-3 text-xs text-gray-600">
-              <strong className="text-gray-500">Hinweis:</strong> Die Bitch-Punkte zählen nur wenn die Ausrede im Ausreden-Gericht abgelehnt wurde (Ende des jeweiligen Monats). Bis Monatsende können sich die Punkte noch ändern.
+            <div className="card px-4 py-3 text-xs text-[var(--muted)]">
+              <strong className="text-[var(--text)]">Hinweis:</strong> Die Bitch-Punkte zählen nur wenn die Ausrede im Ausreden-Gericht abgelehnt wurde (Ende des jeweiligen Monats). Bis Monatsende können sich die Punkte noch ändern.
             </div>
           </>
         )}
