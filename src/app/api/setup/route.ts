@@ -230,6 +230,64 @@ export async function POST() {
       )
     `;
 
+    // --- Profil-Kommentare ---
+    await sql`
+      CREATE TABLE IF NOT EXISTS profile_comments (
+        id SERIAL PRIMARY KEY,
+        profile_name VARCHAR(100) NOT NULL,   -- wessen Profil
+        author_name VARCHAR(100) NOT NULL,    -- wer kommentiert
+        body TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    // --- Skilltree-Anfechtungen (Vorschlag → Übernehmen/Ablehnen) ---
+    await sql`
+      CREATE TABLE IF NOT EXISTS skill_challenges (
+        id SERIAL PRIMARY KEY,
+        profile_name VARCHAR(100) NOT NULL,      -- wessen Skilltree
+        challenger_name VARCHAR(100) NOT NULL,   -- wer anficht
+        proposal JSONB NOT NULL DEFAULT '{}'::jsonb, -- { skillKey: level(0–5) } nur geänderte
+        note TEXT NOT NULL DEFAULT '',
+        status VARCHAR(10) NOT NULL DEFAULT 'open',   -- 'open' | 'accepted' | 'rejected'
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        resolved_at TIMESTAMP WITH TIME ZONE
+      )
+    `;
+    // --- In-App-Benachrichtigungen ---
+    await sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,     -- Empfänger
+        type VARCHAR(20) NOT NULL,           -- 'comment' | 'challenge' | 'challenge_result' | 'praise'
+        actor VARCHAR(100) NOT NULL,         -- Auslöser
+        body TEXT NOT NULL,
+        link TEXT NOT NULL DEFAULT '',
+        ref_id INTEGER,                      -- z. B. praise.id für Ausstellen-Aktionen
+        read BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS ref_id INTEGER`;
+    await sql`CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_name, read)`;
+
+    // --- Lob / Gigalob (Kudos) ---
+    // UNIQUE(from_user, kind, period) erzwingt: 1 Lob pro Woche, 1 Gigalob pro Monat je Geber.
+    // period = Wochenstart-Datum (Lob) bzw. 'YYYY-MM' (Gigalob).
+    await sql`
+      CREATE TABLE IF NOT EXISTS praises (
+        id SERIAL PRIMARY KEY,
+        kind VARCHAR(10) NOT NULL,            -- 'lob' | 'gigalob'
+        from_user VARCHAR(100) NOT NULL,
+        to_user VARCHAR(100) NOT NULL,
+        reason TEXT NOT NULL DEFAULT '',
+        period VARCHAR(10) NOT NULL,
+        displayed BOOLEAN NOT NULL DEFAULT FALSE,    -- vom Empfänger fürs Profil freigegeben
+        show_comment BOOLEAN NOT NULL DEFAULT FALSE, -- mit Begründung anzeigen
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(from_user, kind, period)
+      )
+    `;
+
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });

@@ -13,6 +13,7 @@ export default function StartPage() {
   const { userName } = useUser();
   const [groupName, setGroupName] = useState('');
   const [pendingVotes, setPendingVotes] = useState(0);
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     fetch('/api/groups').then((r) => r.json()).then((d) => {
@@ -21,10 +22,11 @@ export default function StartPage() {
     }).catch(() => {});
   }, []);
 
-  // Wie viele Ausreden muss ich noch bewerten? Treibt Glühen+Wackeln des Gericht-Widgets.
+  // Offene Gericht-Stimmen (Glühen) + ungelesene Benachrichtigungen.
   useEffect(() => {
     if (!userName) return;
     fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {});
+    fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {});
   }, [userName]);
 
   async function logout() {
@@ -36,6 +38,7 @@ export default function StartPage() {
   const courtAlert = courtOpen && pendingVotes > 0; // offen UND noch nicht fertig abgestimmt
 
   const items = [
+    { icon: '🔔', label: 'Benachrichtigungen', href: '/benachrichtigungen', count: unread },
     { icon: '📊', label: 'Statistiken', href: '/statistik' },
     { icon: '🗳️', label: 'Ausreden-Gericht', href: '/vote', badge: courtOpen, alert: courtAlert },
     { icon: '👥', label: 'Mitglieder', href: '/mitglieder' },
@@ -43,7 +46,6 @@ export default function StartPage() {
     { icon: '🏥', label: 'Mein Status', href: '/account' },
     { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },
     { icon: '⚙️', label: 'Einstellungen', href: '/settings' },
-    { icon: '🛠️', label: 'Admin', href: '/admin' },
   ];
 
   return (
@@ -66,6 +68,9 @@ export default function StartPage() {
               <span className="text-sm font-semibold flex items-center gap-1.5">
                 {it.label}
                 {it.badge && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(245,197,24,0.16)', color: 'var(--bitch)' }}>offen</span>}
+                {!!it.count && it.count > 0 && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: 'var(--accent)' }}>{it.count}</span>
+                )}
               </span>
             </a>
           ))}
