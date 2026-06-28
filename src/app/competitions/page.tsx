@@ -256,16 +256,16 @@ export default function CompetitionsPage() {
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   className="field" placeholder="z.B. WAKO Kickboxen NRW Meisterschaft" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
+              <div className="flex gap-3 items-start">
+                <div className="flex-1 min-w-0">
                   <label className="section-label mb-1.5 block">Datum *</label>
                   <input type="date" min={editingId ? undefined : today()} value={form.competitionDate}
                     onChange={e => setForm(f => ({ ...f, competitionDate: e.target.value }))} className="field" />
                 </div>
-                <div>
-                  <label className="section-label mb-1.5 block">Gewichtsklasse</label>
+                <div className="w-28 shrink-0">
+                  <label className="section-label mb-1.5 block">Gewicht</label>
                   <input value={form.weightClass} onChange={e => setForm(f => ({ ...f, weightClass: e.target.value }))}
-                    className="field" placeholder="z.B. -67 kg" />
+                    className="field" placeholder="-67 kg" />
                 </div>
               </div>
               <div>
@@ -322,7 +322,7 @@ export default function CompetitionsPage() {
 
       {/* Karten-Auswahl (iOS) */}
       {mapsFor && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm px-3 pb-3 anim-in"
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 anim-in"
           onClick={(e) => { if (e.target === e.currentTarget) setMapsFor(null); }}>
           <div className="card w-full max-w-sm p-4 anim-up">
             <div className="section-label mb-3 px-1">In Karten öffnen</div>

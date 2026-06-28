@@ -733,7 +733,7 @@ export default function ProfilePage() {
 
       {/* Alle Achievements — Übersicht (erreicht + gesperrt mit Bedingung) */}
       {showAllBadges && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm px-3 pb-3 anim-in"
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 py-6 anim-in"
           onClick={(e) => { if (e.target === e.currentTarget) setShowAllBadges(false); }}>
           <div className="card w-full max-w-md max-h-[82vh] overflow-y-auto p-5 anim-up">
             <div className="flex items-center justify-between mb-3">
