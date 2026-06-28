@@ -13,20 +13,32 @@ export interface MyGroup {
   name: string;
   invite_code: string;
   role: string;
+  clan_tag: string | null;
 }
 
 /** Alle aktiven Gruppen des Nutzers. */
 export async function getMyGroups(userName: string): Promise<MyGroup[]> {
+  const sql = getSql();
   try {
-    const sql = getSql();
     return (await sql`
-      SELECT g.id, g.name, g.invite_code, gm.role
+      SELECT g.id, g.name, g.invite_code, g.clan_tag, gm.role
       FROM group_members gm JOIN groups g ON g.id = gm.group_id
       WHERE gm.user_name = ${userName} AND gm.status = 'active'
       ORDER BY LOWER(g.name)
     `) as MyGroup[];
   } catch {
-    return []; // Tabellen evtl. noch nicht angelegt → App läuft ungescoped weiter
+    // clan_tag-Spalte evtl. noch nicht angelegt → ohne sie laden.
+    try {
+      const rows = await sql`
+        SELECT g.id, g.name, g.invite_code, gm.role
+        FROM group_members gm JOIN groups g ON g.id = gm.group_id
+        WHERE gm.user_name = ${userName} AND gm.status = 'active'
+        ORDER BY LOWER(g.name)
+      `;
+      return rows.map((r) => ({ ...r, clan_tag: null })) as MyGroup[];
+    } catch {
+      return []; // Tabellen evtl. noch nicht angelegt → App läuft ungescoped weiter
+    }
   }
 }
 

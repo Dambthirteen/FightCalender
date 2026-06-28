@@ -8,7 +8,7 @@ const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'S
 const COLORS = ['red', 'blue', 'green', 'orange', 'purple'];
 const COLOR_HEX: Record<string, string> = { red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7' };
 
-interface MyGroup { id: number; name: string; invite_code: string; role: string }
+interface MyGroup { id: number; name: string; invite_code: string; role: string; clan_tag: string | null }
 interface Member { user_name: string; role: string; status: string }
 interface Cls { id: number; name: string; day_of_week: number; start_time: string; end_time: string; color: string }
 
@@ -25,6 +25,7 @@ export default function GroupsPage() {
   const [joinCode, setJoinCode] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [clanTag, setClanTag] = useState('');
   const [form, setForm] = useState({ name: '', dayOfWeek: 1, startTime: '18:00', endTime: '19:30', color: 'red' });
 
   const load = useCallback(async () => {
@@ -33,8 +34,10 @@ export default function GroupsPage() {
       fetch('/api/groups/members').then((r) => r.json()).catch(() => ({})),
       fetch('/api/classes').then((r) => r.json()).catch(() => []),
     ]);
-    setGroups(Array.isArray(g.groups) ? g.groups : []);
+    const gs: MyGroup[] = Array.isArray(g.groups) ? g.groups : [];
+    setGroups(gs);
     setCurrent(g.current ?? null);
+    setClanTag(gs.find((x) => x.id === g.current)?.clan_tag ?? '');
     setMembers(Array.isArray(m.members) ? m.members : []);
     setMyRole(m.myRole ?? null);
     setInviteCode(m.inviteCode ?? null);
@@ -61,6 +64,14 @@ export default function GroupsPage() {
       const d = await res.json();
       if (res.ok) { setMsg(d.status === 'active' ? `Du bist in „${d.group}".` : `Anfrage an „${d.group}" gesendet — ein Admin muss sie annehmen.`); setJoinCode(''); }
       else setMsg(d.error ?? 'Fehler');
+    } finally { setBusy(false); }
+  }
+  async function saveClanTag() {
+    if (!current) return;
+    setBusy(true);
+    try {
+      await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, clanTag }) });
+      setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, clan_tag: clanTag || null } : g)));
     } finally { setBusy(false); }
   }
   async function switchGroup(id: number) {
@@ -104,7 +115,7 @@ export default function GroupsPage() {
               <button key={g.id} onClick={() => g.id !== current && switchGroup(g.id)}
                 className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border transition-all active:scale-[0.99]"
                 style={{ borderColor: g.id === current ? 'var(--accent)' : 'var(--border-soft)', background: g.id === current ? 'var(--accent-soft)' : 'var(--surface-2)' }}>
-                <span className="font-semibold text-sm">{g.name}</span>
+                <span className="font-semibold text-sm">{g.clan_tag ? `[${g.clan_tag}] ` : ''}{g.name}</span>
                 <span className="flex items-center gap-2">
                   {g.role === 'admin' && <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--muted)' }}>Admin</span>}
                   {g.id === current ? <span className="text-[10px] font-bold" style={{ color: 'var(--accent)' }}>AKTIV</span> : <span className="text-[var(--faint)] text-xs">wechseln ›</span>}
@@ -135,6 +146,20 @@ export default function GroupsPage() {
             {msg && <p className="text-xs mt-2" style={{ color: 'var(--teal)' }}>{msg}</p>}
           </div>
         </section>
+
+        {/* Clantag (nur Admin) */}
+        {current && isAdmin && (
+          <section className="card p-4 anim-up" style={{ animationDelay: '60ms' }}>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-2.5">Clantag (max. 4 Buchstaben)</div>
+            <div className="flex gap-2">
+              <input value={clanTag} onChange={(e) => setClanTag(e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 4))}
+                maxLength={4} placeholder="z.B. NFT"
+                className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)] tracking-widest font-mono" />
+              <button onClick={saveClanTag} disabled={busy} className="text-white font-bold px-4 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>Speichern</button>
+            </div>
+            <p className="text-[11px] text-[var(--faint)] mt-2">Erscheint vor dem Gruppennamen.</p>
+          </section>
+        )}
 
         {/* Aktuelle Gruppe: Mitglieder */}
         {current && (

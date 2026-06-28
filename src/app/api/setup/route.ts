@@ -164,6 +164,7 @@ export async function POST(req: NextRequest) {
         UNIQUE(group_id, user_name)
       )
     `;
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS clan_tag VARCHAR(4)`;
     await sql`ALTER TABLE classes ADD COLUMN IF NOT EXISTS group_id INTEGER`;
     await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS group_id INTEGER`;
     await sql`ALTER TABLE competitions ADD COLUMN IF NOT EXISTS group_id INTEGER`;

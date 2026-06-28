@@ -13,8 +13,8 @@ export default function StartPage() {
 
   useEffect(() => {
     fetch('/api/groups').then((r) => r.json()).then((d) => {
-      const cur = (d.groups ?? []).find((g: { id: number; name: string }) => g.id === d.current);
-      if (cur) setGroupName(cur.name);
+      const cur = (d.groups ?? []).find((g: { id: number; name: string; clan_tag?: string | null }) => g.id === d.current);
+      if (cur) setGroupName(cur.clan_tag ? `[${cur.clan_tag}] ${cur.name}` : cur.name);
     }).catch(() => {});
   }, []);
 
