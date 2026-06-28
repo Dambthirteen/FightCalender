@@ -39,10 +39,9 @@ export default function StartPage() {
     window.location.href = '/login';
   }
 
-  const courtAlert = pendingVotes > 0; // es gibt Ausreden zu richten → glühen
-
   const iconBtn = 'relative w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all text-lg';
-  const moreRows = [
+  const moreRows: { icon: string; label: string; href: string; badge?: number }[] = [
+    { icon: '🗳️', label: 'Ausreden-Gericht', href: '/vote', badge: pendingVotes },
     { icon: '👥', label: 'Mitglieder', href: '/mitglieder' },
     { icon: '🏥', label: 'Mein Status', href: '/account' },
     { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },
@@ -87,7 +86,7 @@ export default function StartPage() {
 
         {/* Feature: Statistiken */}
         <a href="/statistik"
-          className="card tape-accent pl-6 pr-5 py-5 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up">
+          className="card px-5 py-5 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up">
           <span className="text-3xl">📊</span>
           <div className="flex-1 min-w-0">
             <div className="font-display text-2xl tracking-wide leading-none">Statistiken</div>
@@ -96,24 +95,16 @@ export default function StartPage() {
           <span className="text-[var(--faint)] text-lg">›</span>
         </a>
 
-        {/* Zwei mittlere Tiles */}
-        <div className="grid grid-cols-2 gap-3">
-          <a href="/vote"
-            className={`card p-4 flex flex-col gap-2 active:scale-[0.98] transition-transform anim-up ${courtAlert ? 'court-alert' : ''}`}
-            style={{ animationDelay: '40ms' }}>
-            <span className="text-2xl">🗳️</span>
-            <span className="text-sm font-semibold">Ausreden-Gericht</span>
-            <span className="text-[11px] font-semibold" style={{ color: pendingVotes > 0 ? 'var(--bitch)' : 'var(--faint)' }}>
-              {pendingVotes > 0 ? `● ${pendingVotes} offen` : 'Ausreden bewerten'}
-            </span>
-          </a>
-          <a href="/competitions"
-            className="card p-4 flex flex-col gap-2 active:scale-[0.98] transition-transform anim-up" style={{ animationDelay: '60ms' }}>
-            <span className="text-2xl">🏆</span>
-            <span className="text-sm font-semibold">Wettkämpfe</span>
-            <span className="text-[11px] text-[var(--faint)]">Termine & Countdown</span>
-          </a>
-        </div>
+        {/* Feature: Wettkämpfe */}
+        <a href="/competitions"
+          className="card px-5 py-5 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up" style={{ animationDelay: '40ms' }}>
+          <span className="text-3xl">🏆</span>
+          <div className="flex-1 min-w-0">
+            <div className="font-display text-2xl tracking-wide leading-none">Wettkämpfe</div>
+            <div className="text-xs text-[var(--muted)] mt-1.5">Termine & Countdown</div>
+          </div>
+          <span className="text-[var(--faint)] text-lg">›</span>
+        </a>
 
         {/* Trenner */}
         <div className="flex items-center gap-3 pt-3 pb-1">
@@ -129,6 +120,9 @@ export default function StartPage() {
               className={`flex items-center gap-3 px-4 py-3.5 active:bg-[var(--surface-2)] transition-colors ${i < moreRows.length - 1 ? 'border-b border-[var(--border-soft)]' : ''}`}>
               <span className="text-xl w-6 text-center">{row.icon}</span>
               <span className="flex-1 text-sm font-semibold">{row.label}</span>
+              {!!row.badge && row.badge > 0 && (
+                <span className="text-[11px] font-semibold" style={{ color: 'var(--bitch)' }}>● {row.badge} offen</span>
+              )}
               <span className="text-[var(--faint)]">›</span>
             </a>
           ))}
