@@ -8,7 +8,7 @@ const getSecret = () =>
 // stattdessen per CRON_SECRET geschützt.
 const PUBLIC_PATHS = ['/login', '/api/auth', '/api/setup', '/api/notify', '/design-preview'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) return NextResponse.next();
