@@ -3,9 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { canViewProfile, getMyGroups } from '@/lib/groups';
 import { getStreak } from '@/lib/streak';
-import { earnedBadges, badgeById, ADMIN_BADGE, type BadgeDef } from '@/lib/badges';
+import { earnedBadges, badgeById, ADMIN_BADGE, DOPPELMORAL_BADGE, type BadgeDef } from '@/lib/badges';
 import { createNotification } from '@/lib/notify';
 import { grantStreakPoint, currentWeekRef, STREAK_POINT_CAP } from '@/lib/streak-points';
+import { getBitchCounts, CUTOVER } from '@/lib/bitch-scoring';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Sql = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
 
 async function isGroupAdmin(user: string): Promise<boolean> {
   try {
@@ -13,6 +17,28 @@ async function isGroupAdmin(user: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Alle freigeschalteten Abzeichen eines Nutzers (inkl. Admin & geheimer Doppelmoral). */
+async function computeEarned(sql: Sql, user: string, weeks: number): Promise<{ badges: BadgeDef[]; competitions: number }> {
+  const compRows = (await sql`SELECT COUNT(*)::int AS n FROM competitions WHERE user_name = ${user}`) as { n: number }[];
+  const competitions = compRows[0]?.n ?? 0;
+  const judgedRows = (await sql`SELECT COUNT(*)::int AS n FROM excuse_votes WHERE voter_name = ${user}`) as { n: number }[];
+  const judged = judgedRows[0]?.n ?? 0;
+
+  const badges = earnedBadges(weeks, competitions, judged);
+  if (await isGroupAdmin(user)) badges.push(ADMIN_BADGE);
+
+  // Geheim „Doppelmoral": ≥10 Bitch-Punkte UND ≥20× gerichtet. Bitch-Berechnung nur bei Bedarf.
+  if (judged >= 20) {
+    let bitch = 0;
+    for (const g of await getMyGroups(user)) {
+      const counts = await getBitchCounts(sql, CUTOVER, '2999-01-01', g.id);
+      bitch += counts.find((cc) => cc.user_name === user)?.count ?? 0;
+    }
+    if (bitch >= 10) badges.push(DOPPELMORAL_BADGE);
+  }
+  return { badges, competitions };
 }
 
 export const runtime = 'nodejs'; // verschickt Push beim Freischalten
@@ -32,11 +58,7 @@ export async function GET(req: NextRequest) {
 
     const { days, weeks } = await getStreak(sql, user);
     await sql`UPDATE users SET longest_streak = GREATEST(longest_streak, ${days}) WHERE user_name = ${user}`;
-    const compRows = (await sql`SELECT COUNT(*)::int AS n FROM competitions WHERE user_name = ${user}`) as { n: number }[];
-    const competitions = compRows[0]?.n ?? 0;
-
-    const earned: BadgeDef[] = earnedBadges(weeks, competitions);
-    if (await isGroupAdmin(user)) earned.push(ADMIN_BADGE);
+    const { badges: earned, competitions } = await computeEarned(sql, user, weeks);
 
     // Neu freigeschaltete Abzeichen einmalig verleihen + benachrichtigen; Streak-Badge gibt einen Streak-Punkt.
     try {
@@ -99,9 +121,8 @@ export async function POST(req: NextRequest) {
     const sql = getSql();
 
     const { weeks } = await getStreak(sql, me);
-    const compRows = (await sql`SELECT COUNT(*)::int AS n FROM competitions WHERE user_name = ${me}`) as { n: number }[];
-    const earnedIds = new Set(earnedBadges(weeks, compRows[0]?.n ?? 0).map((b) => b.id));
-    if (await isGroupAdmin(me)) earnedIds.add(ADMIN_BADGE.id);
+    const { badges: earnedList } = await computeEarned(sql, me, weeks);
+    const earnedIds = new Set(earnedList.map((b) => b.id));
 
     // Nur gültige IDs, nur freigeschaltete, max 4, ohne Duplikate.
     const clean: string[] = [];

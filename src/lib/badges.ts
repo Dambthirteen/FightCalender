@@ -1,15 +1,16 @@
 // Abzeichen-Definitionen. Emojis sind Platzhalter — später durch kleine PNGs ersetzbar
 // (einfach `emoji` durch `icon`-Pfad tauschen, die IDs bleiben stabil).
 
-export type BadgeKind = 'streak' | 'competition' | 'special';
+export type BadgeKind = 'streak' | 'competition' | 'judge' | 'special' | 'secret';
 
 export interface BadgeDef {
   id: string;
   label: string;
   emoji: string;
   kind: BadgeKind;
-  threshold: number; // Streak: Wochen am Stück · Wettkampf: Anzahl bestrittener Wettkämpfe
+  threshold: number; // Streak: Wochen · Wettkampf: Anzahl · Gericht: gerichtete Ausreden
   hint: string;
+  secret?: boolean; // wird in der Übersicht erst nach Freischalten gezeigt
 }
 
 // Streak = aufeinanderfolgende Wochen ohne Trainings-Skip vom regulären Plan.
@@ -31,11 +32,27 @@ export const COMPETITION_BADGES: BadgeDef[] = [
   { id: 'comp_30', label: 'Nuklearer Wettkämpfer', emoji: '☢️', kind: 'competition', threshold: 30, hint: '30 Wettkämpfe bestritten' },
 ];
 
-// Spezial-Abzeichen (rollenbasiert, nicht über Schwellen). threshold ungenutzt.
+// Gericht = Anzahl bewerteter (gerichteter) Ausreden.
+export const JUDGE_BADGES: BadgeDef[] = [
+  { id: 'judge_10', label: 'Jura Student', emoji: '📚', kind: 'judge', threshold: 10, hint: '10 Ausreden gerichtet' },
+  { id: 'judge_20', label: 'Angehender Richter', emoji: '⚖️', kind: 'judge', threshold: 20, hint: '20 Ausreden gerichtet' },
+  { id: 'judge_50', label: 'Richter', emoji: '👨‍⚖️', kind: 'judge', threshold: 50, hint: '50 Ausreden gerichtet' },
+  { id: 'judge_100', label: 'Der Richtende!', emoji: '🔨', kind: 'judge', threshold: 100, hint: '100 Ausreden gerichtet' },
+];
+
+// Spezial-Abzeichen (rollenbasiert, nicht über Schwellen).
 export const ADMIN_BADGE: BadgeDef = { id: 'special_admin', label: 'Admin', emoji: '🛠️', kind: 'special', threshold: 0, hint: 'Gruppen-Admin' };
 export const SPECIAL_BADGES: BadgeDef[] = [ADMIN_BADGE];
 
-export const ALL_BADGES: BadgeDef[] = [...STREAK_BADGES, ...COMPETITION_BADGES, ...SPECIAL_BADGES];
+// Geheime Abzeichen — in der Übersicht erst sichtbar, wenn freigeschaltet.
+export const DOPPELMORAL_BADGE: BadgeDef = { id: 'secret_doppelmoral', label: 'Doppelmoral', emoji: '🎭', kind: 'secret', threshold: 0, hint: '10 Bitch-Punkte – und trotzdem über 20× gerichtet', secret: true };
+export const SECRET_BADGES: BadgeDef[] = [DOPPELMORAL_BADGE];
+
+export const ALL_BADGES: BadgeDef[] = [...STREAK_BADGES, ...COMPETITION_BADGES, ...JUDGE_BADGES, ...SPECIAL_BADGES, ...SECRET_BADGES];
+
+export function earnedJudgeBadges(judged: number): BadgeDef[] {
+  return JUDGE_BADGES.filter((b) => judged >= b.threshold);
+}
 
 export function badgeById(id: string): BadgeDef | undefined {
   return ALL_BADGES.find((b) => b.id === id);
@@ -47,8 +64,8 @@ export function earnedStreakBadges(weeks: number): BadgeDef[] {
 export function earnedCompetitionBadges(count: number): BadgeDef[] {
   return COMPETITION_BADGES.filter((b) => count >= b.threshold);
 }
-export function earnedBadges(weeks: number, competitions: number): BadgeDef[] {
-  return [...earnedStreakBadges(weeks), ...earnedCompetitionBadges(competitions)];
+export function earnedBadges(weeks: number, competitions: number, judged = 0): BadgeDef[] {
+  return [...earnedStreakBadges(weeks), ...earnedCompetitionBadges(competitions), ...earnedJudgeBadges(judged)];
 }
 
 /** Nächstes Streak-Abzeichen über `weeks` (für Fortschritts-Anzeige), oder null wenn alle erreicht. */

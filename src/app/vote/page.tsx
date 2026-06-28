@@ -180,7 +180,7 @@ export default function VotePage() {
         {/* Sofort richten: laufender Monat ist jederzeit bewertbar */}
         {info.isCurrentMonth && (
           <div className="rounded-xl px-4 py-3 mb-6 text-center bg-yellow-500/10 border border-yellow-600/30">
-            <div className="text-sm text-yellow-400 font-semibold">Richte die Ausreden — jederzeit</div>
+            <div className="text-sm text-yellow-400 font-semibold">Richte die Ausreden</div>
             <div className="text-xs text-yellow-600 mt-0.5">Ergebnis wird am 1. {format(addMonths(month, 1), 'MMMM', { locale: de })} festgeschrieben</div>
           </div>
         )}
