@@ -54,11 +54,23 @@ function groupClasses(classes: ClassInfo[], today: Date, compDate: Date): Groupe
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
+/** Adresse in der passenden Karten-App öffnen (iOS → Apple Maps, sonst Google Maps). */
+function openMaps(address: string) {
+  const q = encodeURIComponent(address.trim());
+  if (!q) return;
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const url = /iPad|iPhone|iPod/.test(ua)
+    ? `https://maps.apple.com/?q=${q}`
+    : `https://www.google.com/maps/search/?api=1&query=${q}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 export default function CompetitionsPage() {
   const { userName } = useUser();
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -72,13 +84,28 @@ export default function CompetitionsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  function resetForm() {
+    setForm({ name: '', competitionDate: '', location: '', weightClass: '', notes: '' });
+    setEditingId(null); setError('');
+  }
+
+  function startEdit(c: Competition) {
+    setForm({
+      name: c.name, competitionDate: c.competition_date.slice(0, 10),
+      location: c.location ?? '', weightClass: c.weight_class ?? '', notes: c.notes ?? '',
+    });
+    setEditingId(c.id); setError(''); setShowForm(true);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   async function save() {
     if (!form.name.trim() || !form.competitionDate) { setError('Name und Datum erforderlich'); return; }
-    if (form.competitionDate <= today()) { setError('Datum muss in der Zukunft liegen'); return; }
+    // Nur beim NEU-Eintragen muss das Datum in der Zukunft liegen; Bearbeiten geht jederzeit.
+    if (!editingId && form.competitionDate <= today()) { setError('Datum muss in der Zukunft liegen'); return; }
     setSaving(true); setError('');
     try {
-      const res = await fetch('/api/competitions', {
-        method: 'POST',
+      const res = await fetch(editingId ? `/api/competitions/${editingId}` : '/api/competitions', {
+        method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
@@ -86,7 +113,7 @@ export default function CompetitionsPage() {
       // Re-fetch to get user_classes populated
       const all = await fetch('/api/competitions').then(r => r.json());
       setCompetitions(Array.isArray(all) ? all : []);
-      setForm({ name: '', competitionDate: '', location: '', weightClass: '', notes: '' });
+      resetForm();
       setShowForm(false);
     } finally {
       setSaving(false);
@@ -120,15 +147,22 @@ export default function CompetitionsPage() {
             <h3 className="font-display text-xl tracking-wide truncate">{c.name}</h3>
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
               <span className="chip">{c.user_name}</span>
-              {c.location && <span className="chip">{c.location}</span>}
+              {c.location && (
+                <button onClick={() => openMaps(c.location)} className="chip active:scale-95" style={{ color: 'var(--teal)', borderColor: 'var(--teal)' }}>
+                  📍 {c.location}
+                </button>
+              )}
               {c.weight_class && <span className="chip">{c.weight_class}</span>}
             </div>
             <div className="text-xs text-[var(--faint)] mt-2">
               {format(compDate, 'EEEE, d. MMMM yyyy', { locale: de })}
             </div>
           </div>
-          {isOwn && !isPast && (
-            <button onClick={() => remove(c.id)} className="shrink-0 text-[var(--faint)] hover:text-[var(--accent)] transition-colors text-sm px-1">✕</button>
+          {isOwn && (
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => startEdit(c)} className="text-[var(--faint)] hover:text-white transition-colors text-xs px-1">Bearbeiten</button>
+              <button onClick={() => remove(c.id)} className="text-[var(--faint)] hover:text-[var(--accent)] transition-colors text-sm px-1">✕</button>
+            </div>
           )}
         </div>
 
@@ -199,7 +233,7 @@ export default function CompetitionsPage() {
   return (
     <div className="min-h-screen text-[var(--text)]">
       <PageHeader title="🏆 Wettkämpfe" action={
-        <button onClick={() => setShowForm(f => !f)}
+        <button onClick={() => { setShowForm((f) => !f); resetForm(); }}
           className="w-11 h-11 grid place-items-center text-white rounded-xl transition-all font-bold text-xl active:scale-95"
           style={{ background: 'var(--accent)' }}>
           +
@@ -210,7 +244,7 @@ export default function CompetitionsPage() {
         {/* Add form */}
         {showForm && (
           <div className="card p-5 anim-up">
-            <h2 className="font-display text-xl tracking-wide mb-4">Meinen Wettkampf eintragen</h2>
+            <h2 className="font-display text-xl tracking-wide mb-4">{editingId ? 'Wettkampf bearbeiten' : 'Meinen Wettkampf eintragen'}</h2>
             <div className="space-y-3">
               <div>
                 <label className="section-label mb-1.5 block">Wettkampf / Veranstaltung *</label>
@@ -220,7 +254,7 @@ export default function CompetitionsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="section-label mb-1.5 block">Datum *</label>
-                  <input type="date" min={today()} value={form.competitionDate}
+                  <input type="date" min={editingId ? undefined : today()} value={form.competitionDate}
                     onChange={e => setForm(f => ({ ...f, competitionDate: e.target.value }))} className="field" />
                 </div>
                 <div>
@@ -230,9 +264,9 @@ export default function CompetitionsPage() {
                 </div>
               </div>
               <div>
-                <label className="section-label mb-1.5 block">Ort</label>
+                <label className="section-label mb-1.5 block">Adresse</label>
                 <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                  className="field" placeholder="z.B. Dortmund" />
+                  className="field" placeholder="Straße, PLZ Ort" />
               </div>
               <div>
                 <label className="section-label mb-1.5 block">Notiz</label>
@@ -243,9 +277,9 @@ export default function CompetitionsPage() {
             {error && <p className="text-[var(--accent)] text-xs mt-3">{error}</p>}
             <div className="flex gap-2 mt-4">
               <button onClick={save} disabled={saving} className="btn btn-primary flex-1">
-                {saving ? 'Speichern…' : 'Wettkampf eintragen'}
+                {saving ? 'Speichern…' : editingId ? 'Speichern' : 'Wettkampf eintragen'}
               </button>
-              <button onClick={() => { setShowForm(false); setError(''); }} className="btn btn-ghost">
+              <button onClick={() => { setShowForm(false); resetForm(); }} className="btn btn-ghost">
                 Abbrechen
               </button>
             </div>
@@ -258,7 +292,7 @@ export default function CompetitionsPage() {
           <div className="card p-10 text-center anim-up">
             <div className="text-5xl mb-3">🥊</div>
             <div className="text-[var(--muted)] text-sm">Noch keine Wettkämpfe eingetragen.</div>
-            <button onClick={() => setShowForm(true)} className="mt-3 text-sm font-semibold" style={{ color: 'var(--accent)' }}>
+            <button onClick={() => { resetForm(); setShowForm(true); }} className="mt-3 text-sm font-semibold" style={{ color: 'var(--accent)' }}>
               Ersten eintragen →
             </button>
           </div>
