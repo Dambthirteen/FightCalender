@@ -88,6 +88,8 @@ export async function GET(req: NextRequest) {
     const earnedIds = new Set(earned.map((b) => b.id));
     const displayed = (uRows[0]?.displayed_badges ?? []).filter((id) => earnedIds.has(id)); // nur noch gültige
 
+    const clanTag = (await getMyGroups(user))[0]?.clan_tag ?? null;
+
     let adAvailable = false;
     if (me === user) {
       const adClaimed = (await sql`
@@ -103,6 +105,7 @@ export async function GET(req: NextRequest) {
       competitions,
       earned: earned.map((b) => ({ id: b.id, label: b.label, emoji: b.emoji, kind: b.kind, hint: b.hint })),
       displayed,
+      clanTag,
       points: me === user ? (uRows[0]?.streak_points ?? 0) : undefined,
       adAvailable,
     });

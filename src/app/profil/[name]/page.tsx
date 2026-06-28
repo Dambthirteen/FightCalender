@@ -8,7 +8,29 @@ import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type Mart
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
-interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; points?: number; adAvailable?: boolean }
+interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; clanTag?: string | null; points?: number; adAvailable?: boolean }
+
+// Championship-Belt: Clantag mittig (schwarz), 4 ausgestellte Badges auf den Achtecken.
+// x-Positionen (% der Breite) der 4 Achteck-Platten, links → rechts. Bei Bedarf feinjustieren.
+const BELT_SLOTS = [20.5, 30.5, 69.5, 79.5];
+function Belt({ clanTag, badges }: { clanTag: string | null; badges: BadgeInfo[] }) {
+  return (
+    <div className="relative w-full select-none" style={{ aspectRatio: '1400 / 319', containerType: 'inline-size' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/belt.png" alt="Championship Belt" className="w-full h-full object-contain pointer-events-none" />
+      {clanTag && (
+        <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: '50%', top: '46%' }}>
+          <span className="font-display tracking-wide" style={{ color: '#1a1a1a', fontSize: '6cqw', lineHeight: 1 }}>{clanTag}</span>
+        </div>
+      )}
+      {BELT_SLOTS.map((x, i) => badges[i] && (
+        <div key={i} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${x}%`, top: '47%' }}>
+          <span title={badges[i].label} style={{ fontSize: '4.5cqw', lineHeight: 1, display: 'block' }}>{badges[i].emoji}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface YearRow { user_name: string; total: number }
 
@@ -287,7 +309,9 @@ export default function ProfilePage() {
   }
 
   const canInteract = !priv && !!userName;
-  const displayedBadges = badgeData ? badgeData.earned.filter((b) => badgeData.displayed.includes(b.id)) : [];
+  const displayedBadges = badgeData
+    ? badgeData.displayed.map((id) => badgeData.earned.find((b) => b.id === id)).filter((b): b is BadgeInfo => !!b)
+    : [];
   const nextBadge = badgeData ? nextStreakBadge(badgeData.streakWeeks) : null;
   const earnedSet = new Set(badgeData?.earned.map((b) => b.id) ?? []);
   const editing = isSelf && editMode; // Bearbeitungsmodus (Standard = Außenansicht)
@@ -326,19 +350,19 @@ export default function ProfilePage() {
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
           <div className="font-display text-3xl tracking-wide">{name}</div>
 
-          {/* Flamme + ausgestellte Abzeichen */}
-          {badgeData && (badgeData.streakDays > 0 || displayedBadges.length > 0) && (
-            <div className="flex items-center justify-center flex-wrap gap-1.5 mt-2">
-              {badgeData.streakDays > 0 && (
-                <span className="chip" style={{ borderColor: 'var(--accent-2)', color: 'var(--accent-2)' }}>
-                  🔥 {badgeData.streakDays} {badgeData.streakDays === 1 ? 'Tag' : 'Tage'}
-                </span>
-              )}
-              {displayedBadges.map((b) => (
-                <span key={b.id} className="chip" title={b.label}>{b.emoji} {b.label}</span>
-              ))}
+          {/* Flamme */}
+          {badgeData && badgeData.streakDays > 0 && (
+            <div className="mt-2">
+              <span className="chip" style={{ borderColor: 'var(--accent-2)', color: 'var(--accent-2)' }}>
+                🔥 {badgeData.streakDays} {badgeData.streakDays === 1 ? 'Tag' : 'Tage'}
+              </span>
             </div>
           )}
+
+          {/* Championship-Belt: Clantag + ausgestellte Badges */}
+          <div className="w-full mt-3">
+            <Belt clanTag={badgeData?.clanTag ?? null} badges={displayedBadges} />
+          </div>
 
           {/* Bio */}
           {editing ? (
