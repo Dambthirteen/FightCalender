@@ -1,0 +1,109 @@
+import { neon } from '@neondatabase/serverless';
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth';
+import { getCurrentGroupId, getMyGroups } from '@/lib/groups';
+import { getBitchCounts } from '@/lib/bitch-scoring';
+import { currentYm, ymPrev, ymNext } from '@/lib/awards';
+
+function getSql() {
+  return neon(process.env.DATABASE_URL!);
+}
+
+/**
+ * Monats-Rückblick („Wrapped") für den eingeloggten Nutzer in seiner Gruppe:
+ * Gruppen-Highlights + persönliche Zahlen des Monats. Default = letzter
+ * abgeschlossener Monat. `?seen=1`-Check über wrapped_seen (Auto-Popup einmalig).
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const me = await getCurrentUser();
+    if (!me) return NextResponse.json({ available: false });
+    const sql = getSql();
+    const gid = await getCurrentGroupId(me);
+    if (!gid) return NextResponse.json({ available: false });
+
+    const ym = req.nextUrl.searchParams.get('month') || ymPrev(currentYm());
+    const start = `${ym}-01`;
+    const end = `${ymNext(ym)}-01`;
+    const groups = await getMyGroups(me);
+    const groupName = groups.find((g) => g.id === gid)?.name ?? 'Gruppe';
+
+    // Gruppen-Highlights (alle gruppen-scoped über classes.group_id bzw. skipping.group_id) ---
+    const macherRows = (await sql`
+      SELECT a.user_name, COUNT(*)::int AS n
+      FROM attendance a JOIN classes c ON c.id = a.class_id
+      WHERE c.group_id = ${gid} AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
+      GROUP BY a.user_name ORDER BY n DESC LIMIT 1
+    `) as { user_name: string; n: number }[];
+
+    const bitchCounts = await getBitchCounts(sql, start, end, gid);
+    const topBitch = bitchCounts[0];
+
+    const bestRows = (await sql`
+      SELECT s.user_name, s.excuse,
+        COUNT(CASE WHEN ev.vote = 'accept' THEN 1 END)::int AS accept,
+        COUNT(CASE WHEN ev.vote = 'reject' THEN 1 END)::int AS reject
+      FROM skipping s LEFT JOIN excuse_votes ev ON ev.skip_id = s.id
+      WHERE s.group_id = ${gid} AND s.date >= ${start}::date AND s.date < ${end}::date AND s.excuse != ''
+      GROUP BY s.id, s.user_name, s.excuse
+      ORDER BY accept DESC, reject ASC LIMIT 1
+    `) as { user_name: string; excuse: string; accept: number; reject: number }[];
+
+    const worstRows = (await sql`
+      SELECT s.user_name, s.excuse,
+        COUNT(CASE WHEN ev.vote = 'reject' THEN 1 END)::int AS reject
+      FROM skipping s LEFT JOIN excuse_votes ev ON ev.skip_id = s.id
+      WHERE s.group_id = ${gid} AND s.date >= ${start}::date AND s.date < ${end}::date AND s.excuse != ''
+      GROUP BY s.id, s.user_name, s.excuse
+      ORDER BY reject DESC LIMIT 1
+    `) as { user_name: string; excuse: string; reject: number }[];
+
+    const judgeRows = (await sql`
+      SELECT ev.voter_name, COUNT(*)::int AS n
+      FROM excuse_votes ev JOIN skipping s ON s.id = ev.skip_id
+      WHERE s.group_id = ${gid} AND s.date >= ${start}::date AND s.date < ${end}::date
+      GROUP BY ev.voter_name ORDER BY n DESC LIMIT 1
+    `) as { voter_name: string; n: number }[];
+
+    const lobRows = (await sql`
+      SELECT to_user, COUNT(*)::int AS n FROM praises
+      WHERE created_at >= ${start}::timestamptz AND created_at < ${end}::timestamptz
+      GROUP BY to_user ORDER BY n DESC LIMIT 1
+    `) as { to_user: string; n: number }[];
+
+    // Persönliche Zahlen
+    const myAtt = (await sql`
+      SELECT COUNT(*)::int AS n FROM attendance a JOIN classes c ON c.id = a.class_id
+      WHERE c.group_id = ${gid} AND a.user_name = ${me} AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
+    `) as { n: number }[];
+    const mySkips = (await sql`
+      SELECT COUNT(*)::int AS n FROM skipping WHERE group_id = ${gid} AND user_name = ${me} AND date >= ${start}::date AND date < ${end}::date
+    `) as { n: number }[];
+    const myLob = (await sql`
+      SELECT COUNT(*)::int AS n FROM praises WHERE to_user = ${me} AND created_at >= ${start}::timestamptz AND created_at < ${end}::timestamptz
+    `) as { n: number }[];
+    const myBitch = bitchCounts.find((c) => c.user_name === me)?.count ?? 0;
+
+    const seenRows = (await sql`SELECT 1 FROM wrapped_seen WHERE user_name = ${me} AND month = ${ym}`) as unknown[];
+
+    const macher = macherRows[0] ? { user: macherRows[0].user_name, count: macherRows[0].n } : null;
+    const bitch = topBitch ? { user: topBitch.user_name, count: topBitch.count } : null;
+    const available = !!(macher || bitch || (myAtt[0]?.n ?? 0) > 0);
+
+    return NextResponse.json({
+      available,
+      seen: seenRows.length > 0,
+      month: ym,
+      groupName,
+      macher,
+      bitch,
+      bestExcuse: bestRows[0] && bestRows[0].accept > 0 ? { user: bestRows[0].user_name, excuse: bestRows[0].excuse, accept: bestRows[0].accept } : null,
+      worstExcuse: worstRows[0] && worstRows[0].reject > 0 ? { user: worstRows[0].user_name, excuse: worstRows[0].excuse, reject: worstRows[0].reject } : null,
+      topJudge: judgeRows[0] ? { user: judgeRows[0].voter_name, count: judgeRows[0].n } : null,
+      lobKing: lobRows[0] ? { user: lobRows[0].to_user, count: lobRows[0].n } : null,
+      me: { trainings: myAtt[0]?.n ?? 0, skips: mySkips[0]?.n ?? 0, lobe: myLob[0]?.n ?? 0, bitch: myBitch },
+    });
+  } catch (error) {
+    return NextResponse.json({ available: false, error: String(error) });
+  }
+}

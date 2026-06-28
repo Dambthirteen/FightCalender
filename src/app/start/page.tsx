@@ -134,7 +134,11 @@ export default function StartPage() {
           ))}
         </div>
 
-        <button onClick={logout} className="w-full text-center text-sm py-3 mt-1 text-[var(--faint)] hover:text-[var(--accent)] transition-colors">
+        <button onClick={() => window.location.assign('/start?wrapped=1')}
+          className="w-full text-center text-sm py-2 mt-1 text-[var(--muted)] hover:text-white transition-colors">
+          Monats-Wrapped ansehen
+        </button>
+        <button onClick={logout} className="w-full text-center text-sm py-3 text-[var(--faint)] hover:text-[var(--accent)] transition-colors">
           Ausloggen
         </button>
       </main>

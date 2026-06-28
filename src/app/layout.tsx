@@ -4,6 +4,7 @@ import "./globals.css";
 import { UserProvider } from "@/components/UserProvider";
 import BottomNav from "@/components/BottomNav";
 import AwardPopup from "@/components/AwardPopup";
+import WrappedPopup from "@/components/WrappedPopup";
 
 // Display: Fight-Poster-Optik (kondensiert, wuchtig). Body: Sora (eigenständig, klar).
 const display = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-display" });
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <BottomNav />
           <AwardPopup />
+          <WrappedPopup />
         </UserProvider>
       </body>
     </html>

@@ -321,6 +321,17 @@ export async function POST() {
       )
     `;
 
+    // --- Monats-Wrapped: merkt, wer den Rückblick eines Monats schon gesehen hat ---
+    await sql`
+      CREATE TABLE IF NOT EXISTS wrapped_seen (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        month VARCHAR(7) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_name, month)
+      )
+    `;
+
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
