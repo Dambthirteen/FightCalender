@@ -11,23 +11,25 @@ interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hi
 interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; clanTag?: string | null; points?: number; adAvailable?: boolean }
 
 // Championship-Belt: Clantag mittig (schwarz), 4 ausgestellte Badges auf den Achtecken.
-// x-Positionen (% der Breite) der 4 Achteck-Platten, links → rechts. Bei Bedarf feinjustieren.
-const BELT_SLOTS = [20.5, 30.5, 69.5, 79.5];
-function Belt({ clanTag, badges }: { clanTag: string | null; badges: BadgeInfo[] }) {
+// Gemessene Achteck-Zentren (% der Breite), links → rechts.
+const BELT_SLOTS = [21.4, 32, 67.9, 78.6];
+function Belt({ clanTag, badges, onBadge }: { clanTag: string | null; badges: BadgeInfo[]; onBadge?: (b: BadgeInfo) => void }) {
   return (
     <div className="relative w-full select-none" style={{ aspectRatio: '1400 / 319', containerType: 'inline-size' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/belt.png" alt="Championship Belt" className="w-full h-full object-contain pointer-events-none" />
       {clanTag && (
-        <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: '50%', top: '46%' }}>
+        <div className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: '49.8%', top: '48%' }}>
           <span className="font-display tracking-wide" style={{ color: '#1a1a1a', fontSize: '6cqw', lineHeight: 1 }}>{clanTag}</span>
         </div>
       )}
-      {BELT_SLOTS.map((x, i) => badges[i] && (
-        <div key={i} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${x}%`, top: '47%' }}>
-          <span title={badges[i].label} style={{ fontSize: '4.5cqw', lineHeight: 1, display: 'block' }}>{badges[i].emoji}</span>
-        </div>
-      ))}
+      {BELT_SLOTS.map((x, i) => badges[i] ? (
+        <button key={i} type="button" onClick={() => onBadge?.(badges[i])} aria-label={badges[i].label}
+          className="absolute -translate-x-1/2 -translate-y-1/2 active:scale-90 transition-transform"
+          style={{ left: `${x}%`, top: '48%' }}>
+          <span style={{ fontSize: '4.5cqw', lineHeight: 1, display: 'block' }}>{badges[i].emoji}</span>
+        </button>
+      ) : null)}
     </div>
   );
 }
@@ -109,6 +111,7 @@ export default function ProfilePage() {
   const [badgeData, setBadgeData] = useState<BadgeData | null>(null);
   const [claimingAd, setClaimingAd] = useState(false);
   const [showAllBadges, setShowAllBadges] = useState(false);
+  const [beltBadge, setBeltBadge] = useState<BadgeInfo | null>(null);
   const [editMode, setEditMode] = useState(false);
 
   const c = colorFor(name, color);
@@ -361,7 +364,7 @@ export default function ProfilePage() {
 
           {/* Championship-Belt: Clantag + ausgestellte Badges */}
           <div className="w-full mt-3">
-            <Belt clanTag={badgeData?.clanTag ?? null} badges={displayedBadges} />
+            <Belt clanTag={badgeData?.clanTag ?? null} badges={displayedBadges} onBadge={setBeltBadge} />
           </div>
 
           {/* Bio */}
@@ -755,6 +758,19 @@ export default function ProfilePage() {
           </>
         )}
       </main>
+
+      {/* Badge-Detail (Klick auf ein Belt-Abzeichen) */}
+      {beltBadge && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 anim-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setBeltBadge(null); }}>
+          <div className="card w-full max-w-xs p-6 text-center anim-pop">
+            <div className="text-5xl mb-2">{beltBadge.emoji}</div>
+            <div className="font-display text-2xl tracking-wide">{beltBadge.label}</div>
+            <div className="text-sm text-[var(--muted)] mt-1">{beltBadge.hint}</div>
+            <button onClick={() => setBeltBadge(null)} className="btn btn-ghost w-full mt-4">Schließen</button>
+          </div>
+        </div>
+      )}
 
       {/* Alle Achievements — Übersicht (erreicht + gesperrt mit Bedingung) */}
       {showAllBadges && (
