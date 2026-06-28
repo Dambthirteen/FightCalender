@@ -5,6 +5,10 @@ import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
+import { nextStreakBadge } from '@/lib/badges';
+
+interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
+interface BadgeData { streakWeeks: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; points?: number }
 
 interface YearRow { user_name: string; total: number }
 
@@ -80,6 +84,7 @@ export default function ProfilePage() {
   const [praiseMsg, setPraiseMsg] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [tab, setTab] = useState<Tab>('fighter');
+  const [badgeData, setBadgeData] = useState<BadgeData | null>(null);
 
   const c = colorFor(name, color);
 
@@ -105,6 +110,7 @@ export default function ProfilePage() {
     fetch(`/api/comments?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setComments(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`/api/challenges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setChallenges(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`/api/praise?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setPraises(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`/api/badges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setBadgeData(d); }).catch(() => {});
   }, [name]);
 
   // Lob/Gigalob-Verfügbarkeit des Betrachters (für die Buttons auf fremden Profilen)
@@ -255,7 +261,20 @@ export default function ProfilePage() {
     } finally { setGivingPraise(false); }
   }
 
+  // Bis zu 4 Abzeichen am Profil-Kopf ausstellen (nur eigenes Profil).
+  async function toggleBadge(id: string) {
+    if (!badgeData) return;
+    const cur = badgeData.displayed;
+    let next: string[];
+    if (cur.includes(id)) next = cur.filter((x) => x !== id);
+    else { if (cur.length >= 4) return; next = [...cur, id]; }
+    setBadgeData({ ...badgeData, displayed: next });
+    await fetch('/api/badges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ badges: next }) }).catch(() => {});
+  }
+
   const canInteract = !priv && !!userName;
+  const displayedBadges = badgeData ? badgeData.earned.filter((b) => badgeData.displayed.includes(b.id)) : [];
+  const nextBadge = badgeData ? nextStreakBadge(badgeData.streakWeeks) : null;
 
   return (
     <div className="min-h-screen text-[var(--text)]">
@@ -284,6 +303,20 @@ export default function ProfilePage() {
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
           <div className="font-display text-3xl tracking-wide">{name}</div>
+
+          {/* Flamme + ausgestellte Abzeichen */}
+          {badgeData && (badgeData.streakWeeks > 0 || displayedBadges.length > 0) && (
+            <div className="flex items-center justify-center flex-wrap gap-1.5 mt-2">
+              {badgeData.streakWeeks > 0 && (
+                <span className="chip" style={{ borderColor: 'var(--accent-2)', color: 'var(--accent-2)' }}>
+                  🔥 {badgeData.streakWeeks} Wo.
+                </span>
+              )}
+              {displayedBadges.map((b) => (
+                <span key={b.id} className="chip" title={b.label}>{b.emoji} {b.label}</span>
+              ))}
+            </div>
+          )}
 
           {/* Bio */}
           {isSelf ? (
@@ -341,6 +374,49 @@ export default function ProfilePage() {
             {/* --- Tab: Fighter --- */}
             {tab === 'fighter' && (
               <div className="space-y-4 anim-in">
+                {/* Abzeichen */}
+                <div className="card px-4 py-4">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="section-label">Abzeichen</div>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--accent-2)' }}>🔥 {badgeData?.streakWeeks ?? 0} Wo. Streak</span>
+                  </div>
+                  {nextBadge && (
+                    <div className="text-xs text-[var(--muted)] mb-3">
+                      Noch {nextBadge.threshold - (badgeData?.streakWeeks ?? 0)} Wo. bis <strong>{nextBadge.emoji} {nextBadge.label}</strong>
+                    </div>
+                  )}
+                  {isSelf && (
+                    <div className="text-xs text-[var(--muted)] mb-3">
+                      Streak-Punkte: <strong style={{ color: 'var(--text)' }}>{badgeData?.points ?? 0}</strong> — schützen deine Streak beim Skippen.
+                    </div>
+                  )}
+                  {!badgeData || badgeData.earned.length === 0 ? (
+                    <div className="text-sm text-[var(--faint)]">Noch keine Abzeichen — bleib dran.</div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-2">
+                        {badgeData.earned.map((b) => {
+                          const on = isSelf && badgeData.displayed.includes(b.id);
+                          const cls = 'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all';
+                          const style = on
+                            ? { background: 'var(--accent-soft)', borderColor: 'var(--accent-2)' }
+                            : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)' };
+                          const inner = (
+                            <>
+                              <span className="text-2xl leading-none">{b.emoji}</span>
+                              <span className="text-[10px] font-semibold leading-tight">{b.label}</span>
+                            </>
+                          );
+                          return isSelf
+                            ? <button key={b.id} onClick={() => toggleBadge(b.id)} className={`${cls} active:scale-95`} style={style}>{inner}</button>
+                            : <div key={b.id} className={cls} style={style}>{inner}</div>;
+                        })}
+                      </div>
+                      {isSelf && <p className="text-[10px] text-[var(--faint)] mt-2">Tippe an, um bis zu 4 am Profil-Kopf auszustellen.</p>}
+                    </>
+                  )}
+                </div>
+
                 {/* Jahres-Punkte */}
                 <div className="flex gap-2.5">
                   <Stat value={macherYear ?? '–'} label="Macher-Punkte (Jahr)" color="var(--gold)" />

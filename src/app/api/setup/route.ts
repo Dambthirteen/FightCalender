@@ -288,6 +288,25 @@ export async function POST() {
       )
     `;
 
+    // --- Streaks & Badges ---
+    // streak_points: „Joker", um einen Skip einzulegen ohne die Streak zu brechen
+    // (jeder startet mit 3). displayed_badges: bis zu 4 am Profil ausgestellte Abzeichen.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_points INTEGER NOT NULL DEFAULT 3`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS displayed_badges JSONB NOT NULL DEFAULT '[]'::jsonb`;
+    // streak_protected: dieser Skip wurde mit einem Streak-Punkt geschützt → bricht die Streak nicht
+    // (zählt aber weiterhin als Bitch-Punkt).
+    await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS streak_protected BOOLEAN NOT NULL DEFAULT FALSE`;
+    // badges_awarded: merkt verliehene Abzeichen (für die einmalige „freigeschaltet"-Benachrichtigung).
+    await sql`
+      CREATE TABLE IF NOT EXISTS badges_awarded (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        badge_id VARCHAR(40) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_name, badge_id)
+      )
+    `;
+
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });

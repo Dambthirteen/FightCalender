@@ -43,6 +43,8 @@ export default function Home() {
   const [excuseDate, setExcuseDate] = useState<string | null>(null);
   const [excuseText, setExcuseText] = useState('');
   const [submittingExcuse, setSubmittingExcuse] = useState(false);
+  const [streakPoints, setStreakPoints] = useState(0);
+  const [useStreakPt, setUseStreakPt] = useState(false);
   const [userColors, setUserColors] = useState<Record<string, string | null>>({});
   const [bitchAnim, setBitchAnim] = useState(false);
   const audioRef = useRef<AudioContext | null>(null);
@@ -76,12 +78,14 @@ export default function Home() {
     async function init() {
       try {
         // Jeder Aufruf für sich abgesichert — ein Fehler darf das Laden nie blockieren.
-        const [classData, profileData, usersData] = await Promise.all([
+        const [classData, profileData, usersData, streakData] = await Promise.all([
           fetch('/api/classes').then(r => r.json()).catch(() => []),
           fetch(`/api/profile?user=${encodeURIComponent(userName)}`).then(r => r.json()).catch(() => []),
           fetch('/api/users').then(r => r.json()).catch(() => []),
+          fetch('/api/streak').then(r => r.json()).catch(() => ({ points: 0 })),
         ]);
         setAllClasses(Array.isArray(classData) ? classData : []);
+        setStreakPoints(streakData?.points ?? 0);
         if (Array.isArray(usersData)) {
           const map: Record<string, string | null> = {};
           for (const u of usersData) map[u.user_name] = u.color ?? null;
@@ -208,7 +212,7 @@ export default function Home() {
   function openExcuseModal(dateStr: string) {
     const already = skipping.some(s => s.date === dateStr && s.user_name === userName);
     if (already) { submitSkip(dateStr, ''); return; }
-    setExcuseDate(dateStr); setExcuseText('');
+    setExcuseDate(dateStr); setExcuseText(''); setUseStreakPt(false);
   }
 
   async function submitSkip(dateStr: string, excuse: string) {
@@ -218,7 +222,7 @@ export default function Home() {
       const res = await fetch('/api/skip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: dateStr, userName, excuse }),
+        body: JSON.stringify({ date: dateStr, userName, excuse, useStreakPoint: useStreakPt }),
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -228,6 +232,9 @@ export default function Home() {
       } else {
         setSkipping(prev => prev.filter(s => !(s.date === dateStr && s.user_name === userName)));
       }
+      // Streak-Punkte aktuell halten (Schutz abgezogen / bei Rücknahme erstattet).
+      fetch('/api/streak').then(r => r.json()).then(d => setStreakPoints(d.points ?? 0)).catch(() => {});
+      setUseStreakPt(false);
       setExcuseDate(null);
     } finally {
       setSubmittingExcuse(false);
@@ -337,6 +344,16 @@ export default function Home() {
               onChange={e => setExcuseText(e.target.value)}
               autoFocus
             />
+            {streakPoints > 0 && (
+              <label className="flex items-center gap-2.5 mb-4 px-3 py-2.5 rounded-xl cursor-pointer select-none"
+                style={{ background: 'var(--surface-2)', border: `1px solid ${useStreakPt ? 'var(--accent-2)' : 'var(--border-soft)'}` }}>
+                <input type="checkbox" checked={useStreakPt} onChange={e => setUseStreakPt(e.target.checked)} />
+                <span className="flex-1 text-sm">
+                  🔥 Streak-Punkt einsetzen
+                  <span className="block text-[11px] text-[var(--muted)]">Schützt deine Streak · {streakPoints} übrig (Bitch-Punkt zählt trotzdem)</span>
+                </span>
+              </label>
+            )}
             <div className="flex gap-2">
               <button onClick={() => setExcuseDate(null)} className="flex-1 py-2.5 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-white text-sm transition-colors">Abbrechen</button>
               <button onClick={() => submitSkip(excuseDate, excuseText)} disabled={!excuseText.trim() || submittingExcuse}

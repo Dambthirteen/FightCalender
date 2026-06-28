@@ -9,7 +9,7 @@ import { ensurePushConfigured, sendPush } from './push';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Sql = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
 
-export type NotifType = 'comment' | 'challenge' | 'challenge_result' | 'praise';
+export type NotifType = 'comment' | 'challenge' | 'challenge_result' | 'praise' | 'badge';
 
 export async function createNotification(
   sql: Sql,

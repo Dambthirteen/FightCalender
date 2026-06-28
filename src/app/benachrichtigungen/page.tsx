@@ -6,7 +6,7 @@ import { useUser } from '@/components/UserProvider';
 
 interface Notif {
   id: number;
-  type: 'comment' | 'challenge' | 'challenge_result' | 'praise';
+  type: 'comment' | 'challenge' | 'challenge_result' | 'praise' | 'badge';
   actor: string;
   body: string;
   link: string;
@@ -20,7 +20,7 @@ interface Notif {
 }
 
 const ICON: Record<string, string> = {
-  comment: '💬', challenge: '⚔️', challenge_result: '⚖️', praise: '🏅',
+  comment: '💬', challenge: '⚔️', challenge_result: '⚖️', praise: '🏅', badge: '🎖️',
 };
 
 function timeAgo(iso: string): string {

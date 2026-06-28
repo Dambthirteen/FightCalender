@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getDaysInMonth } from 'date-fns';
 import { useUser } from '@/components/UserProvider';
+import { nextStreakBadge, flameTier } from '@/lib/badges';
 
 function isVotingWindow() {
   const n = new Date();
@@ -14,6 +15,7 @@ export default function StartPage() {
   const [groupName, setGroupName] = useState('');
   const [pendingVotes, setPendingVotes] = useState(0);
   const [unread, setUnread] = useState(0);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
     fetch('/api/groups').then((r) => r.json()).then((d) => {
@@ -22,12 +24,21 @@ export default function StartPage() {
     }).catch(() => {});
   }, []);
 
-  // Offene Gericht-Stimmen (Glühen) + ungelesene Benachrichtigungen.
+  // Offene Gericht-Stimmen (Glühen), ungelesene Benachrichtigungen, Streak.
   useEffect(() => {
     if (!userName) return;
     fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {});
     fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {});
+    fetch('/api/streak').then((r) => r.json()).then((d) => setStreak(d.weeks ?? 0)).catch(() => {});
   }, [userName]);
+
+  const nextBadge = nextStreakBadge(streak);
+  const flames = '🔥'.repeat(Math.max(1, flameTier(streak)));
+  const streakHint = streak === 0
+    ? 'Trainiere deinen Plan komplett durch, um eine Streak zu starten.'
+    : nextBadge
+      ? `Noch ${nextBadge.threshold - streak} Wo. bis „${nextBadge.label}"`
+      : 'Maximale Stufe erreicht.';
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -68,6 +79,19 @@ export default function StartPage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 pb-28 space-y-3">
+        {/* Streak — immer sichtbar */}
+        <a href={`/profil/${encodeURIComponent(userName ?? '')}`}
+          className="card px-4 py-3 flex items-center gap-3 active:scale-[0.99] transition-transform anim-up"
+          style={streak > 0 ? { borderColor: 'var(--accent-2)' } : undefined}>
+          <span className="text-2xl leading-none" style={streak === 0 ? { filter: 'grayscale(1)', opacity: 0.6 } : undefined}>{flames}</span>
+          <div className="flex-1 min-w-0">
+            <div className="font-display text-xl tracking-wide leading-none tnum">
+              {streak} <span className="text-base">{streak === 1 ? 'Woche' : 'Wochen'} Streak</span>
+            </div>
+            <div className="text-[11px] text-[var(--muted)] mt-1">{streakHint}</div>
+          </div>
+        </a>
+
         {/* Feature: Statistiken */}
         <a href="/statistik"
           className="card tape-accent pl-6 pr-5 py-5 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up">
