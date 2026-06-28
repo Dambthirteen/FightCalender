@@ -21,7 +21,7 @@ function Belt({ clanTag, badges, onBadge }: { clanTag: string | null; badges: Ba
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/belt.png" alt="Championship Belt" className="w-full h-full object-contain pointer-events-none" />
       {clanTag && (
-        <div className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: '49.8%', top: '48%' }}>
+        <div className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: '49.8%', top: '53%' }}>
           <span className="font-display tracking-wide" style={{ color: '#1a1a1a', fontSize: '6.5cqw', lineHeight: 1 }}>{clanTag}</span>
         </div>
       )}
