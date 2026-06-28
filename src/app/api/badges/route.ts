@@ -1,10 +1,19 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { canViewProfile } from '@/lib/groups';
-import { getStreakWeeks } from '@/lib/streak';
-import { earnedBadges, badgeById } from '@/lib/badges';
+import { canViewProfile, getMyGroups } from '@/lib/groups';
+import { getStreak } from '@/lib/streak';
+import { earnedBadges, badgeById, ADMIN_BADGE, type BadgeDef } from '@/lib/badges';
 import { createNotification } from '@/lib/notify';
+import { grantStreakPoint, currentWeekRef, STREAK_POINT_CAP } from '@/lib/streak-points';
+
+async function isGroupAdmin(user: string): Promise<boolean> {
+  try {
+    return (await getMyGroups(user)).some((g) => g.role === 'admin');
+  } catch {
+    return false;
+  }
+}
 
 export const runtime = 'nodejs'; // verschickt Push beim Freischalten
 
@@ -21,13 +30,15 @@ export async function GET(req: NextRequest) {
     if (!(await canViewProfile(me, user))) return NextResponse.json({ private: true });
     const sql = getSql();
 
-    const weeks = await getStreakWeeks(sql, user);
+    const { days, weeks } = await getStreak(sql, user);
+    await sql`UPDATE users SET longest_streak = GREATEST(longest_streak, ${days}) WHERE user_name = ${user}`;
     const compRows = (await sql`SELECT COUNT(*)::int AS n FROM competitions WHERE user_name = ${user}`) as { n: number }[];
     const competitions = compRows[0]?.n ?? 0;
 
-    const earned = earnedBadges(weeks, competitions);
+    const earned: BadgeDef[] = earnedBadges(weeks, competitions);
+    if (await isGroupAdmin(user)) earned.push(ADMIN_BADGE);
 
-    // Neu freigeschaltete Abzeichen einmalig verleihen + benachrichtigen.
+    // Neu freigeschaltete Abzeichen einmalig verleihen + benachrichtigen; Streak-Badge gibt einen Streak-Punkt.
     try {
       const awarded = (await sql`SELECT badge_id FROM badges_awarded WHERE user_name = ${user}`) as { badge_id: string }[];
       const known = new Set(awarded.map((r) => r.badge_id));
@@ -38,6 +49,7 @@ export async function GET(req: NextRequest) {
           ON CONFLICT (user_name, badge_id) DO NOTHING RETURNING id
         `;
         if (ins.length === 0) continue; // Race: anderer Request war schneller
+        if (b.kind === 'streak') await grantStreakPoint(sql, user, 'streak_badge', b.id);
         await createNotification(sql, {
           user,
           type: 'badge',
@@ -49,17 +61,28 @@ export async function GET(req: NextRequest) {
       }
     } catch { /* badges_awarded evtl. noch nicht angelegt */ }
 
-    const uRows = (await sql`SELECT displayed_badges, streak_points FROM users WHERE user_name = ${user}`) as
-      { displayed_badges: string[]; streak_points: number }[];
+    const uRows = (await sql`SELECT displayed_badges, streak_points, longest_streak FROM users WHERE user_name = ${user}`) as
+      { displayed_badges: string[]; streak_points: number; longest_streak: number }[];
     const earnedIds = new Set(earned.map((b) => b.id));
     const displayed = (uRows[0]?.displayed_badges ?? []).filter((id) => earnedIds.has(id)); // nur noch gültige
 
+    let adAvailable = false;
+    if (me === user) {
+      const adClaimed = (await sql`
+        SELECT 1 FROM streak_point_log WHERE user_name = ${user} AND kind = 'ad' AND ref = ${currentWeekRef()}
+      `) as unknown[];
+      adAvailable = (uRows[0]?.streak_points ?? 0) < STREAK_POINT_CAP && adClaimed.length === 0;
+    }
+
     return NextResponse.json({
+      streakDays: days,
       streakWeeks: weeks,
+      longest: uRows[0]?.longest_streak ?? days,
       competitions,
       earned: earned.map((b) => ({ id: b.id, label: b.label, emoji: b.emoji, kind: b.kind, hint: b.hint })),
       displayed,
       points: me === user ? (uRows[0]?.streak_points ?? 0) : undefined,
+      adAvailable,
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
@@ -75,9 +98,10 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(badges)) return NextResponse.json({ error: 'Ungültig' }, { status: 400 });
     const sql = getSql();
 
-    const weeks = await getStreakWeeks(sql, me);
+    const { weeks } = await getStreak(sql, me);
     const compRows = (await sql`SELECT COUNT(*)::int AS n FROM competitions WHERE user_name = ${me}`) as { n: number }[];
     const earnedIds = new Set(earnedBadges(weeks, compRows[0]?.n ?? 0).map((b) => b.id));
+    if (await isGroupAdmin(me)) earnedIds.add(ADMIN_BADGE.id);
 
     // Nur gültige IDs, nur freigeschaltete, max 4, ohne Duplikate.
     const clean: string[] = [];

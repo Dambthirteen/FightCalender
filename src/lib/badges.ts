@@ -1,7 +1,7 @@
 // Abzeichen-Definitionen. Emojis sind Platzhalter — später durch kleine PNGs ersetzbar
 // (einfach `emoji` durch `icon`-Pfad tauschen, die IDs bleiben stabil).
 
-export type BadgeKind = 'streak' | 'competition';
+export type BadgeKind = 'streak' | 'competition' | 'special';
 
 export interface BadgeDef {
   id: string;
@@ -31,7 +31,11 @@ export const COMPETITION_BADGES: BadgeDef[] = [
   { id: 'comp_30', label: 'Nuklearer Wettkämpfer', emoji: '☢️', kind: 'competition', threshold: 30, hint: '30 Wettkämpfe bestritten' },
 ];
 
-export const ALL_BADGES: BadgeDef[] = [...STREAK_BADGES, ...COMPETITION_BADGES];
+// Spezial-Abzeichen (rollenbasiert, nicht über Schwellen). threshold ungenutzt.
+export const ADMIN_BADGE: BadgeDef = { id: 'special_admin', label: 'Admin', emoji: '🛠️', kind: 'special', threshold: 0, hint: 'Gruppen-Admin' };
+export const SPECIAL_BADGES: BadgeDef[] = [ADMIN_BADGE];
+
+export const ALL_BADGES: BadgeDef[] = [...STREAK_BADGES, ...COMPETITION_BADGES, ...SPECIAL_BADGES];
 
 export function badgeById(id: string): BadgeDef | undefined {
   return ALL_BADGES.find((b) => b.id === id);

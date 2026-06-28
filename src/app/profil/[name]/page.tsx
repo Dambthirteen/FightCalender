@@ -8,7 +8,7 @@ import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type Mart
 import { nextStreakBadge } from '@/lib/badges';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
-interface BadgeData { streakWeeks: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; points?: number }
+interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; points?: number; adAvailable?: boolean }
 
 interface YearRow { user_name: string; total: number }
 
@@ -85,6 +85,7 @@ export default function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [tab, setTab] = useState<Tab>('fighter');
   const [badgeData, setBadgeData] = useState<BadgeData | null>(null);
+  const [claimingAd, setClaimingAd] = useState(false);
 
   const c = colorFor(name, color);
 
@@ -261,6 +262,17 @@ export default function ProfilePage() {
     } finally { setGivingPraise(false); }
   }
 
+  // Werbung-Platzhalter: 1 Streak-Punkt (max. 1×/Woche).
+  async function claimAdPoint() {
+    if (!badgeData || claimingAd) return;
+    setClaimingAd(true);
+    try {
+      const res = await fetch('/api/streak/ad-point', { method: 'POST' });
+      const d = await res.json().catch(() => ({}));
+      setBadgeData({ ...badgeData, points: d.granted ? d.points : badgeData.points, adAvailable: false });
+    } finally { setClaimingAd(false); }
+  }
+
   // Bis zu 4 Abzeichen am Profil-Kopf ausstellen (nur eigenes Profil).
   async function toggleBadge(id: string) {
     if (!badgeData) return;
@@ -305,11 +317,11 @@ export default function ProfilePage() {
           <div className="font-display text-3xl tracking-wide">{name}</div>
 
           {/* Flamme + ausgestellte Abzeichen */}
-          {badgeData && (badgeData.streakWeeks > 0 || displayedBadges.length > 0) && (
+          {badgeData && (badgeData.streakDays > 0 || displayedBadges.length > 0) && (
             <div className="flex items-center justify-center flex-wrap gap-1.5 mt-2">
-              {badgeData.streakWeeks > 0 && (
+              {badgeData.streakDays > 0 && (
                 <span className="chip" style={{ borderColor: 'var(--accent-2)', color: 'var(--accent-2)' }}>
-                  🔥 {badgeData.streakWeeks} Wo.
+                  🔥 {badgeData.streakDays} {badgeData.streakDays === 1 ? 'Tag' : 'Tage'}
                 </span>
               )}
               {displayedBadges.map((b) => (
@@ -376,9 +388,12 @@ export default function ProfilePage() {
               <div className="space-y-4 anim-in">
                 {/* Abzeichen */}
                 <div className="card px-4 py-4">
-                  <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center justify-between mb-1">
                     <div className="section-label">Abzeichen</div>
-                    <span className="text-xs font-semibold" style={{ color: 'var(--accent-2)' }}>🔥 {badgeData?.streakWeeks ?? 0} Wo. Streak</span>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--accent-2)' }}>🔥 {badgeData?.streakDays ?? 0} {(badgeData?.streakDays ?? 0) === 1 ? 'Tag' : 'Tage'}</span>
+                  </div>
+                  <div className="text-[11px] text-[var(--faint)] mb-3">
+                    {badgeData?.streakWeeks ?? 0} {(badgeData?.streakWeeks ?? 0) === 1 ? 'Woche' : 'Wochen'} am Stück · Rekord: {badgeData?.longest ?? 0} Tage
                   </div>
                   {nextBadge && (
                     <div className="text-xs text-[var(--muted)] mb-3">
@@ -388,10 +403,17 @@ export default function ProfilePage() {
                   {isSelf && (
                     <div className="text-xs text-[var(--muted)] mb-3">
                       Streak-Punkte: <strong style={{ color: 'var(--text)' }}>{badgeData?.points ?? 0}</strong> — schützen deine Streak beim Skippen.
+                      {badgeData?.adAvailable && (
+                        <button onClick={claimAdPoint} disabled={claimingAd}
+                          className="ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border border-[var(--border)] disabled:opacity-40"
+                          style={{ color: 'var(--accent-2)' }}>
+                          {claimingAd ? '…' : 'Werbung → +1 (Platzhalter)'}
+                        </button>
+                      )}
                     </div>
                   )}
                   {!badgeData || badgeData.earned.length === 0 ? (
-                    <div className="text-sm text-[var(--faint)]">Noch keine Abzeichen — bleib dran.</div>
+                    isSelf ? <div className="text-sm text-[var(--faint)]">Noch keine Abzeichen — bleib dran.</div> : null
                   ) : (
                     <>
                       <div className="grid grid-cols-2 gap-2">

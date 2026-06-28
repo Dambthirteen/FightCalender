@@ -17,6 +17,7 @@ export interface CourtExcuse {
   reject_count: number;
   my_vote: 'accept' | 'reject' | null;
   user_status_type: string | null;
+  streak_protected: boolean;
   holiday: string | null;
   is_exempt: boolean;
 }
@@ -35,7 +36,8 @@ export async function getCourtExcuses(
       COUNT(CASE WHEN ev.vote = 'accept' THEN 1 END)::int AS accept_count,
       COUNT(CASE WHEN ev.vote = 'reject' THEN 1 END)::int AS reject_count,
       MAX(CASE WHEN ev.voter_name = ${voter} THEN ev.vote END) AS my_vote,
-      MAX(st.status_type) AS user_status_type
+      MAX(st.status_type) AS user_status_type,
+      bool_or(s.streak_protected) AS streak_protected
     FROM skipping s
     LEFT JOIN excuse_votes ev ON ev.skip_id = s.id
     LEFT JOIN user_status st ON st.user_name = s.user_name

@@ -3,16 +3,16 @@ import { isHoliday } from './holidays';
 import { CUTOVER } from './bitch-scoring';
 
 /**
- * Persönliche Trainings-Streak: aufeinanderfolgende ABGESCHLOSSENE Wochen, in denen
- * der Nutzer keinen geplanten Trainingstag „geskippt" hat (No-Show ohne Befreiung).
+ * Persönliche Trainings-Streak in zwei Einheiten:
+ *  - days:  besuchte geplante Trainings am Stück (Hauptzahl, granular)
+ *  - weeks: abgeschlossene Wochen ohne Trainings-Skip am Stück (für Badges)
  *
- * Eine Woche bricht die Streak, sobald an einem geplanten Tag gilt: kein Feiertag,
- * nicht krank/Urlaub, NICHT anwesend — UND der Skip wurde nicht mit einem
- * Streak-Punkt geschützt (streak_protected). Geschützte Skips zählen weiter als
- * Bitch-Punkt, brechen aber die Streak nicht.
+ * Ein geplanter Tag bricht die Streak nur, wenn: kein Feiertag, nicht krank/Urlaub,
+ * NICHT anwesend UND nicht mit einem Streak-Punkt geschützt (streak_protected).
+ * Geschützte/befreite/Feiertags-Tage sind neutral (kein Bruch, kein +). Heute ist
+ * neutral, solange noch nichts eingetragen ist (Training evtl. noch ausstehend).
  *
- * Bewusst PERSÖNLICH (über alle Gruppen), da Streak/Badges Profil-Erfolge sind.
- * Gezählt wird erst ab dem Stichtag (CUTOVER) — davor wurden No-Shows nicht abgeleitet.
+ * Bewusst PERSÖNLICH (über alle Gruppen) und erst ab dem Stichtag (CUTOVER).
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,17 +28,17 @@ function addDaysStr(dateStr: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function getStreakWeeks(sql: Sql, user: string): Promise<number> {
-  // Geplante Wochentage (aktueller Stundenplan, über alle Gruppen).
+export interface Streak { days: number; weeks: number; }
+
+export async function getStreak(sql: Sql, user: string): Promise<Streak> {
   const schedRows = (await sql`
     SELECT DISTINCT c.day_of_week::int AS dow
     FROM user_schedule us JOIN classes c ON c.id = us.class_id
     WHERE us.user_name = ${user}
   `) as { dow: number }[];
   const dows = new Set(schedRows.map((r) => r.dow));
-  if (dows.size === 0) return 0;
+  if (dows.size === 0) return { days: 0, weeks: 0 };
 
-  // Anwesenheits-Tage.
   const attRows = (await sql`
     SELECT (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
     FROM attendance a JOIN classes c ON c.id = a.class_id
@@ -46,43 +46,55 @@ export async function getStreakWeeks(sql: Sql, user: string): Promise<number> {
   `) as { d: string }[];
   const present = new Set(attRows.map((r) => r.d));
 
-  // Mit Streak-Punkt geschützte Skip-Tage.
   const skipRows = (await sql`
     SELECT date::text AS d FROM skipping WHERE user_name = ${user} AND streak_protected = TRUE
   `) as { d: string }[];
   const protectedDays = new Set(skipRows.map((r) => r.d));
 
-  // Krank/Urlaub-Zeiträume (befreien).
   const statusRows = (await sql`
     SELECT start_date::text AS s, end_date::text AS e FROM user_status
     WHERE user_name = ${user} AND status_type IN ('sick', 'vacation')
   `) as { s: string; e: string }[];
   const exempt = (d: string) => statusRows.some((x) => d >= x.s && d <= x.e);
 
-  const curWeekStart = weekStartOf(berlinNow().date);
+  const today = berlinNow().date;
+
+  // --- Tage: geplante Trainings am Stück (rückwärts ab heute) ---
+  let days = 0;
+  let d = today;
+  for (let guard = 0; guard < 400 && d >= CUTOVER; guard++, d = addDaysStr(d, -1)) {
+    if (!dows.has(isodow(d))) continue;
+    if (isHoliday(d)) continue;
+    if (exempt(d)) continue;
+    if (present.has(d)) { days++; continue; }
+    if (protectedDays.has(d)) continue;       // geschützt → neutral
+    if (d === today) continue;                // heute noch offen → neutral
+    break;                                     // ungeschützter No-Show in der Vergangenheit → Bruch
+  }
+
+  // --- Wochen: abgeschlossene saubere Wochen am Stück (für Badges) ---
+  const curWeekStart = weekStartOf(today);
   const cutoverWeek = weekStartOf(CUTOVER);
-
-  let streak = 0;
+  let weeks = 0;
   for (let i = 1; i <= 60; i++) {
-    const ws = addDaysStr(curWeekStart, -7 * i); // i-te abgeschlossene Woche vor dieser
+    const ws = addDaysStr(curWeekStart, -7 * i);
     if (ws < cutoverWeek) break;
-
     let hadScheduled = false;
     let broke = false;
     for (let off = 0; off < 7; off++) {
-      const d = addDaysStr(ws, off);
-      if (!dows.has(isodow(d))) continue;
-      if (isHoliday(d)) continue;
-      if (exempt(d)) continue;
+      const wd = addDaysStr(ws, off);
+      if (!dows.has(isodow(wd))) continue;
+      if (isHoliday(wd)) continue;
+      if (exempt(wd)) continue;
       hadScheduled = true;
-      if (present.has(d)) continue;
-      if (protectedDays.has(d)) continue;
+      if (present.has(wd)) continue;
+      if (protectedDays.has(wd)) continue;
       broke = true;
       break;
     }
     if (broke) break;
-    if (hadScheduled) streak++;
-    // Woche ohne geplante Tage = neutral: weder Bruch noch Zähler.
+    if (hadScheduled) weeks++;
   }
-  return streak;
+
+  return { days, weeks };
 }

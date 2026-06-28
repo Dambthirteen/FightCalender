@@ -293,6 +293,20 @@ export async function POST() {
     // (jeder startet mit 3). displayed_badges: bis zu 4 am Profil ausgestellte Abzeichen.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_points INTEGER NOT NULL DEFAULT 3`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS displayed_badges JSONB NOT NULL DEFAULT '[]'::jsonb`;
+    // longest_streak: persistierter Rekord (bleibt, auch wenn die aktuelle Streak reißt).
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS longest_streak INTEGER NOT NULL DEFAULT 0`;
+    // streak_point_log: Vergabe-Ledger → verhindert Doppel-Vergabe (perfekte Woche, Streak-Badge,
+    // Gigalob, Werbung). Kontostand bleibt users.streak_points.
+    await sql`
+      CREATE TABLE IF NOT EXISTS streak_point_log (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        kind VARCHAR(20) NOT NULL,   -- 'perfect_week' | 'streak_badge' | 'gigalob' | 'ad'
+        ref VARCHAR(40) NOT NULL,    -- Wochenstart / badge_id / praise_id
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_name, kind, ref)
+      )
+    `;
     // streak_protected: dieser Skip wurde mit einem Streak-Punkt geschützt → bricht die Streak nicht
     // (zählt aber weiterhin als Bitch-Punkt).
     await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS streak_protected BOOLEAN NOT NULL DEFAULT FALSE`;

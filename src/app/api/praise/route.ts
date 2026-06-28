@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { canViewProfile } from '@/lib/groups';
 import { createNotification } from '@/lib/notify';
 import { berlinNow, weekStartOf } from '@/lib/berlin-time';
+import { grantStreakPoint } from '@/lib/streak-points';
 
 export const runtime = 'nodejs'; // POST verschickt Push
 
@@ -71,6 +72,10 @@ export async function POST(req: NextRequest) {
       refId: ins[0].id as number,
       push: { title: `${emoji} ${label} erhalten!`, body: `${me} findet: du hast es verdient.` },
     });
+    // Gigalob koppelt an die Streak-Ökonomie: Empfänger bekommt einen Streak-Punkt (gedeckelt).
+    if (kind === 'gigalob') {
+      await grantStreakPoint(sql, to, 'gigalob', String(ins[0].id));
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

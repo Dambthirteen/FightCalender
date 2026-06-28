@@ -25,6 +25,7 @@ interface Excuse {
   my_vote: 'accept' | 'reject' | null;
   holiday: string | null;
   user_status_type: string | null;
+  streak_protected: boolean;
   is_exempt: boolean;
 }
 
@@ -120,6 +121,11 @@ export default function VotePage() {
             {e.is_exempt && (
               <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-600/20 text-green-400 border border-green-500/30">
                 ✓ Befreit
+              </span>
+            )}
+            {e.streak_protected && (
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: 'var(--accent-soft)', color: 'var(--accent-2)', border: '1px solid rgba(255,106,61,0.3)' }}>
+                🔥 Streak gerettet
               </span>
             )}
             {!e.is_exempt && info.isPast && (
