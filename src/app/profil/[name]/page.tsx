@@ -11,8 +11,10 @@ interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hi
 interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; clanTag?: string | null; points?: number; adAvailable?: boolean }
 
 // Championship-Belt: Clantag mittig (schwarz), 4 ausgestellte Badges auf den Achtecken.
-// Gemessene Achteck-Zentren (% der Breite), links → rechts.
-const BELT_SLOTS = [21.4, 32, 67.9, 78.6];
+// Gemessene Achteck-Zentren (% der Breite). Füll-Reihenfolge von INNEN nach außen,
+// damit 1 Badge neben dem Clantag sitzt und 2 symmetrisch sind:
+// inner-links · inner-rechts · outer-links · outer-rechts.
+const BELT_SLOTS = [32, 67.9, 21.4, 78.6];
 function Belt({ clanTag, badges, onBadge }: { clanTag: string | null; badges: BadgeInfo[]; onBadge?: (b: BadgeInfo) => void }) {
   return (
     <div className="relative w-full select-none" style={{ aspectRatio: '1400 / 319', containerType: 'inline-size' }}>
@@ -20,14 +22,14 @@ function Belt({ clanTag, badges, onBadge }: { clanTag: string | null; badges: Ba
       <img src="/belt.png" alt="Championship Belt" className="w-full h-full object-contain pointer-events-none" />
       {clanTag && (
         <div className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: '49.8%', top: '48%' }}>
-          <span className="font-display tracking-wide" style={{ color: '#1a1a1a', fontSize: '6cqw', lineHeight: 1 }}>{clanTag}</span>
+          <span className="font-display tracking-wide" style={{ color: '#1a1a1a', fontSize: '6.5cqw', lineHeight: 1 }}>{clanTag}</span>
         </div>
       )}
       {BELT_SLOTS.map((x, i) => badges[i] ? (
         <button key={i} type="button" onClick={() => onBadge?.(badges[i])} aria-label={badges[i].label}
           className="absolute -translate-x-1/2 -translate-y-1/2 active:scale-90 transition-transform"
           style={{ left: `${x}%`, top: '48%' }}>
-          <span style={{ fontSize: '4.5cqw', lineHeight: 1, display: 'block' }}>{badges[i].emoji}</span>
+          <span style={{ fontSize: '5.5cqw', lineHeight: 1, display: 'block' }}>{badges[i].emoji}</span>
         </button>
       ) : null)}
     </div>
