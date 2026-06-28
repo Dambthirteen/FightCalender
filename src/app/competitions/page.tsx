@@ -54,15 +54,18 @@ function groupClasses(classes: ClassInfo[], today: Date, compDate: Date): Groupe
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
-/** Adresse in der passenden Karten-App öffnen (iOS → Apple Maps, sonst Google Maps). */
-function openMaps(address: string) {
+function isIOS(): boolean {
+  return typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+function mapsUrl(address: string, provider: 'apple' | 'google'): string {
   const q = encodeURIComponent(address.trim());
-  if (!q) return;
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  const url = /iPad|iPhone|iPod/.test(ua)
+  return provider === 'apple'
     ? `https://maps.apple.com/?q=${q}`
     : `https://www.google.com/maps/search/?api=1&query=${q}`;
-  window.open(url, '_blank', 'noopener,noreferrer');
+}
+function openMap(address: string, provider: 'apple' | 'google') {
+  if (!address.trim()) return;
+  window.open(mapsUrl(address, provider), '_blank', 'noopener,noreferrer');
 }
 
 export default function CompetitionsPage() {
@@ -71,6 +74,7 @@ export default function CompetitionsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [mapsFor, setMapsFor] = useState<string | null>(null); // Adresse für die Karten-Auswahl (iOS)
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -148,7 +152,8 @@ export default function CompetitionsPage() {
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
               <span className="chip">{c.user_name}</span>
               {c.location && (
-                <button onClick={() => openMaps(c.location)} className="chip active:scale-95" style={{ color: 'var(--teal)', borderColor: 'var(--teal)' }}>
+                <button onClick={() => { if (isIOS()) setMapsFor(c.location); else openMap(c.location, 'google'); }}
+                  className="chip active:scale-95" style={{ color: 'var(--teal)', borderColor: 'var(--teal)' }}>
                   📍 {c.location}
                 </button>
               )}
@@ -314,6 +319,21 @@ export default function CompetitionsPage() {
           </>
         )}
       </main>
+
+      {/* Karten-Auswahl (iOS) */}
+      {mapsFor && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm px-3 pb-3 anim-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setMapsFor(null); }}>
+          <div className="card w-full max-w-sm p-4 anim-up">
+            <div className="section-label mb-3 px-1">In Karten öffnen</div>
+            <div className="space-y-2">
+              <button onClick={() => { openMap(mapsFor, 'apple'); setMapsFor(null); }} className="btn btn-ghost w-full">Apple Maps</button>
+              <button onClick={() => { openMap(mapsFor, 'google'); setMapsFor(null); }} className="btn btn-ghost w-full">Google Maps</button>
+              <button onClick={() => setMapsFor(null)} className="btn w-full text-[var(--muted)]">Abbrechen</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
