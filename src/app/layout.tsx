@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bebas_Neue, Sora } from "next/font/google";
+import { Bebas_Neue, Sora, New_Rocker } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/components/UserProvider";
 import BottomNav from "@/components/BottomNav";
@@ -9,6 +9,8 @@ import WrappedPopup from "@/components/WrappedPopup";
 // Display: Fight-Poster-Optik (kondensiert, wuchtig). Body: Sora (eigenständig, klar).
 const display = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-display" });
 const sans = Sora({ subsets: ["latin"], variable: "--font-body", display: "swap" });
+// Fantasy-Heading-Font (für den Design-Mix / Vorschau).
+const medieval = New_Rocker({ weight: "400", subsets: ["latin"], variable: "--font-medieval", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Fight Calendar",
@@ -34,7 +36,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={`${display.variable} ${sans.variable}`}>
+    <html lang="de" className={`${display.variable} ${sans.variable} ${medieval.variable}`}>
       <body className="min-h-screen">
         <UserProvider>
           {children}
