@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
     }
     const rows = await sql`
       INSERT INTO competitions (user_name, name, competition_date, location, weight_class, notes)
-      VALUES (${userName}, ${name.trim()}, ${competitionDate}, ${location ?? ''}, ${weightClass ?? ''}, ${notes ?? ''})
+      VALUES (${userName}, ${name.trim().slice(0, 200)}, ${competitionDate},
+              ${String(location ?? '').slice(0, 200)}, ${String(weightClass ?? '').slice(0, 100)}, ${String(notes ?? '').slice(0, 500)})
       RETURNING *
     `;
     return NextResponse.json(rows[0], { status: 201 });

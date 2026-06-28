@@ -1,8 +1,14 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-const getSecret = () =>
-  new TextEncoder().encode(process.env.JWT_SECRET ?? 'fight-calender-dev-secret');
+const getSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 16) {
+    // Kein unsicherer Fallback: ohne starkes Secret keine gültigen Sessions.
+    throw new Error('JWT_SECRET fehlt oder ist zu kurz (min. 16 Zeichen).');
+  }
+  return new TextEncoder().encode(secret);
+};
 
 export const COOKIE_NAME = 'fightcal_session';
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days

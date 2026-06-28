@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
       await sql`
         INSERT INTO skipping (date, user_name, excuse, group_id, streak_protected)
-        VALUES (${date}, ${name}, ${excuse.trim()}, ${gid}, ${protectStreak})
+        VALUES (${date}, ${name}, ${excuse.trim().slice(0, 500)}, ${gid}, ${protectStreak})
       `;
       return NextResponse.json({ skipping: true, streakProtected: protectStreak });
     }

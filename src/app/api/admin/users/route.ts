@@ -2,8 +2,9 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
-  const pw = req.nextUrl.searchParams.get('adminPassword');
-  if (pw !== process.env.ADMIN_PASSWORD) {
+  // Passwort über Header, nicht als Query-Param (landet sonst in Logs/History).
+  const pw = req.headers.get('x-admin-password') ?? req.nextUrl.searchParams.get('adminPassword');
+  if (!process.env.ADMIN_PASSWORD || pw !== process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const sql = neon(process.env.DATABASE_URL!);

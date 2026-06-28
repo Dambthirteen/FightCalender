@@ -1,8 +1,13 @@
 import { neon } from '@neondatabase/serverless';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    // Schema-Setup nur mit Admin-Passwort (verhindert anonyme Aufrufe).
+    const pw = req.headers.get('x-admin-password') ?? (await req.json().catch(() => ({})))?.adminPassword;
+    if (!process.env.ADMIN_PASSWORD || pw !== process.env.ADMIN_PASSWORD) {
+      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+    }
     const sql = neon(process.env.DATABASE_URL!);
     await sql`
       CREATE TABLE IF NOT EXISTS users (
@@ -331,6 +336,24 @@ export async function POST() {
         UNIQUE(user_name, month)
       )
     `;
+
+    // --- Indizes auf häufig gefilterte Spalten (Performance) ---
+    await sql`CREATE INDEX IF NOT EXISTS attendance_user_idx ON attendance (user_name)`;
+    await sql`CREATE INDEX IF NOT EXISTS attendance_week_idx ON attendance (week_start)`;
+    await sql`CREATE INDEX IF NOT EXISTS attendance_class_idx ON attendance (class_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS skipping_user_idx ON skipping (user_name)`;
+    await sql`CREATE INDEX IF NOT EXISTS skipping_date_idx ON skipping (date)`;
+    await sql`CREATE INDEX IF NOT EXISTS skipping_group_idx ON skipping (group_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS excuse_votes_skip_idx ON excuse_votes (skip_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS excuse_votes_voter_idx ON excuse_votes (voter_name)`;
+    await sql`CREATE INDEX IF NOT EXISTS competitions_user_idx ON competitions (user_name)`;
+    await sql`CREATE INDEX IF NOT EXISTS classes_group_idx ON classes (group_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS user_schedule_user_idx ON user_schedule (user_name)`;
+    await sql`CREATE INDEX IF NOT EXISTS group_members_user_idx ON group_members (user_name)`;
+    await sql`CREATE INDEX IF NOT EXISTS group_members_group_idx ON group_members (group_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS user_status_user_idx ON user_status (user_name)`;
+    await sql`CREATE INDEX IF NOT EXISTS praises_to_idx ON praises (to_user)`;
+    await sql`CREATE INDEX IF NOT EXISTS profile_comments_profile_idx ON profile_comments (profile_name)`;
 
     return NextResponse.json({ ok: true, message: 'Tables created successfully' });
   } catch (error) {

@@ -6,9 +6,12 @@ import { setSessionCookie } from '@/lib/auth';
 export async function POST(req: NextRequest) {
   try {
     const { userName, password } = await req.json();
-    const name = userName?.trim();
-    if (!name || !password || password.length < 4) {
-      return NextResponse.json({ error: 'Name und Passwort (mind. 4 Zeichen) erforderlich.' }, { status: 400 });
+    const name = String(userName ?? '').trim();
+    if (name.length < 2 || name.length > 100) {
+      return NextResponse.json({ error: 'Name muss 2–100 Zeichen lang sein.' }, { status: 400 });
+    }
+    if (typeof password !== 'string' || password.length < 6 || password.length > 72) {
+      return NextResponse.json({ error: 'Passwort muss 6–72 Zeichen lang sein.' }, { status: 400 });
     }
     const sql = neon(process.env.DATABASE_URL!);
     const existing = await sql`SELECT id FROM users WHERE user_name = ${name}`;

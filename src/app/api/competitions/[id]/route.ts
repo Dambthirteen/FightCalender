@@ -34,8 +34,9 @@ export async function PUT(
     }
     const rows = await sql`
       UPDATE competitions
-      SET name = ${name.trim()}, competition_date = ${competitionDate},
-          location = ${location ?? ''}, weight_class = ${weightClass ?? ''}, notes = ${notes ?? ''}
+      SET name = ${name.trim().slice(0, 200)}, competition_date = ${competitionDate},
+          location = ${String(location ?? '').slice(0, 200)}, weight_class = ${String(weightClass ?? '').slice(0, 100)},
+          notes = ${String(notes ?? '').slice(0, 500)}
       WHERE id = ${parseInt(id)} AND user_name = ${userName}
       RETURNING *
     `;

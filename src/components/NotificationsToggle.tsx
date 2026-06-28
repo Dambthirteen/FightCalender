@@ -144,7 +144,7 @@ export default function NotificationsToggle() {
       ) : isIOS && !isStandalone ? (
         <div className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-3">
           Auf dem iPhone musst du die App zuerst <strong>zum Home-Bildschirm hinzufügen</strong>:
-          unten auf <span aria-label="Teilen">⎋ Teilen</span> tippen → „Zum Home-Bildschirm". Öffne
+          unten auf <span aria-label="Teilen">⎋ Teilen</span> tippen → „Zum Home-Bildschirm“. Öffne
           die App dann über das neue Icon und aktiviere hier die Benachrichtigungen.
         </div>
       ) : (

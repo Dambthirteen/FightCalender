@@ -84,7 +84,7 @@ export default function AdminPage() {
   async function loadUsers() {
     setUsersLoading(true);
     try {
-      const res = await fetch(`/api/admin/users?adminPassword=${encodeURIComponent(password)}`);
+      const res = await fetch('/api/admin/users', { headers: { 'x-admin-password': password } });
       const data = await res.json();
       setUsers(Array.isArray(data) ? data : []);
     } finally {
@@ -138,7 +138,7 @@ export default function AdminPage() {
   }
 
   async function initDb() {
-    const res = await fetch('/api/setup', { method: 'POST' });
+    const res = await fetch('/api/setup', { method: 'POST', headers: { 'x-admin-password': password } });
     const data = await res.json();
     alert(data.message ?? data.error);
   }
