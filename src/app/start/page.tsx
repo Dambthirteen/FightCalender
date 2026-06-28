@@ -1,14 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getDaysInMonth } from 'date-fns';
 import { useUser } from '@/components/UserProvider';
 import { nextStreakBadge, flameTier } from '@/lib/badges';
-
-function isVotingWindow() {
-  const n = new Date();
-  return n.getDate() >= getDaysInMonth(n) - 2;
-}
 
 export default function StartPage() {
   const { userName } = useUser();
@@ -45,8 +39,7 @@ export default function StartPage() {
     window.location.href = '/login';
   }
 
-  const courtOpen = isVotingWindow();
-  const courtAlert = courtOpen && pendingVotes > 0; // offen UND noch nicht fertig abgestimmt
+  const courtAlert = pendingVotes > 0; // es gibt Ausreden zu richten → glühen
 
   const iconBtn = 'relative w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all text-lg';
   const moreRows = [
@@ -110,8 +103,8 @@ export default function StartPage() {
             style={{ animationDelay: '40ms' }}>
             <span className="text-2xl">🗳️</span>
             <span className="text-sm font-semibold">Ausreden-Gericht</span>
-            <span className="text-[11px] font-semibold" style={{ color: courtOpen ? 'var(--bitch)' : 'var(--faint)' }}>
-              {courtOpen ? '● offen' : 'Ausreden bewerten'}
+            <span className="text-[11px] font-semibold" style={{ color: pendingVotes > 0 ? 'var(--bitch)' : 'var(--faint)' }}>
+              {pendingVotes > 0 ? `● ${pendingVotes} offen` : 'Ausreden bewerten'}
             </span>
           </a>
           <a href="/competitions"
