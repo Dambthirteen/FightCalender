@@ -422,30 +422,31 @@ export default function ProfilePage() {
                       )}
                     </div>
                   )}
-                  {!badgeData || badgeData.earned.length === 0 ? (
-                    isSelf ? <div className="text-sm text-[var(--faint)]">Noch keine Abzeichen — bleib dran.</div> : null
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 gap-2">
-                        {badgeData.earned.map((b) => {
-                          const on = editing && badgeData.displayed.includes(b.id);
-                          const cls = 'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all';
-                          const style = on
-                            ? { background: 'var(--accent-soft)', borderColor: 'var(--accent-2)' }
-                            : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)' };
-                          const inner = (
-                            <>
-                              <span className="text-2xl leading-none">{b.emoji}</span>
-                              <span className="text-[10px] font-semibold leading-tight">{b.label}</span>
-                            </>
-                          );
-                          return editing
-                            ? <button key={b.id} onClick={() => toggleBadge(b.id)} className={`${cls} active:scale-95`} style={style}>{inner}</button>
-                            : <div key={b.id} className={cls} style={style}>{inner}</div>;
-                        })}
-                      </div>
-                      {editing && <p className="text-[10px] text-[var(--faint)] mt-2">Tippe an, um bis zu 4 auszustellen</p>}
-                    </>
+                  {/* Volles Raster nur im Bearbeiten-Modus — sonst überlädt das Profil.
+                      Ausgestellte Badges erscheinen ohnehin als Chips unter dem Namen. */}
+                  {editing && (
+                    badgeData && badgeData.earned.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          {badgeData.earned.map((b) => {
+                            const on = badgeData.displayed.includes(b.id);
+                            const cls = 'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all active:scale-95';
+                            const style = on
+                              ? { background: 'var(--accent-soft)', borderColor: 'var(--accent-2)' }
+                              : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)' };
+                            return (
+                              <button key={b.id} onClick={() => toggleBadge(b.id)} className={cls} style={style}>
+                                <span className="text-2xl leading-none">{b.emoji}</span>
+                                <span className="text-[10px] font-semibold leading-tight">{b.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[10px] text-[var(--faint)] mt-2">Tippe an, um bis zu 4 auszustellen</p>
+                      </>
+                    ) : (
+                      <div className="text-sm text-[var(--faint)]">Noch keine Abzeichen — bleib dran.</div>
+                    )
                   )}
                   {isSelf && (
                     <button onClick={() => setShowAllBadges(true)} className="mt-3 text-xs font-semibold" style={{ color: 'var(--teal)' }}>
