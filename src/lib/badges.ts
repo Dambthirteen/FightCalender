@@ -1,7 +1,7 @@
 // Abzeichen-Definitionen. Emojis sind Platzhalter — später durch kleine PNGs ersetzbar
 // (einfach `emoji` durch `icon`-Pfad tauschen, die IDs bleiben stabil).
 
-export type BadgeKind = 'streak' | 'competition' | 'judge' | 'special' | 'secret';
+export type BadgeKind = 'streak' | 'competition' | 'fight' | 'judge' | 'special' | 'secret';
 
 export interface BadgeDef {
   id: string;
@@ -32,6 +32,18 @@ export const COMPETITION_BADGES: BadgeDef[] = [
   { id: 'comp_30', label: 'Nuklearer Wettkämpfer', emoji: '☢️', kind: 'competition', threshold: 30, hint: '30 Wettkämpfe bestritten' },
 ];
 
+// Kampf-Siege nach Art des Sieges (aus den Wettkampf-Ergebnissen).
+export const FIGHT_BADGES: BadgeDef[] = [
+  { id: 'fight_points', label: 'Punktsieger', emoji: '🧮', kind: 'fight', threshold: 0, hint: 'Einen Wettkampf nach Punkten gewonnen' },
+  { id: 'fight_tko', label: 'Abbruchsieg', emoji: '🛑', kind: 'fight', threshold: 0, hint: 'Einen Wettkampf per TKO gewonnen' },
+  { id: 'fight_ko', label: 'K.-o.-Sieger', emoji: '💥', kind: 'fight', threshold: 0, hint: 'Einen Wettkampf per K.o. gewonnen' },
+];
+const FIGHT_BY_METHOD: Record<string, string> = { points: 'fight_points', tko: 'fight_tko', ko: 'fight_ko' };
+export function earnedFightBadges(winMethods: string[]): BadgeDef[] {
+  const ids = new Set(winMethods.map((m) => FIGHT_BY_METHOD[m]).filter(Boolean));
+  return FIGHT_BADGES.filter((b) => ids.has(b.id));
+}
+
 // Gericht = Anzahl bewerteter (gerichteter) Ausreden.
 export const JUDGE_BADGES: BadgeDef[] = [
   { id: 'judge_10', label: 'Jura Student', emoji: '📚', kind: 'judge', threshold: 10, hint: '10 Ausreden gerichtet' },
@@ -48,7 +60,7 @@ export const SPECIAL_BADGES: BadgeDef[] = [ADMIN_BADGE];
 export const DOPPELMORAL_BADGE: BadgeDef = { id: 'secret_doppelmoral', label: 'Doppelmoral', emoji: '🎭', kind: 'secret', threshold: 0, hint: '10 Bitch-Punkte – und trotzdem über 20× gerichtet', secret: true };
 export const SECRET_BADGES: BadgeDef[] = [DOPPELMORAL_BADGE];
 
-export const ALL_BADGES: BadgeDef[] = [...STREAK_BADGES, ...COMPETITION_BADGES, ...JUDGE_BADGES, ...SPECIAL_BADGES, ...SECRET_BADGES];
+export const ALL_BADGES: BadgeDef[] = [...STREAK_BADGES, ...COMPETITION_BADGES, ...FIGHT_BADGES, ...JUDGE_BADGES, ...SPECIAL_BADGES, ...SECRET_BADGES];
 
 export function earnedJudgeBadges(judged: number): BadgeDef[] {
   return JUDGE_BADGES.filter((b) => judged >= b.threshold);

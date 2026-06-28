@@ -4,6 +4,11 @@ import { getCurrentUser } from '@/lib/auth';
 
 function getSql() { return neon(process.env.DATABASE_URL!); }
 
+const RESULTS = ['win', 'loss'];
+const METHODS = ['points', 'tko', 'ko'];
+export function cleanResult(v: unknown): string | null { return typeof v === 'string' && RESULTS.includes(v) ? v : null; }
+export function cleanMethod(v: unknown): string | null { return typeof v === 'string' && METHODS.includes(v) ? v : null; }
+
 export async function GET() {
   try {
     const sql = getSql();
@@ -16,6 +21,8 @@ export async function GET() {
         comp.location,
         comp.weight_class,
         comp.notes,
+        comp.result,
+        comp.method,
         comp.created_at,
         COALESCE(
           json_agg(
@@ -41,14 +48,15 @@ export async function POST(req: NextRequest) {
     const sql = getSql();
     const userName = await getCurrentUser();
     if (!userName) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const { name, competitionDate, location, weightClass, notes } = await req.json();
+    const { name, competitionDate, location, weightClass, notes, result, method } = await req.json();
     if (!name?.trim() || !competitionDate) {
       return NextResponse.json({ error: 'Name und Datum erforderlich' }, { status: 400 });
     }
     const rows = await sql`
-      INSERT INTO competitions (user_name, name, competition_date, location, weight_class, notes)
+      INSERT INTO competitions (user_name, name, competition_date, location, weight_class, notes, result, method)
       VALUES (${userName}, ${name.trim().slice(0, 200)}, ${competitionDate},
-              ${String(location ?? '').slice(0, 200)}, ${String(weightClass ?? '').slice(0, 100)}, ${String(notes ?? '').slice(0, 500)})
+              ${String(location ?? '').slice(0, 200)}, ${String(weightClass ?? '').slice(0, 100)}, ${String(notes ?? '').slice(0, 500)},
+              ${cleanResult(result)}, ${cleanMethod(method)})
       RETURNING *
     `;
     return NextResponse.json(rows[0], { status: 201 });

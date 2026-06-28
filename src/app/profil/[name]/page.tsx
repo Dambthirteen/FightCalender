@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
-import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
+import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
 interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; clanTag?: string | null; points?: number; adAvailable?: boolean }
@@ -783,7 +783,7 @@ export default function ProfilePage() {
               <h2 className="font-display text-2xl tracking-wide">Alle Achievements</h2>
               <button onClick={() => setShowAllBadges(false)} className="text-[var(--faint)] hover:text-white text-lg px-1">✕</button>
             </div>
-            {([['Streak', STREAK_BADGES], ['Wettkampf', COMPETITION_BADGES], ['Gericht', JUDGE_BADGES], ['Spezial', SPECIAL_BADGES], ['Geheim', SECRET_BADGES]] as const).map(([title, list]) => {
+            {([['Streak', STREAK_BADGES], ['Wettkampf', COMPETITION_BADGES], ['Kampf-Siege', FIGHT_BADGES], ['Gericht', JUDGE_BADGES], ['Spezial', SPECIAL_BADGES], ['Geheim', SECRET_BADGES]] as const).map(([title, list]) => {
               const visible = list.filter((b) => !b.secret || earnedSet.has(b.id)); // geheime erst nach Freischalten
               if (visible.length === 0) return null;
               return (

@@ -15,10 +15,13 @@ interface Competition {
   location: string;
   weight_class: string;
   notes: string;
+  result: string | null;
+  method: string | null;
   user_classes: ClassInfo[];
 }
 
 const DAY_SHORT = ['', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const METHOD_LABEL: Record<string, string> = { points: 'Punkte', tko: 'TKO', ko: 'K.o.' };
 
 function countClassSessions(dayOfWeek: number, today: Date, compDate: Date): number {
   // Count how many times this day-of-week occurs from tomorrow up to (not including) comp date
@@ -78,7 +81,7 @@ export default function CompetitionsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    name: '', competitionDate: '', location: '', weightClass: '', notes: '',
+    name: '', competitionDate: '', location: '', weightClass: '', notes: '', result: '', method: '',
   });
 
   useEffect(() => {
@@ -89,7 +92,7 @@ export default function CompetitionsPage() {
   }, []);
 
   function resetForm() {
-    setForm({ name: '', competitionDate: '', location: '', weightClass: '', notes: '' });
+    setForm({ name: '', competitionDate: '', location: '', weightClass: '', notes: '', result: '', method: '' });
     setEditingId(null); setError('');
   }
 
@@ -97,6 +100,7 @@ export default function CompetitionsPage() {
     setForm({
       name: c.name, competitionDate: c.competition_date.slice(0, 10),
       location: c.location ?? '', weightClass: c.weight_class ?? '', notes: c.notes ?? '',
+      result: c.result ?? '', method: c.method ?? '',
     });
     setEditingId(c.id); setError(''); setShowForm(true);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -136,6 +140,10 @@ export default function CompetitionsPage() {
   const upcoming = competitions.filter(c => new Date(c.competition_date.slice(0, 10) + 'T12:00') >= now);
   const past = competitions.filter(c => new Date(c.competition_date.slice(0, 10) + 'T12:00') < now);
 
+  const myComps = competitions.filter(c => c.user_name === userName);
+  const wins = myComps.filter(c => c.result === 'win').length;
+  const losses = myComps.filter(c => c.result === 'loss').length;
+
   function CompCard({ c }: { c: Competition }) {
     const compDate = new Date(c.competition_date.slice(0, 10) + 'T12:00');
     const days = differenceInDays(compDate, now);
@@ -158,6 +166,13 @@ export default function CompetitionsPage() {
                 </button>
               )}
               {c.weight_class && <span className="chip">{c.weight_class}</span>}
+              {c.result && (
+                <span className="chip" style={c.result === 'win'
+                  ? { color: 'var(--good)', borderColor: 'var(--good)' }
+                  : { color: 'var(--accent)', borderColor: 'var(--accent)' }}>
+                  {c.result === 'win' ? 'Sieg' : 'Niederlage'}{c.method ? ` · ${METHOD_LABEL[c.method] ?? c.method}` : ''}
+                </span>
+              )}
             </div>
             <div className="text-xs text-[var(--faint)] mt-2">
               {format(compDate, 'EEEE, d. MMMM yyyy', { locale: de })}
@@ -246,6 +261,20 @@ export default function CompetitionsPage() {
       } />
 
       <main className="max-w-md mx-auto px-4 pb-24 space-y-6">
+        {/* Persönliche Bilanz */}
+        {wins + losses > 0 && (
+          <div className="card px-4 py-3 flex items-center justify-center gap-8 anim-up">
+            <div className="text-center">
+              <div className="font-display text-2xl tnum" style={{ color: 'var(--good)' }}>{wins}</div>
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">Siege</div>
+            </div>
+            <div className="text-center">
+              <div className="font-display text-2xl tnum" style={{ color: 'var(--accent)' }}>{losses}</div>
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">Niederlagen</div>
+            </div>
+          </div>
+        )}
+
         {/* Add form */}
         {showForm && (
           <div className="card p-5 anim-up">
@@ -277,6 +306,37 @@ export default function CompetitionsPage() {
                 <label className="section-label mb-1.5 block">Notiz</label>
                 <input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                   className="field" placeholder="z.B. Erster Wettkampf, Punkte-Turnier…" />
+              </div>
+              {/* Ergebnis (nach dem Kampf) */}
+              <div>
+                <label className="section-label mb-1.5 block">Ergebnis (nach dem Kampf)</label>
+                <div className="flex gap-2">
+                  {([['', '—'], ['win', 'Sieg'], ['loss', 'Niederlage']] as const).map(([v, l]) => {
+                    const on = form.result === v;
+                    const col = v === 'win' ? 'var(--good)' : v === 'loss' ? 'var(--accent)' : 'var(--muted)';
+                    return (
+                      <button key={v} onClick={() => setForm(f => ({ ...f, result: v, method: v ? f.method : '' }))}
+                        className="flex-1 py-2 rounded-lg border text-sm font-semibold"
+                        style={on ? { borderColor: col, color: col, background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                        {l}
+                      </button>
+                    );
+                  })}
+                </div>
+                {form.result && (
+                  <div className="flex gap-2 mt-2">
+                    {(['points', 'tko', 'ko'] as const).map((v) => {
+                      const on = form.method === v;
+                      return (
+                        <button key={v} onClick={() => setForm(f => ({ ...f, method: v }))}
+                          className="flex-1 py-2 rounded-lg border text-sm font-semibold"
+                          style={on ? { borderColor: 'var(--accent-2)', color: 'var(--accent-2)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                          {v === 'points' ? 'Punkte' : v === 'tko' ? 'TKO' : 'K.o.'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
             {error && <p className="text-[var(--accent)] text-xs mt-3">{error}</p>}

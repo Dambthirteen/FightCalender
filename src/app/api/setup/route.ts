@@ -168,6 +168,9 @@ export async function POST(req: NextRequest) {
     await sql`ALTER TABLE classes ADD COLUMN IF NOT EXISTS group_id INTEGER`;
     await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS group_id INTEGER`;
     await sql`ALTER TABLE competitions ADD COLUMN IF NOT EXISTS group_id INTEGER`;
+    // Kampf-Ergebnis (nach dem Wettkampf): result = 'win'|'loss', method = 'points'|'tko'|'ko'
+    await sql`ALTER TABLE competitions ADD COLUMN IF NOT EXISTS result VARCHAR(10)`;
+    await sql`ALTER TABLE competitions ADD COLUMN IF NOT EXISTS method VARCHAR(20)`;
 
     // --- Einmalige, GESCHÜTZTE Migration: bestehende Daten → Standard-Gruppe „NFT Köln" ---
     // Läuft nur, solange es ≤ 1 Gruppe gibt → kann nie Daten anderer Gruppen überschreiben.

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { canViewProfile, getMyGroups } from '@/lib/groups';
 import { getStreak } from '@/lib/streak';
-import { earnedBadges, badgeById, ADMIN_BADGE, DOPPELMORAL_BADGE, type BadgeDef } from '@/lib/badges';
+import { earnedBadges, earnedFightBadges, badgeById, ADMIN_BADGE, DOPPELMORAL_BADGE, type BadgeDef } from '@/lib/badges';
 import { createNotification } from '@/lib/notify';
 import { grantStreakPoint, currentWeekRef, STREAK_POINT_CAP } from '@/lib/streak-points';
 import { getBitchCounts, CUTOVER } from '@/lib/bitch-scoring';
@@ -27,6 +27,9 @@ async function computeEarned(sql: Sql, user: string, weeks: number): Promise<{ b
   const judged = judgedRows[0]?.n ?? 0;
 
   const badges = earnedBadges(weeks, competitions, judged);
+  // Kampf-Sieg-Badges aus den gewonnenen Wettkämpfen.
+  const winRows = (await sql`SELECT DISTINCT method FROM competitions WHERE user_name = ${user} AND result = 'win' AND method IS NOT NULL`) as { method: string }[];
+  badges.push(...earnedFightBadges(winRows.map((r) => r.method)));
   if (await isGroupAdmin(user)) badges.push(ADMIN_BADGE);
 
   // Geheim „Doppelmoral": ≥10 Bitch-Punkte UND ≥20× gerichtet. Bitch-Berechnung nur bei Bedarf.
