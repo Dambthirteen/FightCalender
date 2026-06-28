@@ -87,6 +87,7 @@ export default function ProfilePage() {
   const [badgeData, setBadgeData] = useState<BadgeData | null>(null);
   const [claimingAd, setClaimingAd] = useState(false);
   const [showAllBadges, setShowAllBadges] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   const c = colorFor(name, color);
 
@@ -289,27 +290,34 @@ export default function ProfilePage() {
   const displayedBadges = badgeData ? badgeData.earned.filter((b) => badgeData.displayed.includes(b.id)) : [];
   const nextBadge = badgeData ? nextStreakBadge(badgeData.streakWeeks) : null;
   const earnedSet = new Set(badgeData?.earned.map((b) => b.id) ?? []);
+  const editing = isSelf && editMode; // Bearbeitungsmodus (Standard = Außenansicht)
 
   return (
     <div className="min-h-screen text-[var(--text)]">
       <header className="max-w-md mx-auto px-4 pt-5 pb-2 flex items-center justify-between anim-in">
         <a href="/start" aria-label="Zurück" className="w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
         <h1 className="font-display text-xl tracking-wide">{isSelf ? 'Mein Profil' : 'Profil'}</h1>
-        <span className="w-11" />
+        {isSelf ? (
+          <button onClick={() => setEditMode((v) => !v)}
+            className="h-11 px-3 grid place-items-center rounded-xl border bg-[var(--surface)] text-xs font-semibold transition-all active:scale-95"
+            style={editMode ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : { color: 'var(--muted)', borderColor: 'var(--border-soft)' }}>
+            {editMode ? 'Fertig' : 'Bearbeiten'}
+          </button>
+        ) : <span className="w-11" />}
       </header>
 
       <main className="max-w-md mx-auto px-4 pb-24">
         {/* Identität */}
         <div className="flex flex-col items-center text-center anim-up pt-1">
           <button
-            onClick={() => isSelf && fileRef.current?.click()}
-            disabled={!isSelf || uploading}
+            onClick={() => editing && fileRef.current?.click()}
+            disabled={!editing || uploading}
             className="relative w-24 h-24 rounded-full mb-3 overflow-hidden grid place-items-center"
             style={{ background: avatar ? 'transparent' : `${c}22`, border: `2px solid ${c}`, boxShadow: `0 0 40px ${c}33` }}>
             {avatar
               ? <img src={avatar} alt={name} className="w-full h-full object-cover" />
               : <span className="font-display text-5xl" style={{ color: c }}>{initials(name)}</span>}
-            {isSelf && (
+            {editing && (
               <span className="absolute bottom-0 inset-x-0 py-1 text-[10px] font-semibold text-white" style={{ background: 'rgba(0,0,0,0.55)' }}>
                 {uploading ? '…' : '📷 Ändern'}
               </span>
@@ -333,7 +341,7 @@ export default function ProfilePage() {
           )}
 
           {/* Bio */}
-          {isSelf ? (
+          {editing ? (
             <div className="w-full max-w-xs mt-2">
               <textarea
                 value={bioEdit} onChange={(e) => setBioEdit(e.target.value)} maxLength={300} rows={2}
@@ -397,7 +405,7 @@ export default function ProfilePage() {
                   <div className="text-[11px] text-[var(--faint)] mb-3">
                     {badgeData?.streakWeeks ?? 0} {(badgeData?.streakWeeks ?? 0) === 1 ? 'Woche' : 'Wochen'} am Stück · Rekord: {badgeData?.longest ?? 0} Tage
                   </div>
-                  {nextBadge && (
+                  {isSelf && nextBadge && (
                     <div className="text-xs text-[var(--muted)] mb-3">
                       Noch {nextBadge.threshold - (badgeData?.streakWeeks ?? 0)} Wo. bis <strong>{nextBadge.emoji} {nextBadge.label}</strong>
                     </div>
@@ -420,7 +428,7 @@ export default function ProfilePage() {
                     <>
                       <div className="grid grid-cols-2 gap-2">
                         {badgeData.earned.map((b) => {
-                          const on = isSelf && badgeData.displayed.includes(b.id);
+                          const on = editing && badgeData.displayed.includes(b.id);
                           const cls = 'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all';
                           const style = on
                             ? { background: 'var(--accent-soft)', borderColor: 'var(--accent-2)' }
@@ -431,17 +439,19 @@ export default function ProfilePage() {
                               <span className="text-[10px] font-semibold leading-tight">{b.label}</span>
                             </>
                           );
-                          return isSelf
+                          return editing
                             ? <button key={b.id} onClick={() => toggleBadge(b.id)} className={`${cls} active:scale-95`} style={style}>{inner}</button>
                             : <div key={b.id} className={cls} style={style}>{inner}</div>;
                         })}
                       </div>
-                      {isSelf && <p className="text-[10px] text-[var(--faint)] mt-2">Bis zu 4 ausstellen</p>}
+                      {editing && <p className="text-[10px] text-[var(--faint)] mt-2">Tippe an, um bis zu 4 auszustellen</p>}
                     </>
                   )}
-                  <button onClick={() => setShowAllBadges(true)} className="mt-3 text-xs font-semibold" style={{ color: 'var(--teal)' }}>
-                    Alle Achievements anzeigen ›
-                  </button>
+                  {isSelf && (
+                    <button onClick={() => setShowAllBadges(true)} className="mt-3 text-xs font-semibold" style={{ color: 'var(--teal)' }}>
+                      Alle Achievements anzeigen ›
+                    </button>
+                  )}
                 </div>
 
                 {/* Jahres-Punkte */}
@@ -453,7 +463,7 @@ export default function ProfilePage() {
                 {/* Kampfsport */}
                 <div className="card px-4 py-4">
                   <div className="section-label mb-2.5">Kampfsport</div>
-                  {isSelf ? (
+                  {editing ? (
                     <>
                       <div className="flex flex-wrap gap-2">
                         {ARTS.map((a) => {
@@ -504,12 +514,17 @@ export default function ProfilePage() {
                   const rating = overallRating(skills);
                   return (
                     <div className="card px-4 py-4">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-3 gap-2">
                         <div className="section-label">Skills</div>
-                        <span className="font-display text-base tracking-wide px-2.5 py-0.5 rounded-full"
-                          style={{ color: rating.color, border: `1px solid ${rating.color}`, background: `${rating.color}1a` }}>
-                          {rating.label}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {!isSelf && canInteract && !challengeOpen && (
+                            <button onClick={openChallenge} className="text-[11px] font-semibold" style={{ color: 'var(--accent-2)' }}>⚔ anfechten</button>
+                          )}
+                          <span className="font-display text-base tracking-wide px-2.5 py-0.5 rounded-full"
+                            style={{ color: rating.color, border: `1px solid ${rating.color}`, background: `${rating.color}1a` }}>
+                            {rating.label}
+                          </span>
+                        </div>
                       </div>
                       <div className="space-y-2.5">
                         {SKILLS.map((s) => {
@@ -519,59 +534,52 @@ export default function ProfilePage() {
                               <span className="text-xs font-medium w-28 shrink-0">{s.label}</span>
                               <div className="flex gap-1 flex-1">
                                 {[1, 2, 3, 4, 5].map((seg) => (
-                                  <button key={seg} onClick={() => isSelf && setSkill(s.key, seg)} disabled={!isSelf}
+                                  <button key={seg} onClick={() => editing && setSkill(s.key, seg)} disabled={!editing}
                                     className="h-3 flex-1 rounded-sm transition-all"
-                                    style={{ background: level >= seg ? c : 'var(--surface-2)', border: '1px solid var(--border-soft)', cursor: isSelf ? 'pointer' : 'default' }} />
+                                    style={{ background: level >= seg ? c : 'var(--surface-2)', border: '1px solid var(--border-soft)', cursor: editing ? 'pointer' : 'default' }} />
                                 ))}
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                      {isSelf && <p className="text-[10px] text-[var(--faint)] mt-3">Tippe die Balken (0–5).</p>}
+                      {editing && <p className="text-[10px] text-[var(--faint)] mt-3">Tippe die Balken (0–5).</p>}
+
+                      {/* Anfechtung direkt am Skilltree */}
+                      {!isSelf && challengeOpen && (
+                        <div className="mt-4 pt-4 border-t border-[var(--border-soft)]">
+                          <div className="section-label mb-2.5">Dein Vorschlag (Level 0–5)</div>
+                          <div className="space-y-2.5">
+                            {SKILLS.map((s) => {
+                              const lvl = proposal[s.key] ?? 0;
+                              return (
+                                <div key={s.key} className="flex items-center gap-3">
+                                  <span className="text-xs font-medium w-28 shrink-0">{s.label}</span>
+                                  <div className="flex gap-1 flex-1">
+                                    {[1, 2, 3, 4, 5].map((seg) => (
+                                      <button key={seg}
+                                        onClick={() => setProposal((p) => ({ ...p, [s.key]: (p[s.key] ?? 0) === seg ? seg - 1 : seg }))}
+                                        className="h-3 flex-1 rounded-sm transition-all"
+                                        style={{ background: lvl >= seg ? c : 'var(--surface-2)', border: '1px solid var(--border-soft)' }} />
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <textarea value={challengeNote} onChange={(e) => setChallengeNote(e.target.value)} rows={2} maxLength={300}
+                            placeholder="Begründung (optional)" className="field resize-none mt-3" />
+                          <div className="flex gap-2 mt-2">
+                            <button onClick={() => setChallengeOpen(false)} className="btn btn-ghost flex-1">Abbrechen</button>
+                            <button onClick={submitChallenge} disabled={submittingChallenge} className="btn btn-primary flex-1">
+                              {submittingChallenge ? '…' : 'Anfechtung senden'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
-
-                {/* Skilltree anfechten (fremdes Profil) */}
-                {!isSelf && canInteract && (
-                  <div className="card px-4 py-4">
-                    {!challengeOpen ? (
-                      <button onClick={openChallenge} className="btn btn-ghost w-full">Skilltree anfechten</button>
-                    ) : (
-                      <>
-                        <div className="section-label mb-2.5">Dein Vorschlag (Level 0–5)</div>
-                        <div className="space-y-2.5">
-                          {SKILLS.map((s) => {
-                            const lvl = proposal[s.key] ?? 0;
-                            return (
-                              <div key={s.key} className="flex items-center gap-3">
-                                <span className="text-xs font-medium w-28 shrink-0">{s.label}</span>
-                                <div className="flex gap-1 flex-1">
-                                  {[1, 2, 3, 4, 5].map((seg) => (
-                                    <button key={seg}
-                                      onClick={() => setProposal((p) => ({ ...p, [s.key]: (p[s.key] ?? 0) === seg ? seg - 1 : seg }))}
-                                      className="h-3 flex-1 rounded-sm transition-all"
-                                      style={{ background: lvl >= seg ? c : 'var(--surface-2)', border: '1px solid var(--border-soft)' }} />
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <textarea value={challengeNote} onChange={(e) => setChallengeNote(e.target.value)} rows={2} maxLength={300}
-                          placeholder="Begründung (optional)"
-                          className="field resize-none mt-3" />
-                        <div className="flex gap-2 mt-2">
-                          <button onClick={() => setChallengeOpen(false)} className="btn btn-ghost flex-1">Abbrechen</button>
-                          <button onClick={submitChallenge} disabled={submittingChallenge} className="btn btn-primary flex-1">
-                            {submittingChallenge ? '…' : 'Anfechtung senden'}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
 
                 {/* Offene Anfechtungen (eigenes Profil) */}
                 {isSelf && challenges.length > 0 && (
@@ -696,8 +704,8 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Eigene Einstellungen (nur eigenes Profil) */}
-            {isSelf && (
+            {/* Eigene Einstellungen — nur im Bearbeiten-Modus */}
+            {editing && (
               <div className="mt-7 space-y-3">
                 <div className="card px-4 py-3">
                   <div className="section-label mb-2.5">Profilfarbe (im Kalender)</div>
