@@ -185,10 +185,6 @@ export default function YearPage() {
             <Podest data={data.macher} title="Macher des Jahres" />
             <Podest data={data.bitch} title="Bitch des Jahres" />
             <MiniBarChart data={data.macherMonthly} users={allUsers} />
-
-            <div className="card px-4 py-3 text-xs text-[var(--muted)]">
-              <strong className="text-[var(--text)]">Hinweis:</strong> Die Bitch-Punkte zählen nur wenn die Ausrede im Ausreden-Gericht abgelehnt wurde (Ende des jeweiligen Monats). Bis Monatsende können sich die Punkte noch ändern.
-            </div>
           </>
         )}
       </main>

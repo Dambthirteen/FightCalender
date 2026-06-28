@@ -349,8 +349,8 @@ export default function Home() {
                 style={{ background: 'var(--surface-2)', border: `1px solid ${useStreakPt ? 'var(--accent-2)' : 'var(--border-soft)'}` }}>
                 <input type="checkbox" checked={useStreakPt} onChange={e => setUseStreakPt(e.target.checked)} />
                 <span className="flex-1 text-sm">
-                  🔥 Streak-Punkt einsetzen
-                  <span className="block text-[11px] text-[var(--muted)]">Schützt deine Streak · {streakPoints} übrig (Bitch-Punkt zählt trotzdem)</span>
+                  🔥 Streak schützen
+                  <span className="block text-[11px] text-[var(--muted)]">{streakPoints} übrig</span>
                 </span>
               </label>
             )}

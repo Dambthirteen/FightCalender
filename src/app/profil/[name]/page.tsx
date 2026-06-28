@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
-import { nextStreakBadge } from '@/lib/badges';
+import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, SPECIAL_BADGES } from '@/lib/badges';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
 interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; points?: number; adAvailable?: boolean }
@@ -86,6 +86,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<Tab>('fighter');
   const [badgeData, setBadgeData] = useState<BadgeData | null>(null);
   const [claimingAd, setClaimingAd] = useState(false);
+  const [showAllBadges, setShowAllBadges] = useState(false);
 
   const c = colorFor(name, color);
 
@@ -287,6 +288,7 @@ export default function ProfilePage() {
   const canInteract = !priv && !!userName;
   const displayedBadges = badgeData ? badgeData.earned.filter((b) => badgeData.displayed.includes(b.id)) : [];
   const nextBadge = badgeData ? nextStreakBadge(badgeData.streakWeeks) : null;
+  const earnedSet = new Set(badgeData?.earned.map((b) => b.id) ?? []);
 
   return (
     <div className="min-h-screen text-[var(--text)]">
@@ -402,12 +404,12 @@ export default function ProfilePage() {
                   )}
                   {isSelf && (
                     <div className="text-xs text-[var(--muted)] mb-3">
-                      Streak-Punkte: <strong style={{ color: 'var(--text)' }}>{badgeData?.points ?? 0}</strong> — schützen deine Streak beim Skippen.
+                      Streak-Punkte: <strong style={{ color: 'var(--text)' }}>{badgeData?.points ?? 0}</strong>
                       {badgeData?.adAvailable && (
                         <button onClick={claimAdPoint} disabled={claimingAd}
                           className="ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border border-[var(--border)] disabled:opacity-40"
                           style={{ color: 'var(--accent-2)' }}>
-                          {claimingAd ? '…' : 'Werbung → +1 (Platzhalter)'}
+                          {claimingAd ? '…' : 'Werbung'}
                         </button>
                       )}
                     </div>
@@ -434,9 +436,12 @@ export default function ProfilePage() {
                             : <div key={b.id} className={cls} style={style}>{inner}</div>;
                         })}
                       </div>
-                      {isSelf && <p className="text-[10px] text-[var(--faint)] mt-2">Tippe an, um bis zu 4 am Profil-Kopf auszustellen.</p>}
+                      {isSelf && <p className="text-[10px] text-[var(--faint)] mt-2">Bis zu 4 ausstellen</p>}
                     </>
                   )}
+                  <button onClick={() => setShowAllBadges(true)} className="mt-3 text-xs font-semibold" style={{ color: 'var(--teal)' }}>
+                    Alle Achievements anzeigen ›
+                  </button>
                 </div>
 
                 {/* Jahres-Punkte */}
@@ -523,7 +528,7 @@ export default function ProfilePage() {
                           );
                         })}
                       </div>
-                      {isSelf && <p className="text-[10px] text-[var(--faint)] mt-3">Tippe die Balken (0–5). Daraus ergibt sich dein Gesamtwert: Single Discipline → Allrounder.</p>}
+                      {isSelf && <p className="text-[10px] text-[var(--faint)] mt-3">Tippe die Balken (0–5).</p>}
                     </div>
                   );
                 })()}
@@ -555,7 +560,7 @@ export default function ProfilePage() {
                           })}
                         </div>
                         <textarea value={challengeNote} onChange={(e) => setChallengeNote(e.target.value)} rows={2} maxLength={300}
-                          placeholder="Begründung (z. B. beim Striking eher 2, Wrestling 2 statt 3)"
+                          placeholder="Begründung (optional)"
                           className="field resize-none mt-3" />
                         <div className="flex gap-2 mt-2">
                           <button onClick={() => setChallengeOpen(false)} className="btn btn-ghost flex-1">Abbrechen</button>
@@ -634,9 +639,7 @@ export default function ProfilePage() {
                       </>
                     )}
                     {praiseMsg && <p className="text-xs mt-2 text-[var(--muted)]">{praiseMsg}</p>}
-                    <p className="text-[10px] text-[var(--faint)] mt-2">
-                      Lob: 1×/Woche {praiseStatus.lob ? '· frei' : '· diese Woche vergeben'} &nbsp;·&nbsp; Gigalob: 1×/Monat {praiseStatus.gigalob ? '· frei' : '· diesen Monat vergeben'}
-                    </p>
+                    <p className="text-[10px] text-[var(--faint)] mt-2">Lob 1×/Woche · Gigalob 1×/Monat</p>
                   </div>
                 )}
 
@@ -719,6 +722,40 @@ export default function ProfilePage() {
           </>
         )}
       </main>
+
+      {/* Alle Achievements — Übersicht (erreicht + gesperrt mit Bedingung) */}
+      {showAllBadges && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm px-3 pb-3 anim-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAllBadges(false); }}>
+          <div className="card w-full max-w-md max-h-[82vh] overflow-y-auto p-5 anim-up">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display text-2xl tracking-wide">Alle Achievements</h2>
+              <button onClick={() => setShowAllBadges(false)} className="text-[var(--faint)] hover:text-white text-lg px-1">✕</button>
+            </div>
+            {([['Streak', STREAK_BADGES], ['Wettkampf', COMPETITION_BADGES], ['Spezial', SPECIAL_BADGES]] as const).map(([title, list]) => (
+              <div key={title} className="mb-4 last:mb-0">
+                <div className="section-label mb-2">{title}</div>
+                <div className="space-y-2">
+                  {list.map((b) => {
+                    const got = earnedSet.has(b.id);
+                    return (
+                      <div key={b.id} className="flex items-center gap-3 rounded-xl border p-2.5"
+                        style={got ? { background: 'var(--accent-soft)', borderColor: 'var(--accent-2)' } : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)' }}>
+                        <span className="text-2xl leading-none" style={got ? undefined : { filter: 'grayscale(1)', opacity: 0.45 }}>{b.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold">{b.label}</div>
+                          <div className="text-[11px] text-[var(--muted)]">{b.hint}</div>
+                        </div>
+                        {got && <span className="text-sm font-bold" style={{ color: 'var(--good)' }}>✓</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

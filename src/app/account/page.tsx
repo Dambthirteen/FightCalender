@@ -75,10 +75,6 @@ export default function AccountPage() {
       <PageHeader title="🏥 Mein Status" />
 
       <main className="max-w-md mx-auto px-4 pb-24 space-y-6">
-        {/* Info */}
-        <div className="card px-4 py-3 text-sm text-[var(--muted)]">
-          Status-Zeiträume werden automatisch von der Bitch-Wertung ausgenommen und im Ausreden-Gericht markiert.
-        </div>
 
         {/* Active statuses */}
         {active.length > 0 && (

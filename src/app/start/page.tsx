@@ -35,7 +35,7 @@ export default function StartPage() {
   const nextBadge = nextStreakBadge(streak.weeks);
   const flames = '🔥'.repeat(Math.max(1, flameTier(streak.weeks)));
   const streakHint = streak.days === 0
-    ? 'Trainiere deinen Plan komplett durch, um eine Streak zu starten.'
+    ? 'Trainiere deinen Plan, um zu starten.'
     : nextBadge
       ? `${streak.weeks} ${streak.weeks === 1 ? 'Woche' : 'Wochen'} · noch ${nextBadge.threshold - streak.weeks} bis „${nextBadge.label}"`
       : `${streak.weeks} Wochen · Maximalstufe`;
