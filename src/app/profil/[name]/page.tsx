@@ -447,16 +447,18 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen text-[var(--text)]">
-      <header className="max-w-md mx-auto px-4 pt-5 pb-2 flex items-center justify-between anim-in">
-        <a href="/start" aria-label="Zurück" className="w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
-        <h1 className="font-display text-xl tracking-wide">{isSelf ? 'Mein Profil' : 'Profil'}</h1>
-        {isSelf ? (
-          <button onClick={() => setEditMode((v) => !v)}
-            className="h-11 px-3 grid place-items-center rounded-xl border bg-[var(--surface)] text-xs font-semibold transition-all active:scale-95"
-            style={editMode ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : { color: 'var(--muted)', borderColor: 'var(--border-soft)' }}>
-            {editMode ? 'Fertig' : 'Bearbeiten'}
-          </button>
-        ) : <span className="w-11" />}
+      <header className="max-w-md mx-auto px-4 pt-5 pb-2 grid grid-cols-3 items-center anim-in">
+        <a href="/start" aria-label="Zurück" className="justify-self-start w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
+        <h1 className="font-display text-xl tracking-wide text-center whitespace-nowrap">{isSelf ? 'Mein Profil' : 'Profil'}</h1>
+        <div className="justify-self-end">
+          {isSelf && (
+            <button onClick={() => setEditMode((v) => !v)}
+              className="h-11 px-3 grid place-items-center rounded-xl border bg-[var(--surface)] text-xs font-semibold transition-all active:scale-95"
+              style={editMode ? { color: 'var(--accent)', borderColor: 'var(--accent)' } : { color: 'var(--muted)', borderColor: 'var(--border-soft)' }}>
+              {editMode ? 'Fertig' : 'Bearbeiten'}
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="max-w-md mx-auto px-4 pb-24">
