@@ -267,7 +267,7 @@ export default function AdminPage() {
           <h2 className="font-display text-xl tracking-wide mb-1">Push testen</h2>
           <p className="text-[var(--muted)] text-xs mb-4">
             Schickt eine Beispiel-Push an dich selbst (oder an einen Namen). Auf dem Zielgerät müssen
-            Benachrichtigungen aktiviert sein. Die „Loser-Cam" öffnet beim Tippen die Frontkamera.
+            Benachrichtigungen aktiviert sein. Die „Loser-Cam“ öffnet beim Tippen die Frontkamera.
           </p>
           <div className="mb-3">
             <label className={labelCls}>Empfänger (leer = ich)</label>
