@@ -5,6 +5,8 @@ import { berlinNow, isoDayOfWeek, weekStartOf, hmToMinutes } from '@/lib/berlin-
 import { isHoliday } from '@/lib/holidays';
 import { CUTOVER } from '@/lib/bitch-scoring';
 import { ymPrev, resolveTitle } from '@/lib/awards';
+import { broadcastToGroup } from '@/lib/feed';
+import { getMyGroups } from '@/lib/groups';
 
 // web-push braucht Node-Crypto → kein Edge-Runtime.
 export const runtime = 'nodejs';
@@ -267,6 +269,38 @@ async function handle(req: NextRequest): Promise<NextResponse> {
         else if (r.gone) await sql`DELETE FROM push_subscriptions WHERE endpoint = ${s.endpoint}`;
       }
     }
+
+    // --- „Bitcht" → Gruppe informieren (jüngster verpasster Trainingstag, einmal je Tag) ---
+    const gmRows = (await sql`SELECT user_name, group_id FROM group_members WHERE status = 'active'`) as { user_name: string; group_id: number }[];
+    const groupsByUser = new Map<string, number[]>();
+    for (const r of gmRows) {
+      if (!groupsByUser.has(r.user_name)) groupsByUser.set(r.user_name, []);
+      groupsByUser.get(r.user_name)!.push(r.group_id);
+    }
+    for (const [user, dows] of dowsByUser) {
+      const groups = groupsByUser.get(user);
+      if (!groups || groups.length === 0) continue;
+      for (let ds = 1; ds <= 3; ds++) {
+        const D = addD(today, -ds);
+        if (D < CUTOVER) break;
+        if (!dows.has(isoDayOfWeek(D))) continue; // an dem Wochentag kein Training
+        if (isHoliday(D)) continue;
+        if (isExempt(user, D)) continue;
+        // jüngsten realen Trainingstag gefunden → bewerten und stoppen
+        if (!presentSet.has(`${user}|${D}`) && !excusedSet.has(`${user}|${D}`)) {
+          for (const gid of groups) {
+            await broadcastToGroup(sql, {
+              groupId: gid, type: 'bitch', actor: user,
+              body: `${user} hat ein Training geschwänzt 🐔`,
+              link: '/statistik', reactable: false,
+              dedupKey: `bitch|${gid}|${user}|${D}`,
+              push: { title: '🐔 Geschwänzt', body: `${user} war nicht beim Training` },
+            });
+          }
+        }
+        break;
+      }
+    }
   } catch { /* Tabellen evtl. noch nicht vorhanden */ }
 
   // --- Loser-Cam B: 2 Monate in Folge „Bitch des Monats" → „Guck dir diesen Loser an!" ---
@@ -301,6 +335,26 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       }
     } catch { /* awards/groups evtl. nicht verfügbar */ }
   }
+
+  // --- Wettkampf heute → Gruppe anfeuern ---
+  try {
+    const compRows = (await sql`
+      SELECT id, user_name, name, location, group_id FROM competitions WHERE competition_date = ${today}
+    `) as { id: number; user_name: string; name: string; location: string; group_id: number | null }[];
+    for (const cmp of compRows) {
+      const groupIds = cmp.group_id ? [cmp.group_id] : (await getMyGroups(cmp.user_name)).map((g) => g.id);
+      const where = cmp.location ? ` in ${cmp.location}` : '';
+      for (const gid of groupIds) {
+        await broadcastToGroup(sql, {
+          groupId: gid, type: 'competition', actor: cmp.user_name,
+          body: `Heute: ${cmp.user_name} kämpft bei ${cmp.name}${where}`,
+          link: '/competitions', reactable: true, excludeActor: false,
+          dedupKey: `competition|${gid}|${cmp.id}`,
+          push: { title: '🥊 Wettkampf heute!', body: `${cmp.user_name}: ${cmp.name}` },
+        });
+      }
+    }
+  } catch { /* competitions/feed evtl. nicht verfügbar */ }
 
   // An Feiertagen (NRW) keine KURS-Erinnerungen (Gericht-Pushes oben laufen trotzdem).
   const holiday = isHoliday(today);

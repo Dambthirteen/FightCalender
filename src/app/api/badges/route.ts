@@ -5,6 +5,7 @@ import { canViewProfile, getMyGroups } from '@/lib/groups';
 import { getStreak } from '@/lib/streak';
 import { earnedBadges, earnedFightBadges, badgeById, ADMIN_BADGE, DOPPELMORAL_BADGE, type BadgeDef } from '@/lib/badges';
 import { createNotification } from '@/lib/notify';
+import { broadcastToGroup } from '@/lib/feed';
 import { grantStreakPoint, currentWeekRef, STREAK_POINT_CAP } from '@/lib/streak-points';
 import { getBitchCounts, CUTOVER } from '@/lib/bitch-scoring';
 
@@ -83,6 +84,19 @@ export async function GET(req: NextRequest) {
           link: `/profil/${encodeURIComponent(user)}`,
           push: { title: '🏅 Neues Abzeichen', body: `${b.label} freigeschaltet!` },
         });
+        // Streak-/Wettkampf-Trophäen zusätzlich an die Gruppe (soziale Anerkennung).
+        if (b.kind === 'streak' || b.kind === 'competition') {
+          for (const g of await getMyGroups(user)) {
+            await broadcastToGroup(sql, {
+              groupId: g.id, type: 'badge_feed', actor: user,
+              body: `${user} hat das Abzeichen ${b.emoji} ${b.label} freigeschaltet`,
+              link: `/profil/${encodeURIComponent(user)}`,
+              reactable: true,
+              dedupKey: `badge|${g.id}|${user}|${b.id}`,
+              push: { title: '🏅 Abzeichen freigeschaltet', body: `${user}: ${b.label}` },
+            });
+          }
+        }
       }
     } catch { /* badges_awarded evtl. noch nicht angelegt */ }
 

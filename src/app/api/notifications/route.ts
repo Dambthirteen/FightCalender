@@ -14,8 +14,11 @@ export async function GET() {
     const sql = getSql();
     const items = await sql`
       SELECT n.id, n.type, n.actor, n.body, n.link, n.ref_id, n.read, n.created_at,
+        n.event_id, n.reactable,
         p.displayed AS praise_displayed, p.show_comment AS praise_show_comment,
-        p.kind AS praise_kind, p.reason AS praise_reason
+        p.kind AS praise_kind, p.reason AS praise_reason,
+        (SELECT COUNT(*)::int FROM feed_reactions fr WHERE fr.event_id = n.event_id) AS reaction_count,
+        EXISTS(SELECT 1 FROM feed_reactions fr2 WHERE fr2.event_id = n.event_id AND fr2.user_name = ${me}) AS reacted_by_me
       FROM notifications n
       LEFT JOIN praises p ON n.type = 'praise' AND p.id = n.ref_id
       WHERE n.user_name = ${me} ORDER BY n.created_at DESC LIMIT 50

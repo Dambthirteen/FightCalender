@@ -6,13 +6,17 @@ import { useUser } from '@/components/UserProvider';
 
 interface Notif {
   id: number;
-  type: 'comment' | 'challenge' | 'challenge_result' | 'praise' | 'badge';
+  type: string;
   actor: string;
   body: string;
   link: string;
   ref_id: number | null;
   read: boolean;
   created_at: string;
+  event_id?: number | null;
+  reactable?: boolean | null;
+  reaction_count?: number | null;
+  reacted_by_me?: boolean | null;
   praise_displayed?: boolean | null;
   praise_show_comment?: boolean | null;
   praise_kind?: string | null;
@@ -21,6 +25,7 @@ interface Notif {
 
 const ICON: Record<string, string> = {
   comment: '💬', challenge: '⚔️', challenge_result: '⚖️', praise: '🏅', badge: '🎖️',
+  skilltree: '🌳', praise_feed: '👏', competition: '🥊', bitch: '🐔', badge_feed: '🏅',
 };
 
 function timeAgo(iso: string): string {
@@ -49,6 +54,22 @@ export default function NotificationsPage() {
     // beim Öffnen alle als gelesen markieren
     fetch('/api/notifications', { method: 'POST' }).catch(() => {});
   }, [userName, loading]);
+
+  async function toggleReaction(n: Notif) {
+    if (!n.event_id || !n.reactable) return;
+    // optimistisch
+    setItems((prev) => prev.map((it) => it.id === n.id
+      ? { ...it, reacted_by_me: !it.reacted_by_me, reaction_count: (it.reaction_count ?? 0) + (it.reacted_by_me ? -1 : 1) }
+      : it));
+    try {
+      const res = await fetch('/api/feed/react', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: n.event_id }),
+      });
+      const d = await res.json();
+      if (res.ok) setItems((prev) => prev.map((it) => it.id === n.id ? { ...it, reacted_by_me: d.reacted, reaction_count: d.count } : it));
+    } catch { /* Fehler → optimistische Anzeige bleibt grob korrekt */ }
+  }
 
   async function setPraiseDisplay(n: Notif, displayed: boolean, showComment: boolean) {
     if (!n.ref_id) return;
@@ -97,9 +118,20 @@ export default function NotificationsPage() {
                     </div>
                   )}
 
+                  {/* Daumen hoch bei guten Ereignissen */}
+                  {n.reactable && n.event_id && (
+                    <button onClick={() => toggleReaction(n)}
+                      className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full border text-xs font-semibold transition-all active:scale-95"
+                      style={n.reacted_by_me
+                        ? { borderColor: 'var(--accent-2)', background: 'var(--accent-soft)', color: 'var(--accent-2)' }
+                        : { borderColor: 'var(--border-soft)', color: 'var(--muted)' }}>
+                      👍 {n.reaction_count ? n.reaction_count : ''}
+                    </button>
+                  )}
+
                   {/* Link zu Profil/Gericht etc. */}
                   {n.link && n.type !== 'praise' && (
-                    <a href={n.link} className="inline-block text-xs font-semibold mt-1.5" style={{ color: 'var(--teal)' }}>
+                    <a href={n.link} className="inline-block text-xs font-semibold mt-1.5 ml-3" style={{ color: 'var(--teal)' }}>
                       Ansehen ›
                     </a>
                   )}

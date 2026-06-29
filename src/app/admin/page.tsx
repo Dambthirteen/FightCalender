@@ -198,10 +198,15 @@ export default function AdminPage() {
     { kind: 'court_result', label: '⚖️ Gericht-Ergebnis' },
     { kind: 'bitch_reminder', label: '🐔 Nicht eingetragen' },
     { kind: 'comment', label: '💬 Kommentar' },
-    { kind: 'challenge', label: '🌳 Skilltree angefochten' },
-    { kind: 'challenge_result', label: '🌳 Anfechtung-Ergebnis' },
+    { kind: 'challenge', label: '⚔️ Skilltree angefochten' },
+    { kind: 'challenge_result', label: '⚖️ Anfechtung-Ergebnis' },
     { kind: 'praise', label: '⭐ Lob / Gigalob' },
     { kind: 'badge', label: '🏅 Abzeichen' },
+    { kind: 'skilltree', label: '🌳 Skilltree-Update (Gruppe)' },
+    { kind: 'praise_feed', label: '👏 Lob erhalten (Gruppe)' },
+    { kind: 'competition', label: '🥊 Wettkampf heute (Gruppe)' },
+    { kind: 'bitch', label: '🐔 Geschwänzt (Gruppe)' },
+    { kind: 'badge_feed', label: '🏅 Trophäe (Gruppe)' },
   ];
 
   const inputCls = 'w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)] transition-colors';

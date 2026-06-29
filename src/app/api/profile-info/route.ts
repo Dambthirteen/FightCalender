@@ -1,7 +1,11 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { canViewProfile } from '@/lib/groups';
+import { canViewProfile, getMyGroups } from '@/lib/groups';
+import { broadcastToGroup } from '@/lib/feed';
+import { berlinNow } from '@/lib/berlin-time';
+
+export const runtime = 'nodejs'; // Skilltree-Broadcast verschickt Push
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -89,6 +93,18 @@ export async function POST(req: NextRequest) {
     }
     if (skills !== undefined && typeof skills === 'object') {
       await sql`UPDATE users SET skills = ${JSON.stringify(skills)}::jsonb WHERE user_name = ${me}`;
+      // Gruppe informieren (max. 1×/Tag je Gruppe, sonst spammt jeder Balken-Tipp).
+      const today = berlinNow().date;
+      for (const g of await getMyGroups(me)) {
+        await broadcastToGroup(sql, {
+          groupId: g.id, type: 'skilltree', actor: me,
+          body: `${me} hat den Skilltree angepasst`,
+          link: `/profil/${encodeURIComponent(me)}`,
+          reactable: true,
+          dedupKey: `skilltree|${g.id}|${me}|${today}`,
+          push: { title: '🌳 Skilltree-Update', body: `${me} hat den Skilltree angepasst` },
+        });
+      }
     }
     if (fighter_info !== undefined && fighter_info && typeof fighter_info === 'object') {
       await sql`UPDATE users SET fighter_info = ${JSON.stringify(sanitizeFighterInfo(fighter_info))}::jsonb WHERE user_name = ${me}`;

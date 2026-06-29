@@ -1,8 +1,9 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { canViewProfile } from '@/lib/groups';
+import { canViewProfile, getMyGroups } from '@/lib/groups';
 import { createNotification } from '@/lib/notify';
+import { broadcastToGroup } from '@/lib/feed';
 import { berlinNow, weekStartOf } from '@/lib/berlin-time';
 import { grantStreakPoint } from '@/lib/streak-points';
 
@@ -72,6 +73,17 @@ export async function POST(req: NextRequest) {
       refId: ins[0].id as number,
       push: { title: `${emoji} ${label} erhalten!`, body: `${me} findet: du hast es verdient.` },
     });
+    // Gruppe informieren — ANONYM (Geber wird NICHT genannt; wird erst öffentlich,
+    // wenn die gelobte Person das Lob im Profil ausstellt).
+    for (const g of await getMyGroups(to)) {
+      await broadcastToGroup(sql, {
+        groupId: g.id, type: 'praise_feed', actor: to,
+        body: `${to} hat ein ${label} erhalten`,
+        link: `/profil/${encodeURIComponent(to)}`,
+        reactable: true,
+        push: { title: `${emoji} ${label}`, body: `${to} hat ein ${label} erhalten` },
+      });
+    }
     // Gigalob koppelt an die Streak-Ökonomie: Empfänger bekommt einen Streak-Punkt (gedeckelt).
     if (kind === 'gigalob') {
       await grantStreakPoint(sql, to, 'gigalob', String(ins[0].id));

@@ -280,7 +280,29 @@ export async function POST(req: NextRequest) {
       )
     `;
     await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS ref_id INTEGER`;
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_id INTEGER`;       // verknüpft Gruppen-Broadcasts
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS reactable BOOLEAN NOT NULL DEFAULT FALSE`;
     await sql`CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_name, read)`;
+    // Gruppen-Feed: geteiltes Ereignis (für Reaktionen) + Daumen-hoch
+    await sql`
+      CREATE TABLE IF NOT EXISTS feed_events (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER,
+        type VARCHAR(20) NOT NULL,
+        actor VARCHAR(100) NOT NULL,
+        reactable BOOLEAN NOT NULL DEFAULT FALSE,
+        dedup_key TEXT UNIQUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS feed_reactions (
+        event_id INTEGER NOT NULL REFERENCES feed_events(id) ON DELETE CASCADE,
+        user_name VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(event_id, user_name)
+      )
+    `;
 
     // --- Lob / Gigalob (Kudos) ---
     // UNIQUE(from_user, kind, period) erzwingt: 1 Lob pro Woche, 1 Gigalob pro Monat je Geber.
