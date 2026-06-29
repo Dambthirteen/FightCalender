@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials } from '@/lib/avatar';
-import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, type CosmeticCategory } from '@/lib/cosmetics';
+import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, beltSkin, type CosmeticCategory } from '@/lib/cosmetics';
 
 export default function SpindPage() {
   const { userName } = useUser();
@@ -54,6 +54,10 @@ export default function SpindPage() {
         </span>
       );
     }
+    if (category === 'belt') {
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img src={beltSkin(id).src} alt="" className="w-full" style={{ maxHeight: 40, objectFit: 'contain' }} />;
+    }
     return <span className="text-2xl" style={{ filter: flameFilter(id), display: 'inline-block' }}>🔥</span>;
   }
 
@@ -73,6 +77,8 @@ export default function SpindPage() {
               <span style={{ filter: flameFilter(cos.flame), display: 'inline-block' }}>🔥</span> 12 Tage
             </span>
           </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={beltSkin(cos.belt).src} alt="Gürtel" className="w-full mt-4" style={{ aspectRatio: '1400 / 319', objectFit: 'contain' }} />
           <div className="text-[11px] text-[var(--faint)] mt-3">Dein Level: <strong style={{ color: 'var(--text)' }}>{level}</strong></div>
         </div>
 

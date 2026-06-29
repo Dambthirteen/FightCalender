@@ -5,8 +5,19 @@
  */
 import type { CSSProperties } from 'react';
 
-export type CosmeticCategory = 'nameplate' | 'avatarFrame' | 'flame';
+export type CosmeticCategory = 'nameplate' | 'avatarFrame' | 'flame' | 'belt';
 export interface CosmeticItem { id: string; label: string; minLevel: number }
+
+/** Gürtel-Skins. Gleiches Template (8779×2000) → identische Plattengeometrie,
+ *  nur Bild + Clantag-Farbe unterscheiden sich. */
+export interface BeltSkin { src: string; clanColor: string }
+export const BELT_SKINS: Record<string, BeltSkin> = {
+  default: { src: '/belt.png', clanColor: '#1a1a1a' },
+  ice: { src: '/belt2.png', clanColor: '#16324a' },
+};
+export function beltSkin(id?: string): BeltSkin {
+  return BELT_SKINS[id ?? 'default'] ?? BELT_SKINS.default;
+}
 
 export const COSMETICS: Record<CosmeticCategory, { label: string; items: CosmeticItem[] }> = {
   nameplate: {
@@ -35,6 +46,13 @@ export const COSMETICS: Record<CosmeticCategory, { label: string; items: Cosmeti
       { id: 'blue', label: 'Blau', minLevel: 5 },
       { id: 'purple', label: 'Lila', minLevel: 10 },
       { id: 'green', label: 'Grün', minLevel: 18 },
+    ],
+  },
+  belt: {
+    label: 'Gürtel-Skin',
+    items: [
+      { id: 'default', label: 'Klassisch', minLevel: 1 },
+      { id: 'ice', label: 'Eis', minLevel: 1 }, // zum Testen auf Level 1
     ],
   },
 };
