@@ -33,6 +33,12 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
+  // Push-Test
+  const [pushTarget, setPushTarget] = useState('');
+  const [pushBusy, setPushBusy] = useState<string | null>(null);
+  const [pushStatus, setPushStatus] = useState('');
+  const [pushOk, setPushOk] = useState(false);
+
   async function login() {
     setAuthLoading(true);
     setAuthError('');
@@ -159,6 +165,45 @@ export default function AdminPage() {
     }
   }
 
+  async function testPush(kind: string) {
+    setPushBusy(kind);
+    setPushStatus('');
+    try {
+      const res = await fetch('/api/admin/test-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': password },
+        body: JSON.stringify({ kind, target: pushTarget.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPushOk(true);
+        setPushStatus(`✓ Gesendet an ${data.recipient} (${data.sent} Gerät${data.sent === 1 ? '' : 'e'})`);
+      } else {
+        setPushOk(false);
+        setPushStatus(`✗ ${data.error ?? 'Fehler'}`);
+      }
+    } catch {
+      setPushOk(false);
+      setPushStatus('✗ Netzwerkfehler');
+    } finally {
+      setPushBusy(null);
+    }
+  }
+
+  const PUSH_TYPES: { kind: string; label: string }[] = [
+    { kind: 'loser_streak', label: '🐔 Loser-Cam · 3 Tage' },
+    { kind: 'loser_2mo', label: '🐔 Loser-Cam · 2 Monate' },
+    { kind: 'class_reminder', label: '🥊 Kurs-Erinnerung' },
+    { kind: 'court_open', label: '🗳️ Gericht offen' },
+    { kind: 'court_result', label: '⚖️ Gericht-Ergebnis' },
+    { kind: 'bitch_reminder', label: '🐔 Nicht eingetragen' },
+    { kind: 'comment', label: '💬 Kommentar' },
+    { kind: 'challenge', label: '🌳 Skilltree angefochten' },
+    { kind: 'challenge_result', label: '🌳 Anfechtung-Ergebnis' },
+    { kind: 'praise', label: '⭐ Lob / Gigalob' },
+    { kind: 'badge', label: '🏅 Abzeichen' },
+  ];
+
   const inputCls = 'w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)] transition-colors';
   const labelCls = 'text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-1.5 block';
 
@@ -211,6 +256,39 @@ export default function AdminPage() {
             DB Init
           </button>
         </div>
+
+        {/* Push-Benachrichtigungen testen */}
+        <section className="card p-5 anim-up" style={{ animationDelay: '20ms' }}>
+          <h2 className="font-display text-xl tracking-wide mb-1">Push testen</h2>
+          <p className="text-[var(--muted)] text-xs mb-4">
+            Schickt eine Beispiel-Push an dich selbst (oder an einen Namen). Auf dem Zielgerät müssen
+            Benachrichtigungen aktiviert sein. Die „Loser-Cam" öffnet beim Tippen die Frontkamera.
+          </p>
+          <div className="mb-3">
+            <label className={labelCls}>Empfänger (leer = ich)</label>
+            <input
+              className={inputCls}
+              placeholder="Nutzername…"
+              value={pushTarget}
+              onChange={e => setPushTarget(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {PUSH_TYPES.map(t => (
+              <button
+                key={t.kind}
+                onClick={() => testPush(t.kind)}
+                disabled={!!pushBusy}
+                className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-white hover:border-[var(--accent)] transition-colors text-left disabled:opacity-40"
+              >
+                {pushBusy === t.kind ? 'Senden…' : t.label}
+              </button>
+            ))}
+          </div>
+          {pushStatus && (
+            <p className="text-xs mt-3" style={{ color: pushOk ? 'var(--good)' : 'var(--accent)' }}>{pushStatus}</p>
+          )}
+        </section>
 
         {/* Add Class Form */}
         <section className="card p-5 anim-up" style={{ animationDelay: '40ms' }}>

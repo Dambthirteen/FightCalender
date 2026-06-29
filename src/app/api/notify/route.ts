@@ -4,6 +4,7 @@ import { ensurePushConfigured, sendPush } from '@/lib/push';
 import { berlinNow, isoDayOfWeek, weekStartOf, hmToMinutes } from '@/lib/berlin-time';
 import { isHoliday } from '@/lib/holidays';
 import { CUTOVER } from '@/lib/bitch-scoring';
+import { ymPrev, resolveTitle } from '@/lib/awards';
 
 // web-push braucht Node-Crypto → kein Edge-Runtime.
 export const runtime = 'nodejs';
@@ -197,6 +198,109 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       }
     }
   } catch { /* user_notif_log / Spalten evtl. noch nicht vorhanden */ }
+
+  // --- Loser-Cam A: 3 geplante Trainings am Stück geschwänzt → „Guck dir diesen Loser an!" ---
+  // „Geschwänzt" = nicht da UND keine Ausrede eingetragen (eine eingetragene Ausrede
+  // beendet die Strähne — wir verschonen, wer es zumindest versucht). Feiertage/krank
+  // sind neutral (zählen weder als Bitch noch brechen sie die Strähne). Einmal pro Strähne.
+  try {
+    const LB = 28; // Tage zurückblicken (reicht für 3 Termine selbst bei 1×/Woche-Plänen)
+    const since = addD(today, -LB);
+    const sched = (await sql`
+      SELECT us.user_name, c.day_of_week::int AS dow
+      FROM user_schedule us JOIN classes c ON c.id = us.class_id
+    `) as { user_name: string; dow: number }[];
+    const dowsByUser = new Map<string, Set<number>>();
+    for (const r of sched) {
+      if (!dowsByUser.has(r.user_name)) dowsByUser.set(r.user_name, new Set());
+      dowsByUser.get(r.user_name)!.add(r.dow);
+    }
+    const pres = (await sql`
+      SELECT a.user_name, (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
+      FROM attendance a JOIN classes c ON c.id = a.class_id
+      WHERE a.week_start >= ${weekStartOf(since)}::date
+    `) as { user_name: string; d: string }[];
+    const presentSet = new Set(pres.map((r) => `${r.user_name}|${r.d}`));
+    const sk = (await sql`
+      SELECT user_name, date::text AS date, excuse FROM skipping
+      WHERE date >= ${since}::date AND date <= ${today}::date
+    `) as { user_name: string; date: string; excuse: string }[];
+    const excusedSet = new Set(sk.filter((s) => s.excuse !== '').map((s) => `${s.user_name}|${s.date}`));
+    const lstatus = (await sql`
+      SELECT user_name, start_date::text AS s, end_date::text AS e FROM user_status
+      WHERE status_type IN ('sick', 'vacation') AND start_date <= ${today}::date AND end_date >= ${since}::date
+    `) as { user_name: string; s: string; e: string }[];
+    const isExempt = (u: string, d: string) => lstatus.some((st) => st.user_name === u && d >= st.s && d <= st.e);
+
+    for (const user of [...new Set(allSubs.map((s) => s.user_name))]) {
+      const dows = dowsByUser.get(user);
+      if (!dows) continue;
+      // Vom jüngsten vergangenen Trainingstag rückwärts: glatte No-Shows zählen.
+      let streak = 0;
+      let streakStart = '';
+      for (let ds = 1; ds <= LB; ds++) {
+        const D = addD(today, -ds);
+        if (D < CUTOVER) break;
+        if (!dows.has(isoDayOfWeek(D))) continue; // an dem Wochentag nichts geplant
+        if (isHoliday(D)) continue;               // Feiertag → neutral
+        if (isExempt(user, D)) continue;          // krank/Urlaub → neutral
+        if (presentSet.has(`${user}|${D}`)) break; // war da → Strähne endet
+        if (excusedSet.has(`${user}|${D}`)) break; // Ausrede eingetragen → Strähne endet
+        streak++;
+        streakStart = D;                           // frühester Tag der laufenden Strähne
+      }
+      if (streak < 3) continue;
+      const claim = await sql`
+        INSERT INTO user_notif_log (user_name, notify_date, kind)
+        VALUES (${user}, ${streakStart}, 'loser_streak')
+        ON CONFLICT (user_name, notify_date, kind) DO NOTHING
+        RETURNING id
+      `;
+      if (claim.length === 0) continue; // für diese Strähne schon gepingt
+      for (const s of allSubs) {
+        if (s.user_name !== user) continue;
+        const r = await sendPush(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          { title: 'Guck dir diesen Loser an!', body: `${streak} Trainings am Stück geschwänzt. Tipp drauf. 📸`, url: '/loser' }
+        );
+        if (r.ok) totalSent++;
+        else if (r.gone) await sql`DELETE FROM push_subscriptions WHERE endpoint = ${s.endpoint}`;
+      }
+    }
+  } catch { /* Tabellen evtl. noch nicht vorhanden */ }
+
+  // --- Loser-Cam B: 2 Monate in Folge „Bitch des Monats" → „Guck dir diesen Loser an!" ---
+  // Am Monatsanfang (nach Gericht/Tie-Auswertung) prüfen, einmal je Person/Monat.
+  if (dayOfMonth <= 5) {
+    try {
+      const prevYm = ymPrev(ym);
+      const prevPrevYm = ymPrev(prevYm);
+      const groups = (await sql`SELECT id FROM groups`) as { id: number }[];
+      for (const g of groups) {
+        const t1 = await resolveTitle(sql, g.id, prevYm, 'bitch');
+        if (t1.status !== 'final' || !t1.winner) continue;
+        const t0 = await resolveTitle(sql, g.id, prevPrevYm, 'bitch');
+        if (t0.status !== 'final' || t0.winner !== t1.winner) continue;
+        const user = t1.winner;
+        const claim = await sql`
+          INSERT INTO user_notif_log (user_name, notify_date, kind)
+          VALUES (${user}, ${prevYm + '-01'}, 'loser_2mo')
+          ON CONFLICT (user_name, notify_date, kind) DO NOTHING
+          RETURNING id
+        `;
+        if (claim.length === 0) continue;
+        for (const s of allSubs) {
+          if (s.user_name !== user) continue;
+          const r = await sendPush(
+            { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+            { title: 'Guck dir diesen Loser an!', body: '2 Monate in Folge Bitch des Monats. Tipp drauf. 📸', url: '/loser' }
+          );
+          if (r.ok) totalSent++;
+          else if (r.gone) await sql`DELETE FROM push_subscriptions WHERE endpoint = ${s.endpoint}`;
+        }
+      }
+    } catch { /* awards/groups evtl. nicht verfügbar */ }
+  }
 
   // An Feiertagen (NRW) keine KURS-Erinnerungen (Gericht-Pushes oben laufen trotzdem).
   const holiday = isHoliday(today);
