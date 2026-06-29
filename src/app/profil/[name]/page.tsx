@@ -6,6 +6,7 @@ import { useUser } from '@/components/UserProvider';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
+import XpBar, { type XpData } from '@/components/XpBar';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
 interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; clanTag?: string | null; points?: number; adAvailable?: boolean }
@@ -130,6 +131,7 @@ export default function ProfilePage() {
   const [arts, setArts] = useState<MartialArtEntry[]>([]);
   const [skills, setSkills] = useState<Skills>({});
   const [fighterInfo, setFighterInfo] = useState<FighterInfo>({});
+  const [xp, setXp] = useState<XpData | null>(null);
   const [priv, setPriv] = useState(false);
   const [savingBio, setSavingBio] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -184,6 +186,7 @@ export default function ProfilePage() {
     fetch(`/api/challenges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setChallenges(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`/api/praise?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setPraises(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`/api/badges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setBadgeData(d); }).catch(() => {});
+    fetch(`/api/xp?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setXp(d); }).catch(() => {});
   }, [name]);
 
   // Lob/Gigalob-Verfügbarkeit des Betrachters (für die Buttons auf fremden Profilen)
@@ -477,6 +480,13 @@ export default function ProfilePage() {
               <span className="chip" style={{ borderColor: 'var(--accent-2)', color: 'var(--accent-2)' }}>
                 🔥 {badgeData.streakDays} {badgeData.streakDays === 1 ? 'Tag' : 'Tage'}
               </span>
+            </div>
+          )}
+
+          {/* Level / XP */}
+          {xp && (
+            <div className="w-full max-w-xs mt-3">
+              <XpBar data={xp} />
             </div>
           )}
 

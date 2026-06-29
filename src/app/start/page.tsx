@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { nextStreakBadge, flameTier } from '@/lib/badges';
+import XpBar, { type XpData } from '@/components/XpBar';
 
 export default function StartPage() {
   const { userName } = useUser();
@@ -10,6 +11,7 @@ export default function StartPage() {
   const [pendingVotes, setPendingVotes] = useState(0);
   const [unread, setUnread] = useState(0);
   const [streak, setStreak] = useState({ days: 0, weeks: 0 });
+  const [xp, setXp] = useState<XpData | null>(null);
 
   useEffect(() => {
     fetch('/api/groups').then((r) => r.json()).then((d) => {
@@ -24,6 +26,7 @@ export default function StartPage() {
     fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {});
     fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {});
     fetch('/api/streak').then((r) => r.json()).then((d) => setStreak({ days: d.days ?? 0, weeks: d.weeks ?? 0 })).catch(() => {});
+    fetch('/api/xp').then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setXp(d); }).catch(() => {});
   }, [userName]);
 
   const nextBadge = nextStreakBadge(streak.weeks);
@@ -83,6 +86,14 @@ export default function StartPage() {
             <div className="text-[11px] text-[var(--muted)] mt-1">{streakHint}</div>
           </div>
         </a>
+
+        {/* Level / XP */}
+        {xp && (
+          <a href={`/profil/${encodeURIComponent(userName ?? '')}`}
+            className="card px-4 py-3 block active:scale-[0.99] transition-transform anim-up">
+            <XpBar data={xp} />
+          </a>
+        )}
 
         {/* Feature: Statistiken */}
         <a href="/statistik"

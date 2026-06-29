@@ -121,6 +121,7 @@ export async function POST(req: NextRequest) {
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS martial_arts JSONB NOT NULL DEFAULT '[]'::jsonb`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '{}'::jsonb`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS fighter_info JSONB NOT NULL DEFAULT '{}'::jsonb`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS xp_level_seen INTEGER`; // Basis für Level-up-Popup
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility VARCHAR(10) NOT NULL DEFAULT 'public'`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility_group INTEGER`;
     // Benachrichtigungs-Einstellungen pro Nutzer
