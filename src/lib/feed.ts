@@ -20,6 +20,7 @@ export interface BroadcastOpts {
   link?: string;
   reactable?: boolean;          // nur „gute" Ereignisse → Daumen hoch
   excludeActor?: boolean;       // Default: true (Auslöser bekommt es nicht selbst)
+  exclude?: string[];           // weitere Empfänger ausnehmen (z. B. der Gelobte)
   dedupKey?: string;            // wenn gesetzt: nur EINMAL (ON CONFLICT)
   push?: { title: string; body: string };
 }
@@ -49,7 +50,8 @@ export async function broadcastToGroup(sql: Sql, o: BroadcastOpts): Promise<numb
     SELECT user_name FROM group_members WHERE group_id = ${o.groupId} AND status = 'active'
   `) as { user_name: string }[];
   const excludeActor = o.excludeActor !== false;
-  const recipients = members.map((m) => m.user_name).filter((u) => !(excludeActor && u === o.actor));
+  const extra = new Set(o.exclude ?? []);
+  const recipients = members.map((m) => m.user_name).filter((u) => !(excludeActor && u === o.actor) && !extra.has(u));
   if (recipients.length === 0) return eventId;
 
   // 3) In-App-Eintrag je Empfänger.

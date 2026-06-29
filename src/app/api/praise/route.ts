@@ -73,15 +73,17 @@ export async function POST(req: NextRequest) {
       refId: ins[0].id as number,
       push: { title: `${emoji} ${label} erhalten!`, body: `${me} findet: du hast es verdient.` },
     });
-    // Gruppe informieren — ANONYM (Geber wird NICHT genannt; wird erst öffentlich,
-    // wenn die gelobte Person das Lob im Profil ausstellt).
+    // Gruppe informieren: Namen (wer → wem) sind sichtbar. NUR die Begründung
+    // bleibt verborgen, bis die gelobte Person das Lob im Profil ausstellt
+    // (deshalb steht der `reason` NICHT im Broadcast). Geber + Empfänger nehmen
+    // wir aus (Geber weiß es, Empfänger hat schon seine persönliche Nachricht).
     for (const g of await getMyGroups(to)) {
       await broadcastToGroup(sql, {
-        groupId: g.id, type: 'praise_feed', actor: to,
-        body: `${to} hat ein ${label} erhalten`,
+        groupId: g.id, type: 'praise_feed', actor: me, exclude: [to],
+        body: `${me} hat ${to} ein ${label} gegeben`,
         link: `/profil/${encodeURIComponent(to)}`,
         reactable: true,
-        push: { title: `${emoji} ${label}`, body: `${to} hat ein ${label} erhalten` },
+        push: { title: `${emoji} ${label}`, body: `${me} hat ${to} ein ${label} gegeben` },
       });
     }
     // Gigalob koppelt an die Streak-Ökonomie: Empfänger bekommt einen Streak-Punkt (gedeckelt).

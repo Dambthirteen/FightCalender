@@ -21,7 +21,7 @@ const SAMPLES: Record<string, { title: string; body: string; url: string }> = {
   praise: { title: '⭐ Lob erhalten', body: 'Angelo hat dir ein Lob gegeben!', url: '/benachrichtigungen' },
   badge: { title: '🏅 Neues Abzeichen', body: 'Du hast „Soldier" freigeschaltet!', url: '/benachrichtigungen' },
   skilltree: { title: '🌳 Skilltree-Update', body: 'Max hat den Skilltree angepasst', url: '/benachrichtigungen' },
-  praise_feed: { title: '👏 Lob', body: 'Tim hat ein Lob erhalten', url: '/benachrichtigungen' },
+  praise_feed: { title: '👏 Lob', body: 'Tim hat Max ein Lob gegeben', url: '/benachrichtigungen' },
   competition: { title: '🥊 Wettkampf heute!', body: 'Angelo: Rumble in Köln', url: '/competitions' },
   bitch: { title: '🐔 Geschwänzt', body: 'Niklas war nicht beim Training', url: '/statistik' },
   badge_feed: { title: '🏅 Abzeichen freigeschaltet', body: 'Max: Soldier', url: '/benachrichtigungen' },
