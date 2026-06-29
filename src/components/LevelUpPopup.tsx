@@ -23,7 +23,7 @@ export default function LevelUpPopup() {
     if (preview) {
       if (loadedFor.current === '__preview__') return;
       loadedFor.current = '__preview__';
-      setUp({ level: 10, from: 9, rank: { name: 'Prospect', color: '#1ec7da' } });
+      setUp({ level: 10, from: 9, rank: { name: 'Silber', color: '#c0c7d0' } });
       return;
     }
 

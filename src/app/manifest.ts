@@ -5,8 +5,8 @@ import type { MetadataRoute } from "next";
 // (Standalone-Anzeige ohne Browser-Leiste, eigene Farben).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Fight Calendar",
-    short_name: "Fight Cal",
+    name: "Tap In",
+    short_name: "Tap In",
     description: "NFT Köln — Wer kommt diese Woche?",
     start_url: "/",
     display: "standalone",

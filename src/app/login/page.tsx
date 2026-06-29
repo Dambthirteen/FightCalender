@@ -40,9 +40,9 @@ export default function LoginPage() {
     <div className="min-h-screen text-[var(--text)] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-7 anim-up">
-          <img src="/icon-192.png" alt="Fight Calendar"
+          <img src="/icon-192.png" alt="Tap In"
             className="w-20 h-20 rounded-[22px] mx-auto mb-4 ring-1 ring-white/10 shadow-2xl shadow-black/50" />
-          <h1 className="font-display text-4xl tracking-wide leading-none">Fight Calendar</h1>
+          <h1 className="font-display text-4xl tracking-wide leading-none">Tap In</h1>
           <p className="text-[var(--muted)] text-[11px] mt-2 uppercase tracking-[0.22em]">NFT Köln · Wer kommt diese Woche?</p>
         </div>
 

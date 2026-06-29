@@ -1,4 +1,4 @@
-// Service Worker für Push-Benachrichtigungen (Fight Calendar).
+// Service Worker für Push-Benachrichtigungen (Tap In).
 // Liegt unter /sw.js → Scope "/" (steuert die ganze App).
 
 self.addEventListener('push', function (event) {
@@ -7,9 +7,9 @@ self.addEventListener('push', function (event) {
   try {
     data = event.data.json();
   } catch {
-    data = { title: 'Fight Calendar', body: event.data.text() };
+    data = { title: 'Tap In', body: event.data.text() };
   }
-  const title = data.title || 'Fight Calendar';
+  const title = data.title || 'Tap In';
   const options = {
     body: data.body || '',
     icon: '/icon-192.png',

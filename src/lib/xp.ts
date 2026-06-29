@@ -48,13 +48,14 @@ export function levelProgress(xp: number): LevelProgress {
 }
 
 export interface Rank { name: string; color: string }
+// Engagement-Stufen (NICHT Kampf-Skill — das misst der Skilltree). Neutrale Tiers.
 const RANKS: { min: number; name: string; color: string }[] = [
-  { min: 1, name: 'Amateur', color: '#9ca3af' },
-  { min: 10, name: 'Prospect', color: '#1ec7da' },
-  { min: 20, name: 'Contender', color: '#3b82f6' },
-  { min: 30, name: 'Veteran', color: '#a855f7' },
-  { min: 45, name: 'Champion', color: '#ffc24b' },
-  { min: 60, name: 'Legende', color: '#ff3b30' },
+  { min: 1, name: 'Bronze', color: '#cd7f32' },
+  { min: 10, name: 'Silber', color: '#c0c7d0' },
+  { min: 20, name: 'Gold', color: '#ffc24b' },
+  { min: 30, name: 'Platin', color: '#5ec8e0' },
+  { min: 45, name: 'Diamant', color: '#7c9cff' },
+  { min: 60, name: 'Elite', color: '#ff3b30' },
 ];
 export function rankFor(level: number): Rank {
   let r = RANKS[0];

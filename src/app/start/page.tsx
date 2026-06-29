@@ -193,7 +193,7 @@ export default function StartPage() {
               <section>
                 <div className="section-label mb-2">Ränge</div>
                 <p className="text-[var(--muted)]">
-                  Mit dem Level steigt dein Rang: <strong className="text-[var(--text)]">Amateur → Prospect → Contender → Veteran → Champion → Legende</strong>.
+                  Mit dem Level steigt dein Rang: <strong className="text-[var(--text)]">Bronze → Silber → Gold → Platin → Diamant → Elite</strong>.
                   Der Rang färbt deine XP-Leiste.
                 </p>
               </section>

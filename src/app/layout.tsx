@@ -12,12 +12,12 @@ const display = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--fon
 const sans = Sora({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Fight Calendar",
+  title: "Tap In",
   description: "NFT Köln — Wer kommt diese Woche?",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Fight Calendar",
+    title: "Tap In",
     statusBarStyle: "black-translucent",
   },
 };
