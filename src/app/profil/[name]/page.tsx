@@ -70,8 +70,31 @@ function Stat({ value, label, color }: { value: number | string; label: string; 
   );
 }
 
-const TABS = [['fighter', 'Fighter'], ['ehrungen', 'Ehrungen'], ['pinnwand', 'Pinnwand']] as const;
+const TABS = [['fighter', 'Fighter'], ['stats', 'Stats'], ['ehrungen', 'Ehrungen'], ['pinnwand', 'Pinnwand']] as const;
 type Tab = (typeof TABS)[number][0];
+
+interface FighterInfo {
+  trainingSince?: string; // 'YYYY-MM'
+  weightKg?: number; heightCm?: number; stance?: string;
+  nickname?: string; gym?: string; instagram?: string; goal?: string;
+}
+const STANCE_LABEL: Record<string, string> = { orthodox: 'Orthodox', southpaw: 'Southpaw', switch: 'Switch' };
+
+// 'YYYY-MM' → „seit 03/2019 · 7 Jahre"
+function trainingLabel(since: string): string {
+  const m = since.match(/^(\d{4})(?:-(\d{2}))?/);
+  if (!m) return since;
+  const y = parseInt(m[1], 10);
+  const mo = m[2] ? parseInt(m[2], 10) : 1;
+  const now = new Date();
+  let years = now.getFullYear() - y;
+  let months = now.getMonth() + 1 - mo;
+  if (months < 0) { years -= 1; months += 12; }
+  const start = m[2] ? `${m[2]}/${m[1]}` : m[1];
+  if (years <= 0 && months <= 0) return `seit ${start}`;
+  if (years <= 0) return `seit ${start} · ${months} Mon.`;
+  return `seit ${start} · ${years} ${years === 1 ? 'Jahr' : 'Jahre'}`;
+}
 
 export default function ProfilePage() {
   const params = useParams();
@@ -88,6 +111,7 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<{ macherTitles: number; bitchTitles: number; daysOut: number } | null>(null);
   const [arts, setArts] = useState<MartialArtEntry[]>([]);
   const [skills, setSkills] = useState<Skills>({});
+  const [fighterInfo, setFighterInfo] = useState<FighterInfo>({});
   const [priv, setPriv] = useState(false);
   const [savingBio, setSavingBio] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -127,6 +151,7 @@ export default function ProfilePage() {
           setBio(d.bio ?? ''); setBioEdit(d.bio ?? '');
           setArts(Array.isArray(d.martial_arts) ? d.martial_arts : []);
           setSkills(d.skills && typeof d.skills === 'object' ? d.skills : {});
+          setFighterInfo(d.fighter_info && typeof d.fighter_info === 'object' ? d.fighter_info : {});
         }
       }
     }).catch(() => {});
@@ -215,6 +240,17 @@ export default function ProfilePage() {
     const cur = Number(skills[key as keyof Skills] ?? 0);
     const val = cur === level * 20 ? (level - 1) * 20 : level * 20; // gleichen Balken nochmal tippen → einen runter
     saveSkills({ ...skills, [key]: val });
+  }
+  // Fighter-Eckdaten (trainiert seit, Gewicht, …) — speichert das ganze Objekt.
+  async function saveFighter(next: FighterInfo) {
+    setFighterInfo(next);
+    await fetch('/api/profile-info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fighter_info: next }) }).catch(() => {});
+  }
+  function setFighterField(key: keyof FighterInfo, value: string | number | undefined) {
+    const next = { ...fighterInfo };
+    if (value === undefined || value === '') delete next[key];
+    else (next as Record<string, string | number>)[key] = value;
+    saveFighter(next);
   }
 
   // --- Kommentare ---
@@ -320,6 +356,68 @@ export default function ProfilePage() {
   const nextBadge = badgeData ? nextStreakBadge(badgeData.streakWeeks) : null;
   const earnedSet = new Set(badgeData?.earned.map((b) => b.id) ?? []);
   const editing = isSelf && editMode; // Bearbeitungsmodus (Standard = Außenansicht)
+  const year = new Date().getFullYear();
+
+  // Abzeichen-Karte (gehört zu „Ehrungen") — Streak-Fortschritt + Ausstellen + Übersicht.
+  const badgesCard = (
+    <div className="card px-4 py-4">
+      <div className="flex items-center justify-between mb-1">
+        <div className="section-label">Abzeichen</div>
+        <span className="text-xs font-semibold" style={{ color: 'var(--accent-2)' }}>🔥 {badgeData?.streakDays ?? 0} {(badgeData?.streakDays ?? 0) === 1 ? 'Tag' : 'Tage'}</span>
+      </div>
+      <div className="text-[11px] text-[var(--faint)] mb-3">
+        {badgeData?.streakWeeks ?? 0} {(badgeData?.streakWeeks ?? 0) === 1 ? 'Woche' : 'Wochen'} am Stück · Rekord: {badgeData?.longest ?? 0} Tage
+      </div>
+      {isSelf && nextBadge && (
+        <div className="text-xs text-[var(--muted)] mb-3">
+          Noch {nextBadge.threshold - (badgeData?.streakWeeks ?? 0)} Wo. bis <strong>{nextBadge.emoji} {nextBadge.label}</strong>
+        </div>
+      )}
+      {isSelf && (
+        <div className="text-xs text-[var(--muted)] mb-3">
+          Streak-Punkte: <strong style={{ color: 'var(--text)' }}>{badgeData?.points ?? 0}</strong>
+          {badgeData?.adAvailable && (
+            <button onClick={claimAdPoint} disabled={claimingAd}
+              className="ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border border-[var(--border)] disabled:opacity-40"
+              style={{ color: 'var(--accent-2)' }}>
+              {claimingAd ? '…' : 'Werbung'}
+            </button>
+          )}
+        </div>
+      )}
+      {/* Volles Raster nur im Bearbeiten-Modus — sonst überlädt das Profil.
+          Ausgestellte Badges erscheinen ohnehin als Chips unter dem Namen. */}
+      {editing && (
+        badgeData && badgeData.earned.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              {badgeData.earned.map((b) => {
+                const on = badgeData.displayed.includes(b.id);
+                const cls = 'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all active:scale-95';
+                const style = on
+                  ? { background: 'var(--accent-soft)', borderColor: 'var(--accent-2)' }
+                  : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)' };
+                return (
+                  <button key={b.id} onClick={() => toggleBadge(b.id)} className={cls} style={style}>
+                    <span className="text-2xl leading-none">{b.emoji}</span>
+                    <span className="text-[10px] font-semibold leading-tight">{b.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-[var(--faint)] mt-2">Tippe an, um bis zu 4 auszustellen</p>
+          </>
+        ) : (
+          <div className="text-sm text-[var(--faint)]">Noch keine Abzeichen — bleib dran.</div>
+        )
+      )}
+      {isSelf && (
+        <button onClick={() => setShowAllBadges(true)} className="mt-3 text-xs font-semibold" style={{ color: 'var(--teal)' }}>
+          Alle Achievements anzeigen ›
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen text-[var(--text)]">
@@ -395,22 +493,6 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
-            {/* Kompakte Stats */}
-            <div className="card mt-5 anim-up">
-              <div className="grid grid-cols-3 divide-x divide-[var(--border-soft)]">
-                {([
-                  ['Macher d.M.', stats?.macherTitles, 'var(--gold)'],
-                  ['Bitch d.M.', stats?.bitchTitles, 'var(--bitch)'],
-                  ['Tage weg', stats?.daysOut, 'var(--teal)'],
-                ] as const).map(([label, val, col]) => (
-                  <div key={label} className="px-2 py-3 text-center">
-                    <div className="font-display text-2xl tnum" style={{ color: col }}>{val ?? '–'}</div>
-                    <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] mt-0.5">{label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Tabs */}
             <div className="flex border-b border-[var(--border-soft)] mt-5 mb-4">
               {TABS.map(([key, label]) => (
@@ -425,69 +507,23 @@ export default function ProfilePage() {
             {/* --- Tab: Fighter --- */}
             {tab === 'fighter' && (
               <div className="space-y-4 anim-in">
-                {/* Abzeichen */}
+                {/* Eckdaten */}
                 <div className="card px-4 py-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="section-label">Abzeichen</div>
-                    <span className="text-xs font-semibold" style={{ color: 'var(--accent-2)' }}>🔥 {badgeData?.streakDays ?? 0} {(badgeData?.streakDays ?? 0) === 1 ? 'Tag' : 'Tage'}</span>
-                  </div>
-                  <div className="text-[11px] text-[var(--faint)] mb-3">
-                    {badgeData?.streakWeeks ?? 0} {(badgeData?.streakWeeks ?? 0) === 1 ? 'Woche' : 'Wochen'} am Stück · Rekord: {badgeData?.longest ?? 0} Tage
-                  </div>
-                  {isSelf && nextBadge && (
-                    <div className="text-xs text-[var(--muted)] mb-3">
-                      Noch {nextBadge.threshold - (badgeData?.streakWeeks ?? 0)} Wo. bis <strong>{nextBadge.emoji} {nextBadge.label}</strong>
+                  <div className="section-label mb-2.5">Eckdaten</div>
+                  {editing ? (
+                    <div>
+                      <label className="text-[11px] text-[var(--muted)] mb-1 block">Trainiert seit</label>
+                      <input type="month" value={fighterInfo.trainingSince ?? ''} max={new Date().toISOString().slice(0, 7)}
+                        onChange={(e) => setFighterField('trainingSince', e.target.value)} className="field" />
                     </div>
-                  )}
-                  {isSelf && (
-                    <div className="text-xs text-[var(--muted)] mb-3">
-                      Streak-Punkte: <strong style={{ color: 'var(--text)' }}>{badgeData?.points ?? 0}</strong>
-                      {badgeData?.adAvailable && (
-                        <button onClick={claimAdPoint} disabled={claimingAd}
-                          className="ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border border-[var(--border)] disabled:opacity-40"
-                          style={{ color: 'var(--accent-2)' }}>
-                          {claimingAd ? '…' : 'Werbung'}
-                        </button>
-                      )}
+                  ) : fighterInfo.trainingSince ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--muted)]">Trainiert</span>
+                      <span className="text-sm font-semibold">{trainingLabel(fighterInfo.trainingSince)}</span>
                     </div>
+                  ) : (
+                    <div className="text-sm text-[var(--faint)]">Noch keine Angaben.</div>
                   )}
-                  {/* Volles Raster nur im Bearbeiten-Modus — sonst überlädt das Profil.
-                      Ausgestellte Badges erscheinen ohnehin als Chips unter dem Namen. */}
-                  {editing && (
-                    badgeData && badgeData.earned.length > 0 ? (
-                      <>
-                        <div className="grid grid-cols-2 gap-2">
-                          {badgeData.earned.map((b) => {
-                            const on = badgeData.displayed.includes(b.id);
-                            const cls = 'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all active:scale-95';
-                            const style = on
-                              ? { background: 'var(--accent-soft)', borderColor: 'var(--accent-2)' }
-                              : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)' };
-                            return (
-                              <button key={b.id} onClick={() => toggleBadge(b.id)} className={cls} style={style}>
-                                <span className="text-2xl leading-none">{b.emoji}</span>
-                                <span className="text-[10px] font-semibold leading-tight">{b.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <p className="text-[10px] text-[var(--faint)] mt-2">Tippe an, um bis zu 4 auszustellen</p>
-                      </>
-                    ) : (
-                      <div className="text-sm text-[var(--faint)]">Noch keine Abzeichen — bleib dran.</div>
-                    )
-                  )}
-                  {isSelf && (
-                    <button onClick={() => setShowAllBadges(true)} className="mt-3 text-xs font-semibold" style={{ color: 'var(--teal)' }}>
-                      Alle Achievements anzeigen ›
-                    </button>
-                  )}
-                </div>
-
-                {/* Jahres-Punkte */}
-                <div className="flex gap-2.5">
-                  <Stat value={macherYear ?? '–'} label="Macher-Punkte (Jahr)" color="var(--gold)" />
-                  <Stat value={bitchYear ?? '–'} label="Bitch-Punkte (Jahr)" color="var(--bitch)" />
                 </div>
 
                 {/* Kampfsport */}
@@ -643,9 +679,31 @@ export default function ProfilePage() {
               </div>
             )}
 
+            {/* --- Tab: Stats --- */}
+            {tab === 'stats' && (
+              <div className="space-y-5 anim-in">
+                <div>
+                  <div className="section-label mb-2.5">Titel &amp; Anwesenheit</div>
+                  <div className="flex gap-2.5">
+                    <Stat value={stats?.macherTitles ?? '–'} label="Macher des Monats" color="var(--gold)" />
+                    <Stat value={stats?.bitchTitles ?? '–'} label="Bitch des Monats" color="var(--bitch)" />
+                    <Stat value={stats?.daysOut ?? '–'} label="Tage weg" color="var(--teal)" />
+                  </div>
+                </div>
+                <div>
+                  <div className="section-label mb-2.5">Punkte · {year}</div>
+                  <div className="flex gap-2.5">
+                    <Stat value={macherYear ?? '–'} label="Macher-Punkte" color="var(--gold)" />
+                    <Stat value={bitchYear ?? '–'} label="Bitch-Punkte" color="var(--bitch)" />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* --- Tab: Ehrungen --- */}
             {tab === 'ehrungen' && (
               <div className="space-y-4 anim-in">
+                {badgesCard}
                 {!isSelf && canInteract && (
                   <div className="card px-4 py-4">
                     <div className="section-label mb-2.5">Würdigung geben</div>
