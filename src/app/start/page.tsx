@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { nextStreakBadge, flameTier } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
+import { XP } from '@/lib/xp';
 
 export default function StartPage() {
   const { userName } = useUser();
@@ -12,6 +13,7 @@ export default function StartPage() {
   const [unread, setUnread] = useState(0);
   const [streak, setStreak] = useState({ days: 0, weeks: 0 });
   const [xp, setXp] = useState<XpData | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/groups').then((r) => r.json()).then((d) => {
@@ -146,7 +148,78 @@ export default function StartPage() {
         <button onClick={logout} className="w-full text-center text-sm py-3 text-[var(--faint)] hover:text-[var(--accent)] transition-colors">
           Ausloggen
         </button>
+
+        {/* Dezenter Hilfe-Button ganz unten */}
+        <button onClick={() => setHelpOpen(true)}
+          className="w-full text-center text-xs py-2 text-[var(--faint)] hover:text-[var(--muted)] transition-colors">
+          ⓘ Wie bekomme ich XP & Level?
+        </button>
       </main>
+
+      {/* Hilfe / Erklärung */}
+      {helpOpen && (
+        <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm anim-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setHelpOpen(false); }}>
+          <div className="card w-full max-w-md max-h-[85vh] overflow-y-auto p-5 anim-up rounded-b-none sm:rounded-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display text-2xl tracking-wide">So funktioniert&apos;s</h2>
+              <button onClick={() => setHelpOpen(false)} className="text-[var(--faint)] hover:text-white text-lg px-1">✕</button>
+            </div>
+
+            <div className="space-y-5 text-sm">
+              <section>
+                <div className="section-label mb-2">XP &amp; Level</div>
+                <p className="text-[var(--muted)] mb-3">
+                  Du sammelst XP fürs Mitmachen. Genug XP → nächstes Level → höherer Rang.
+                  Bitch-Punkte ziehen <strong className="text-[var(--text)]">nichts</strong> ab.
+                </p>
+                <div className="space-y-1.5">
+                  {([
+                    ['Training besucht', XP.attend],
+                    ['Wettkampf bestritten', XP.comp],
+                    ['Wettkampf gewonnen', XP.win],
+                    ['Lob erhalten', XP.lob],
+                    ['Gigalob erhalten', XP.gigalob],
+                    ['Ausrede gerichtet (Vote)', XP.vote],
+                  ] as const).map(([label, amount]) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <span className="text-[var(--muted)]">{label}</span>
+                      <span className="font-semibold tnum" style={{ color: 'var(--teal)' }}>+{amount} XP</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <div className="section-label mb-2">Ränge</div>
+                <p className="text-[var(--muted)]">
+                  Mit dem Level steigt dein Rang: <strong className="text-[var(--text)]">Amateur → Prospect → Contender → Veteran → Champion → Legende</strong>.
+                  Der Rang färbt deine XP-Leiste.
+                </p>
+              </section>
+
+              <section>
+                <div className="section-label mb-2">Streak</div>
+                <p className="text-[var(--muted)]">
+                  Trainiere regelmäßig deinen Plan → deine Streak (🔥) wächst und schaltet Abzeichen frei.
+                  Streak-Punkte schützen dich, wenn du mal einen geplanten Tag verpasst.
+                </p>
+              </section>
+
+              <section>
+                <div className="section-label mb-2">Spind</div>
+                <p className="text-[var(--muted)] mb-3">
+                  Höhere Level schalten Anpassungen frei: Namens-Stil, Avatar-Rahmen, Flammen-Farbe und Gürtel-Skins.
+                </p>
+                <a href={`/profil/${encodeURIComponent(userName ?? '')}`}
+                  className="btn btn-ghost w-full">Zum Profil &amp; Spind</a>
+              </section>
+            </div>
+
+            <button onClick={() => setHelpOpen(false)} className="btn btn-primary w-full mt-5">Verstanden</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
