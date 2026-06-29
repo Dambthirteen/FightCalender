@@ -78,7 +78,25 @@ interface FighterInfo {
   weightKg?: number; heightCm?: number; stance?: string;
   nickname?: string; gym?: string; instagram?: string; goal?: string;
 }
-const STANCE_LABEL: Record<string, string> = { orthodox: 'Orthodox', southpaw: 'Southpaw', switch: 'Switch' };
+// Gewichtsklasse aus kg (grobe Standard-Divisionen).
+function weightClass(kg: number): string {
+  const C: [number, string][] = [
+    [56.7, 'Flyweight'], [61.2, 'Bantamweight'], [65.8, 'Featherweight'],
+    [70.3, 'Lightweight'], [77.1, 'Welterweight'], [83.9, 'Middleweight'],
+    [93.0, 'Light Heavyweight'], [120.2, 'Heavyweight'],
+  ];
+  for (const [max, name] of C) if (kg <= max) return name;
+  return 'Super Heavyweight';
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-[var(--muted)]">{label}</span>
+      <span className="font-semibold text-right">{value}</span>
+    </div>
+  );
+}
 
 // 'YYYY-MM' → „seit 03/2019 · 7 Jahre"
 function trainingLabel(since: string): string {
@@ -511,15 +529,42 @@ export default function ProfilePage() {
                 <div className="card px-4 py-4">
                   <div className="section-label mb-2.5">Eckdaten</div>
                   {editing ? (
-                    <div>
-                      <label className="text-[11px] text-[var(--muted)] mb-1 block">Trainiert seit</label>
-                      <input type="month" value={fighterInfo.trainingSince ?? ''} max={new Date().toISOString().slice(0, 7)}
-                        onChange={(e) => setFighterField('trainingSince', e.target.value)} className="field" />
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[11px] text-[var(--muted)] mb-1 block">Trainiert seit</label>
+                        <input type="month" value={fighterInfo.trainingSince ?? ''} max={new Date().toISOString().slice(0, 7)}
+                          onChange={(e) => setFighterField('trainingSince', e.target.value)} className="field" />
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="flex-1">
+                          <label className="text-[11px] text-[var(--muted)] mb-1 block">Gewicht (kg)</label>
+                          <input type="number" inputMode="numeric" min={20} max={300} value={fighterInfo.weightKg ?? ''}
+                            onChange={(e) => setFighterField('weightKg', e.target.value === '' ? undefined : Number(e.target.value))} className="field" />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[11px] text-[var(--muted)] mb-1 block">Größe (cm)</label>
+                          <input type="number" inputMode="numeric" min={100} max={250} value={fighterInfo.heightCm ?? ''}
+                            onChange={(e) => setFighterField('heightCm', e.target.value === '' ? undefined : Number(e.target.value))} className="field" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-[var(--muted)] mb-1 block">Instagram</label>
+                        <input type="text" placeholder="@handle" value={fighterInfo.instagram ?? ''}
+                          onChange={(e) => setFighterField('instagram', e.target.value.replace(/^@/, ''))} className="field" />
+                      </div>
                     </div>
-                  ) : fighterInfo.trainingSince ? (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-[var(--muted)]">Trainiert</span>
-                      <span className="text-sm font-semibold">{trainingLabel(fighterInfo.trainingSince)}</span>
+                  ) : (fighterInfo.trainingSince || fighterInfo.weightKg || fighterInfo.heightCm || fighterInfo.instagram) ? (
+                    <div className="space-y-2 text-sm">
+                      {fighterInfo.trainingSince && <InfoRow label="Trainiert" value={trainingLabel(fighterInfo.trainingSince)} />}
+                      {fighterInfo.weightKg && <InfoRow label="Gewicht" value={`${fighterInfo.weightKg} kg · ${weightClass(fighterInfo.weightKg)}`} />}
+                      {fighterInfo.heightCm && <InfoRow label="Größe" value={`${fighterInfo.heightCm} cm`} />}
+                      {fighterInfo.instagram && (
+                        <InfoRow label="Instagram" value={
+                          <a href={`https://instagram.com/${fighterInfo.instagram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--teal)' }}>
+                            @{fighterInfo.instagram}
+                          </a>
+                        } />
+                      )}
                     </div>
                   ) : (
                     <div className="text-sm text-[var(--faint)]">Noch keine Angaben.</div>
