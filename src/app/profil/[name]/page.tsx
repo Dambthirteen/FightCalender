@@ -7,6 +7,7 @@ import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
+import { nameplateStyle, avatarFrame, flameFilter } from '@/lib/cosmetics';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
 interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; clanTag?: string | null; points?: number; adAvailable?: boolean }
@@ -132,6 +133,7 @@ export default function ProfilePage() {
   const [skills, setSkills] = useState<Skills>({});
   const [fighterInfo, setFighterInfo] = useState<FighterInfo>({});
   const [xp, setXp] = useState<XpData | null>(null);
+  const [cosmetics, setCosmetics] = useState<Record<string, string>>({});
   const [priv, setPriv] = useState(false);
   const [savingBio, setSavingBio] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -172,6 +174,7 @@ export default function ProfilePage() {
           setArts(Array.isArray(d.martial_arts) ? d.martial_arts : []);
           setSkills(d.skills && typeof d.skills === 'object' ? d.skills : {});
           setFighterInfo(d.fighter_info && typeof d.fighter_info === 'object' ? d.fighter_info : {});
+          setCosmetics(d.cosmetics && typeof d.cosmetics === 'object' ? d.cosmetics : {});
         }
       }
     }).catch(() => {});
@@ -378,6 +381,7 @@ export default function ProfilePage() {
   const earnedSet = new Set(badgeData?.earned.map((b) => b.id) ?? []);
   const editing = isSelf && editMode; // Bearbeitungsmodus (Standard = Außenansicht)
   const year = new Date().getFullYear();
+  const frame = avatarFrame(cosmetics.avatarFrame, c); // Spind: Avatar-Rahmen
 
   // Abzeichen-Karte (gehört zu „Ehrungen") — Streak-Fortschritt + Ausstellen + Übersicht.
   const badgesCard = (
@@ -460,8 +464,8 @@ export default function ProfilePage() {
           <button
             onClick={() => editing && fileRef.current?.click()}
             disabled={!editing || uploading}
-            className="relative w-24 h-24 rounded-full mb-3 overflow-hidden grid place-items-center"
-            style={{ background: avatar ? 'transparent' : `${c}22`, border: `2px solid ${c}`, boxShadow: `0 0 40px ${c}33` }}>
+            className={`relative w-24 h-24 rounded-full mb-3 overflow-hidden grid place-items-center ${frame.className ?? ''}`}
+            style={{ background: avatar ? 'transparent' : `${c}22`, ...frame.style }}>
             {avatar
               ? <img src={avatar} alt={name} className="w-full h-full object-cover" />
               : <span className="font-display text-5xl" style={{ color: c }}>{initials(name)}</span>}
@@ -472,13 +476,13 @@ export default function ProfilePage() {
             )}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
-          <div className="font-display text-3xl tracking-wide">{name}</div>
+          <div className="font-display text-3xl tracking-wide" style={nameplateStyle(cosmetics.nameplate)}>{name}</div>
 
           {/* Flamme */}
           {badgeData && badgeData.streakDays > 0 && (
             <div className="mt-2">
               <span className="chip" style={{ borderColor: 'var(--accent-2)', color: 'var(--accent-2)' }}>
-                🔥 {badgeData.streakDays} {badgeData.streakDays === 1 ? 'Tag' : 'Tage'}
+                <span style={{ filter: flameFilter(cosmetics.flame), display: 'inline-block' }}>🔥</span> {badgeData.streakDays} {badgeData.streakDays === 1 ? 'Tag' : 'Tage'}
               </span>
             </div>
           )}
@@ -850,6 +854,10 @@ export default function ProfilePage() {
             {/* Eigene Einstellungen — nur im Bearbeiten-Modus */}
             {editing && (
               <div className="mt-7 space-y-3">
+                <a href="/spind" className="card px-4 py-3 flex items-center justify-between text-sm font-semibold">
+                  <span>Spind — Anpassung</span>
+                  <span className="text-[var(--faint)]">›</span>
+                </a>
                 <div className="card px-4 py-3">
                   <div className="section-label mb-2.5">Profilfarbe (im Kalender)</div>
                   <div className="flex flex-wrap gap-2.5">

@@ -1,0 +1,78 @@
+/**
+ * Customization (Level-System Phase 2) — der „Spind".
+ * Jedes Cosmetic schaltet ab einem Level frei. Reine CSS-Looks (keine Assets).
+ * Equippte Auswahl liegt in users.cosmetics (JSONB): { nameplate, avatarFrame, flame }.
+ */
+import type { CSSProperties } from 'react';
+
+export type CosmeticCategory = 'nameplate' | 'avatarFrame' | 'flame';
+export interface CosmeticItem { id: string; label: string; minLevel: number }
+
+export const COSMETICS: Record<CosmeticCategory, { label: string; items: CosmeticItem[] }> = {
+  nameplate: {
+    label: 'Namens-Stil',
+    items: [
+      { id: 'default', label: 'Standard', minLevel: 1 },
+      { id: 'gold', label: 'Gold', minLevel: 3 },
+      { id: 'glow', label: 'Glow', minLevel: 8 },
+      { id: 'goldgrad', label: 'Gold-Verlauf', minLevel: 15 },
+      { id: 'rainbow', label: 'Regenbogen', minLevel: 30 },
+    ],
+  },
+  avatarFrame: {
+    label: 'Avatar-Rahmen',
+    items: [
+      { id: 'default', label: 'Standard', minLevel: 1 },
+      { id: 'gold', label: 'Gold', minLevel: 5 },
+      { id: 'neon', label: 'Neon', minLevel: 12 },
+      { id: 'pulse', label: 'Puls', minLevel: 20 },
+    ],
+  },
+  flame: {
+    label: 'Flammen-Farbe',
+    items: [
+      { id: 'default', label: 'Orange', minLevel: 1 },
+      { id: 'blue', label: 'Blau', minLevel: 5 },
+      { id: 'purple', label: 'Lila', minLevel: 10 },
+      { id: 'green', label: 'Grün', minLevel: 18 },
+    ],
+  },
+};
+
+/** Prüft, ob ein Item existiert und ab welchem Level es gilt (-1 = unbekannt). */
+export function minLevelFor(category: string, itemId: string): number {
+  const cat = COSMETICS[category as CosmeticCategory];
+  if (!cat) return -1;
+  return cat.items.find((i) => i.id === itemId)?.minLevel ?? -1;
+}
+
+// ---- Style-Resolver (im UI angewandt) ----
+
+export function nameplateStyle(id?: string): CSSProperties {
+  switch (id) {
+    case 'gold': return { color: 'var(--gold)' };
+    case 'glow': return { color: '#fff', textShadow: '0 0 16px var(--accent)' };
+    case 'goldgrad': return { background: 'linear-gradient(90deg,#ffe08a,#f5a623)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' };
+    case 'rainbow': return { background: 'linear-gradient(90deg,#ff3b30,#ffc24b,#3ddc84,#1ec7da,#a855f7)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' };
+    default: return {};
+  }
+}
+
+export function avatarFrame(id: string | undefined, color: string): { style: CSSProperties; className?: string } {
+  switch (id) {
+    case 'gold': return { style: { border: '3px solid var(--gold)', boxShadow: '0 0 36px rgba(255,194,75,0.45)' } };
+    case 'neon': return { style: { border: '3px solid #a855f7', boxShadow: '0 0 30px rgba(168,85,247,0.6)' } };
+    case 'pulse': return { style: { border: `3px solid ${color}` }, className: 'frame-pulse' };
+    default: return { style: { border: `2px solid ${color}`, boxShadow: `0 0 40px ${color}33` } };
+  }
+}
+
+/** CSS-Filter zum Einfärben der orangenen 🔥-Emoji. */
+export function flameFilter(id?: string): string | undefined {
+  switch (id) {
+    case 'blue': return 'hue-rotate(185deg) saturate(1.4)';
+    case 'purple': return 'hue-rotate(255deg) saturate(1.25)';
+    case 'green': return 'hue-rotate(85deg) saturate(1.25)';
+    default: return undefined;
+  }
+}

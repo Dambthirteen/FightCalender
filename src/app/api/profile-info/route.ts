@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
              COALESCE(martial_arts, '[]'::jsonb) AS martial_arts,
              COALESCE(skills, '{}'::jsonb) AS skills,
              COALESCE(fighter_info, '{}'::jsonb) AS fighter_info,
+             COALESCE(cosmetics, '{}'::jsonb) AS cosmetics,
              COALESCE(profile_visibility, 'public') AS profile_visibility, profile_visibility_group
       FROM users WHERE user_name = ${user}
     `)[0];
