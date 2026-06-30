@@ -383,6 +383,7 @@ export default function ProfilePage() {
   const editing = isSelf && editMode; // Bearbeitungsmodus (Standard = Außenansicht)
   const year = new Date().getFullYear();
   const frame = avatarFrame(cosmetics.avatarFrame, c); // Spind: Avatar-Rahmen
+  const streakDays = badgeData?.streakDays ?? 0;
 
   // Abzeichen-Karte (gehört zu „Ehrungen") — Streak-Fortschritt + Ausstellen + Übersicht.
   const badgesCard = (
@@ -467,7 +468,7 @@ export default function ProfilePage() {
           <button
             onClick={() => editing && fileRef.current?.click()}
             disabled={!editing || uploading}
-            className={`relative w-24 h-24 rounded-full mb-3 overflow-hidden grid place-items-center ${frame.className ?? ''}`}
+            className={`relative w-24 h-24 rounded-full mb-2.5 overflow-hidden grid place-items-center ${frame.className ?? ''}`}
             style={{ background: avatar ? 'transparent' : `${c}22`, ...frame.style }}>
             {avatar
               ? <img src={avatar} alt={name} className="w-full h-full object-cover" />
@@ -479,26 +480,22 @@ export default function ProfilePage() {
             )}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
-          <div className="font-display text-3xl tracking-wide" style={nameplateStyle(cosmetics.nameplate)}>{name}</div>
+          <div className="font-display text-3xl tracking-wide leading-none" style={nameplateStyle(cosmetics.nameplate)}>{name}</div>
 
-          {/* Flamme */}
-          {badgeData && badgeData.streakDays > 0 && (
-            <div className="mt-2">
-              <span className="chip" style={{ borderColor: 'var(--accent-2)', color: 'var(--accent-2)' }}>
-                <span style={{ filter: flameFilter(cosmetics.flame), display: 'inline-block' }}>🔥</span> {badgeData.streakDays} {badgeData.streakDays === 1 ? 'Tag' : 'Tage'}
+          {(() => {
+            const flame = streakDays > 0 ? (
+              <span className="text-xs font-semibold" style={{ color: 'var(--accent-2)' }}>
+                <span style={{ filter: flameFilter(cosmetics.flame), display: 'inline-block' }}>🔥</span> {streakDays} {streakDays === 1 ? 'Tag' : 'Tage'}
               </span>
-            </div>
-          )}
-
-          {/* Level / XP */}
-          {xp && (
-            <div className="w-full max-w-xs mt-3">
-              <XpBar data={xp} />
-            </div>
-          )}
+            ) : undefined;
+            // Level/XP volle Breite (= Gürtel); Streak sitzt rechts in derselben Zeile.
+            if (xp) return <div className="w-full mt-3"><XpBar data={xp} right={flame} /></div>;
+            if (flame) return <div className="mt-2">{flame}</div>;
+            return null;
+          })()}
 
           {/* Championship-Belt: Clantag + ausgestellte Badges */}
-          <div className="w-full mt-3">
+          <div className="w-full mt-2">
             <Belt clanTag={badgeData?.clanTag ?? null} badges={displayedBadges} onBadge={setBeltBadge} skin={cosmetics.belt} />
           </div>
 
