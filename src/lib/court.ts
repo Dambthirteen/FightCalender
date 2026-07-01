@@ -16,6 +16,8 @@ export interface CourtExcuse {
   accept_count: number;
   reject_count: number;
   my_vote: 'accept' | 'reject' | null;
+  best_count: number;
+  my_best: boolean;
   user_status_type: string | null;
   streak_protected: boolean;
   holiday: string | null;
@@ -33,13 +35,16 @@ export async function getCourtExcuses(
     SELECT
       s.id, s.user_name, s.date::text, s.excuse,
       EXTRACT(ISODOW FROM s.date)::int AS day_of_week,
-      COUNT(CASE WHEN ev.vote = 'accept' THEN 1 END)::int AS accept_count,
-      COUNT(CASE WHEN ev.vote = 'reject' THEN 1 END)::int AS reject_count,
+      COUNT(DISTINCT CASE WHEN ev.vote = 'accept' THEN ev.id END)::int AS accept_count,
+      COUNT(DISTINCT CASE WHEN ev.vote = 'reject' THEN ev.id END)::int AS reject_count,
       MAX(CASE WHEN ev.voter_name = ${voter} THEN ev.vote END) AS my_vote,
+      COUNT(DISTINCT bev.id)::int AS best_count,
+      bool_or(bev.voter_name = ${voter}) AS my_best,
       MAX(st.status_type) AS user_status_type,
       bool_or(s.streak_protected) AS streak_protected
     FROM skipping s
     LEFT JOIN excuse_votes ev ON ev.skip_id = s.id
+    LEFT JOIN best_excuse_votes bev ON bev.skip_id = s.id
     LEFT JOIN user_status st ON st.user_name = s.user_name
       AND s.date >= st.start_date AND s.date <= st.end_date
     WHERE s.date >= ${monthStart}::date
@@ -55,6 +60,7 @@ export async function getCourtExcuses(
 
   return rows.map((r) => ({
     ...r,
+    my_best: !!r.my_best,
     holiday: hMap.get(r.date as string) ?? null,
     // injured ist NICHT automatisch befreit — muss weiter bewertet werden.
     is_exempt: !!hMap.get(r.date as string) || !!(r.user_status_type && r.user_status_type !== 'injured'),

@@ -91,6 +91,19 @@ export async function POST(req: NextRequest) {
         UNIQUE(skip_id, voter_name)
       )
     `;
+    // „Beste Ausrede des Monats": pro Nutzer/Gruppe/Monat genau eine Wahl.
+    // month = 'yyyy-MM' (aus dem Datum des gewählten Skips abgeleitet).
+    await sql`
+      CREATE TABLE IF NOT EXISTS best_excuse_votes (
+        id SERIAL PRIMARY KEY,
+        skip_id INTEGER NOT NULL REFERENCES skipping(id) ON DELETE CASCADE,
+        voter_name VARCHAR(100) NOT NULL,
+        group_id INTEGER NOT NULL,
+        month VARCHAR(7) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(voter_name, group_id, month)
+      )
+    `;
     // Push-Abos: ein Eintrag pro Gerät (endpoint ist eindeutig); ein Nutzer kann mehrere Geräte haben.
     await sql`
       CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -375,6 +388,8 @@ export async function POST(req: NextRequest) {
     await sql`CREATE INDEX IF NOT EXISTS skipping_group_idx ON skipping (group_id)`;
     await sql`CREATE INDEX IF NOT EXISTS excuse_votes_skip_idx ON excuse_votes (skip_id)`;
     await sql`CREATE INDEX IF NOT EXISTS excuse_votes_voter_idx ON excuse_votes (voter_name)`;
+    await sql`CREATE INDEX IF NOT EXISTS best_excuse_votes_skip_idx ON best_excuse_votes (skip_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS best_excuse_votes_month_idx ON best_excuse_votes (group_id, month)`;
     await sql`CREATE INDEX IF NOT EXISTS competitions_user_idx ON competitions (user_name)`;
     await sql`CREATE INDEX IF NOT EXISTS classes_group_idx ON classes (group_id)`;
     await sql`CREATE INDEX IF NOT EXISTS user_schedule_user_idx ON user_schedule (user_name)`;

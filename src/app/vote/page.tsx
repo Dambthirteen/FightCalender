@@ -23,6 +23,8 @@ interface Excuse {
   accept_count: number;
   reject_count: number;
   my_vote: 'accept' | 'reject' | null;
+  best_count: number;
+  my_best: boolean;
   holiday: string | null;
   user_status_type: string | null;
   streak_protected: boolean;
@@ -46,6 +48,7 @@ export default function VotePage() {
   const [excuses, setExcuses] = useState<Excuse[]>([]);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState<number | null>(null);
+  const [bestBusy, setBestBusy] = useState<number | null>(null);
 
   const monthKey = format(month, 'yyyy-MM');
   const monthLabel = format(month, 'MMMM yyyy', { locale: de });
@@ -82,8 +85,32 @@ export default function VotePage() {
     }
   }
 
+  // „Beste Ausrede des Monats": genau eine Wahl. Ändern = erst abwählen (unset), dann neu setzen.
+  async function voteBest(skipId: number, action: 'set' | 'unset') {
+    if (!userName) return;
+    setBestBusy(skipId);
+    try {
+      const res = await fetch('/api/vote/best', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skipId, voterName: userName, action }),
+      });
+      if (!res.ok) return; // z. B. schon gewählt — die UI verhindert das eigentlich schon
+      setExcuses(prev => prev.map(e => {
+        if (e.id !== skipId) return e;
+        const was = e.my_best;
+        return { ...e, my_best: action === 'set',
+          best_count: e.best_count + (action === 'set' && !was ? 1 : 0) - (action === 'unset' && was ? 1 : 0),
+        };
+      }));
+    } finally {
+      setBestBusy(null);
+    }
+  }
+
   const ownExcuses = excuses.filter(e => e.user_name === userName);
   const othersExcuses = excuses.filter(e => e.user_name !== userName);
+  const hasBestPick = excuses.some(e => e.my_best); // schon eine „Beste Ausrede" gewählt?
 
   function ExcuseCard({ e, canVote }: { e: Excuse; canVote: boolean }) {
     const accepted = e.accept_count > e.reject_count; // Punkt nur weg, wenn mehr „gilt" als „gilt nicht"
@@ -135,28 +162,50 @@ export default function VotePage() {
 
         {/* Voting or result */}
         {!e.is_exempt && (
-          <div className="flex items-center gap-2">
-            {canVote && !isOwn ? (
-              <>
-                <button onClick={() => vote(e.id, 'accept')} disabled={voting === e.id}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${e.my_vote === 'accept' ? 'bg-green-600/30 text-green-400 border border-green-600/40' : 'bg-[var(--surface-2)] text-[var(--muted)] border border-[var(--border)] hover:border-green-600/40 hover:text-green-400'}`}>
-                  ✅ Gilt <span className="opacity-60">({e.accept_count})</span>
-                </button>
-                <button onClick={() => vote(e.id, 'reject')} disabled={voting === e.id}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${e.my_vote === 'reject' ? 'bg-red-600/30 text-red-400 border border-red-600/40' : 'bg-[var(--surface-2)] text-[var(--muted)] border border-[var(--border)] hover:border-red-600/40 hover:text-red-400'}`}>
-                  ❌ Gilt nicht <span className="opacity-60">({e.reject_count})</span>
-                </button>
-              </>
-            ) : (
-              total > 0 ? (
-                <div className="flex gap-3 text-xs text-[var(--muted)]">
-                  <span className="text-green-500">✅ {e.accept_count}</span>
-                  <span className="text-red-500">❌ {e.reject_count}</span>
-                </div>
-              ) : !info.isPast ? (
-                <span className="text-xs text-[var(--faint)]">Wird im Voting bewertet</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              {canVote && !isOwn ? (
+                <>
+                  <button onClick={() => vote(e.id, 'accept')} disabled={voting === e.id}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${e.my_vote === 'accept' ? 'bg-green-600/30 text-green-400 border border-green-600/40' : 'bg-[var(--surface-2)] text-[var(--muted)] border border-[var(--border)] hover:border-green-600/40 hover:text-green-400'}`}>
+                    ✅ Gilt <span className="opacity-60">({e.accept_count})</span>
+                  </button>
+                  <button onClick={() => vote(e.id, 'reject')} disabled={voting === e.id}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${e.my_vote === 'reject' ? 'bg-red-600/30 text-red-400 border border-red-600/40' : 'bg-[var(--surface-2)] text-[var(--muted)] border border-[var(--border)] hover:border-red-600/40 hover:text-red-400'}`}>
+                    ❌ Gilt nicht <span className="opacity-60">({e.reject_count})</span>
+                  </button>
+                </>
               ) : (
-                <span className="text-xs text-[var(--faint)]">Keine Votes — Bitch bleibt</span>
+                total > 0 ? (
+                  <div className="flex gap-3 text-xs text-[var(--muted)]">
+                    <span className="text-green-500">✅ {e.accept_count}</span>
+                    <span className="text-red-500">❌ {e.reject_count}</span>
+                  </div>
+                ) : !info.isPast ? (
+                  <span className="text-xs text-[var(--faint)]">Wird im Voting bewertet</span>
+                ) : (
+                  <span className="text-xs text-[var(--faint)]">Keine Votes — Bitch bleibt</span>
+                )
+              )}
+            </div>
+
+            {/* Beste Ausrede des Monats — genau eine Wahl, zum Ändern erst abwählen */}
+            {canVote && !isOwn ? (
+              <button onClick={() => voteBest(e.id, e.my_best ? 'unset' : 'set')}
+                disabled={bestBusy === e.id || (!e.my_best && hasBestPick)}
+                title={!e.my_best && hasBestPick ? 'Du hast schon eine beste Ausrede gewählt — erst abwählen.' : undefined}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  e.my_best
+                    ? 'bg-yellow-500/25 text-yellow-300 border border-yellow-500/40'
+                    : hasBestPick
+                      ? 'bg-[var(--surface-2)] text-[var(--faint)] border border-[var(--border)] opacity-50 cursor-not-allowed'
+                      : 'bg-[var(--surface-2)] text-[var(--muted)] border border-[var(--border)] hover:border-yellow-500/40 hover:text-yellow-300'
+                }`}>
+                👑 {e.my_best ? 'Beste Ausrede ✓' : 'Beste Ausrede'} <span className="opacity-60">({e.best_count})</span>
+              </button>
+            ) : (
+              e.best_count > 0 && (
+                <div className="text-xs text-yellow-500">👑 {e.best_count}× „Beste Ausrede“</div>
               )
             )}
           </div>

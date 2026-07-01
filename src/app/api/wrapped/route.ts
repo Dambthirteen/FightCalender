@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { getCurrentGroupId, getMyGroups } from '@/lib/groups';
 import { getBitchCounts } from '@/lib/bitch-scoring';
 import { currentYm, ymPrev, ymNext } from '@/lib/awards';
+import { getNRWHolidays } from '@/lib/holidays';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -39,15 +40,15 @@ export async function GET(req: NextRequest) {
     const bitchCounts = await getBitchCounts(sql, start, end, gid);
     const topBitch = bitchCounts[0];
 
+    // Beste Ausrede = meiste „Beste Ausrede des Monats"-Stimmen (best_excuse_votes),
+    // vom Ausreden-Gericht gewählt. JOIN → nur Ausreden mit mind. einer Stimme.
     const bestRows = (await sql`
-      SELECT s.user_name, s.excuse,
-        COUNT(CASE WHEN ev.vote = 'accept' THEN 1 END)::int AS accept,
-        COUNT(CASE WHEN ev.vote = 'reject' THEN 1 END)::int AS reject
-      FROM skipping s LEFT JOIN excuse_votes ev ON ev.skip_id = s.id
+      SELECT s.user_name, s.excuse, COUNT(bev.id)::int AS votes
+      FROM skipping s JOIN best_excuse_votes bev ON bev.skip_id = s.id
       WHERE s.group_id = ${gid} AND s.date >= ${start}::date AND s.date < ${end}::date AND s.excuse != ''
       GROUP BY s.id, s.user_name, s.excuse
-      ORDER BY accept DESC, reject ASC LIMIT 1
-    `) as { user_name: string; excuse: string; accept: number; reject: number }[];
+      ORDER BY votes DESC LIMIT 1
+    `) as { user_name: string; excuse: string; votes: number }[];
 
     const worstRows = (await sql`
       SELECT s.user_name, s.excuse,
@@ -76,8 +77,18 @@ export async function GET(req: NextRequest) {
       SELECT COUNT(*)::int AS n FROM attendance a JOIN classes c ON c.id = a.class_id
       WHERE c.group_id = ${gid} AND a.user_name = ${me} AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
     `) as { n: number }[];
+    // „Geschwänzt" = echte Fehltage: Urlaub/Krank (user_status) und Feiertage zählen NICHT.
+    const holidays = getNRWHolidays(Number(ym.slice(0, 4))).map((h) => h.date);
     const mySkips = (await sql`
-      SELECT COUNT(*)::int AS n FROM skipping WHERE group_id = ${gid} AND user_name = ${me} AND date >= ${start}::date AND date < ${end}::date
+      SELECT COUNT(*)::int AS n FROM skipping s
+      WHERE s.group_id = ${gid} AND s.user_name = ${me}
+        AND s.date >= ${start}::date AND s.date < ${end}::date
+        AND NOT (s.date::text = ANY(${holidays}))
+        AND NOT EXISTS (
+          SELECT 1 FROM user_status st
+          WHERE st.user_name = s.user_name AND s.date >= st.start_date AND s.date <= st.end_date
+            AND st.status_type IN ('sick', 'vacation')
+        )
     `) as { n: number }[];
     const myLob = (await sql`
       SELECT COUNT(*)::int AS n FROM praises WHERE to_user = ${me} AND created_at >= ${start}::timestamptz AND created_at < ${end}::timestamptz
@@ -97,7 +108,7 @@ export async function GET(req: NextRequest) {
       groupName,
       macher,
       bitch,
-      bestExcuse: bestRows[0] && bestRows[0].accept > 0 ? { user: bestRows[0].user_name, excuse: bestRows[0].excuse, accept: bestRows[0].accept } : null,
+      bestExcuse: bestRows[0] ? { user: bestRows[0].user_name, excuse: bestRows[0].excuse, accept: bestRows[0].votes } : null,
       worstExcuse: worstRows[0] && worstRows[0].reject > 0 ? { user: worstRows[0].user_name, excuse: worstRows[0].excuse, reject: worstRows[0].reject } : null,
       topJudge: judgeRows[0] ? { user: judgeRows[0].voter_name, count: judgeRows[0].n } : null,
       lobKing: lobRows[0] ? { user: lobRows[0].to_user, count: lobRows[0].n } : null,
