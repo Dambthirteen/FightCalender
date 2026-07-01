@@ -98,11 +98,31 @@ function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
   );
 }
 
+/** Rückmeldung, wenn der manuell geöffnete Rückblick lädt oder (noch) keine Daten hat. */
+function Notice({ busy, text, onClose }: { busy: boolean; text: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm anim-in px-6"
+      onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+      {busy ? (
+        <div className="text-[var(--muted)] text-sm">Rückblick wird geladen…</div>
+      ) : (
+        <div className="card w-full max-w-xs p-6 text-center anim-up">
+          <div className="section-label mb-2" style={{ color: 'var(--teal)' }}>Monats-Wrapped</div>
+          <p className="text-sm text-[var(--muted)]">{text}</p>
+          <button onClick={onClose} className="btn btn-primary w-full mt-5">Alles klar</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Auto-Popup am Monatsanfang (einmalig) + Vorschau via ?wrappedpreview=1. */
 export default function WrappedPopup() {
   const { userName, loading } = useUser();
   const [data, setData] = useState<WrappedData | null>(null);
   const [preview, setPreview] = useState(false);
+  const [busy, setBusy] = useState(false);                    // manueller Abruf läuft
+  const [notice, setNotice] = useState<string | null>(null);  // manuell, aber (noch) nichts zu zeigen
   const loadedFor = useRef('');
 
   useEffect(() => {
@@ -110,18 +130,24 @@ export default function WrappedPopup() {
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
     const isPreview = params.get('wrappedpreview') === '1'; // Test: aktueller Monat
     const isManual = params.get('wrapped') === '1';          // manuell: letzter Monat, ungeachtet "gesehen"
+    const manual = isPreview || isManual;
     const key = isPreview ? '__preview__' : isManual ? '__manual__' : userName;
     if (loadedFor.current === key) return;
     loadedFor.current = key;
+    // Spinner erst nach dem Mount setzen (window darf nicht im Render gelesen werden → Hydration-Mismatch).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (manual) setBusy(true);
     const url = isPreview ? `/api/wrapped?month=${clientYm()}` : '/api/wrapped';
     fetch(url).then((r) => r.json()).then((d: WrappedData) => {
-      if (!d.available) return;
-      if (isPreview || isManual) { setPreview(true); setData(d); } // nicht als gesehen markieren
-      else if (!d.seen) setData(d);
-    }).catch(() => {});
+      if (manual) {
+        setBusy(false);
+        if (d.available) { setPreview(true); setData(d); } // nicht als gesehen markieren
+        else setNotice(`Für ${d.month ? monthLabel(d.month) : 'den letzten Monat'} gibt es noch keinen Rückblick – trainiert erst mal fleißig.`);
+      } else if (d.available && !d.seen) setData(d);
+    }).catch(() => {
+      if (manual) { setBusy(false); setNotice('Der Rückblick konnte gerade nicht geladen werden. Bitte später erneut versuchen.'); }
+    });
   }, [userName, loading]);
-
-  if (!data) return null;
 
   function close() {
     if (!preview && data) {
@@ -130,5 +156,7 @@ export default function WrappedPopup() {
     setData(null);
   }
 
-  return <Story data={data} onClose={close} />;
+  if (data) return <Story data={data} onClose={close} />;
+  if (busy || notice) return <Notice busy={busy} text={notice ?? ''} onClose={() => { setBusy(false); setNotice(null); }} />;
+  return null;
 }
