@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
+import { resetAnalytics } from '@/lib/analytics';
 import { nextStreakBadge, flameTier } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
 import { XP } from '@/lib/xp';
@@ -41,6 +42,7 @@ export default function StartPage() {
       : `${streak.weeks} Wochen · Maximalstufe`;
 
   async function logout() {
+    resetAnalytics();
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
   }

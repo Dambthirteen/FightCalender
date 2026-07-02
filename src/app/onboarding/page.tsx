@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { ARTS, SKILLS, artBelts } from '@/lib/fighter';
 import { PALETTE, initials, colorFor } from '@/lib/avatar';
+import { track } from '@/lib/analytics';
 
 // Bild im Browser auf 256×256 (cover) verkleinern → JPEG-Data-URL (wie im Profil).
 function resizeImage(file: File): Promise<string> {
@@ -82,6 +83,7 @@ export default function OnboardingPage() {
   }
 
   async function finish() {
+    track('onboarding_completed');
     try { await fetch('/api/onboarding', { method: 'POST' }); } catch { /* egal */ }
     window.location.href = '/';
   }
@@ -91,7 +93,7 @@ export default function OnboardingPage() {
     setBusy(true); setMsg('');
     try {
       const res = await fetch('/api/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-      if (res.ok) { await finish(); return; }
+      if (res.ok) { track('group_created', { via: 'onboarding' }); await finish(); return; }
       const d = await res.json().catch(() => ({})); setMsg(d.error ?? 'Konnte Gruppe nicht erstellen.');
     } finally { setBusy(false); }
   }
@@ -102,8 +104,8 @@ export default function OnboardingPage() {
     try {
       const res = await fetch('/api/groups/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
       const d = await res.json().catch(() => ({}));
-      if (res.ok && d.status === 'active') { await finish(); return; }
-      if (res.ok) { setMsg(`Anfrage an „${d.group}" gesendet — ein Admin muss dich annehmen. Du kannst schon fortfahren.`); return; }
+      if (res.ok && d.status === 'active') { track('group_joined', { via: 'onboarding', status: 'active' }); await finish(); return; }
+      if (res.ok) { track('group_joined', { via: 'onboarding', status: 'pending' }); setMsg(`Anfrage an „${d.group}" gesendet — ein Admin muss dich annehmen. Du kannst schon fortfahren.`); return; }
       setMsg(d.error ?? 'Code ungültig.');
     } finally { setBusy(false); }
   }

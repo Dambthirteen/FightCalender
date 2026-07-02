@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Sora } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/components/UserProvider";
+import { PostHogProvider } from "@/components/PostHogProvider";
 import BottomNav from "@/components/BottomNav";
 import AwardPopup from "@/components/AwardPopup";
 import WrappedPopup from "@/components/WrappedPopup";
@@ -37,13 +38,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de" className={`${display.variable} ${sans.variable}`}>
       <body className="min-h-screen">
-        <UserProvider>
-          {children}
-          <BottomNav />
-          <AwardPopup />
-          <WrappedPopup />
-          <LevelUpPopup />
-        </UserProvider>
+        <PostHogProvider>
+          <UserProvider>
+            {children}
+            <BottomNav />
+            <AwardPopup />
+            <WrappedPopup />
+            <LevelUpPopup />
+          </UserProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

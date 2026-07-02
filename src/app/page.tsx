@@ -5,6 +5,7 @@ import { startOfWeek, addWeeks, subWeeks, format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useUser } from '@/components/UserProvider';
 import { getHolidays } from '@/lib/holidays';
+import { track } from '@/lib/analytics';
 import { CUTOVER } from '@/lib/bitch-scoring';
 import { colorFor } from '@/lib/avatar';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -136,6 +137,7 @@ export default function Home() {
         body: JSON.stringify({ classId, weekStart, userName }),
       });
       const data = await res.json();
+      track('attendance_toggled', { attending: !!data.attending });
       if (data.attending) {
         setAttendance(prev => [...prev, { id: Date.now(), class_id: classId, week_start: weekStart, user_name: userName }]);
         // Wer doch noch kommt, ist kein No-Show mehr → Ausrede/Bitch für den Tag entfernen.

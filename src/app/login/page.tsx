@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { track, identify } from '@/lib/analytics';
 
 export default function LoginPage() {
   const [tab, setTab] = useState<'login' | 'register'>('login');
@@ -27,6 +28,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Fehler'); return; }
+      if (tab === 'register') { identify(userName); track('signup'); } else { track('login'); }
       // Hard redirect so the browser sends the new session cookie fresh.
       // Neue Accounts zuerst in den Onboarding-Assistenten.
       window.location.href = tab === 'register' ? '/onboarding' : '/';

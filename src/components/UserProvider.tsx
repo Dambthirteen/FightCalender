@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { identify } from '@/lib/analytics';
 
 interface UserCtx {
   userName: string;
@@ -26,6 +27,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         setUserName(data.userName ?? '');
         setOnboardingCompleted(data.onboardingCompleted !== false);
+        if (data.userName) identify(data.userName);
       } else {
         setUserName('');
       }

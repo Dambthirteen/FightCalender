@@ -47,6 +47,13 @@ export default function DatenschutzPage() {
               in unserem Auftrag; es bestehen entsprechende Auftragsverarbeitungsverträge (AVV). [Angaben und
               ggf. Drittland-Transfer/EU-Standardvertragsklauseln hier konkretisieren.]
             </p>
+            <p className="mt-2">
+              Zur Verbesserung der App nutzen wir <strong>PostHog</strong> (EU-Server) für eine datensparsame
+              Nutzungsanalyse: erfasst werden Seitenaufrufe und einzelne Produkt-Ereignisse (z.&nbsp;B. Registrierung,
+              Anwesenheit eingetragen). Es findet <em>kein</em> automatisches Erfassen beliebiger Klicks/Eingaben und
+              <em>keine</em> Sitzungsaufzeichnung statt. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes
+              Interesse an der Produktverbesserung) bzw. deine Einwilligung.
+            </p>
           </div>
 
           <div>

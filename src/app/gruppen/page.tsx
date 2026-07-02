@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { colorFor, initials } from '@/lib/avatar';
 import { BUNDESLAENDER } from '@/lib/holidays';
+import { track } from '@/lib/analytics';
 
 const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 const COLORS = ['red', 'blue', 'green', 'orange', 'purple'];
@@ -57,7 +58,7 @@ export default function GroupsPage() {
     setBusy(true); setMsg('');
     try {
       const res = await fetch('/api/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
-      if (res.ok) { setNewName(''); window.location.href = '/gruppen'; }
+      if (res.ok) { track('group_created', { via: 'settings' }); setNewName(''); window.location.href = '/gruppen'; }
       else { const d = await res.json().catch(() => ({})); setMsg(d.error ?? 'Konnte Gruppe nicht erstellen — schon deployt & /api/setup gelaufen?'); }
     } finally { setBusy(false); }
   }
@@ -67,7 +68,7 @@ export default function GroupsPage() {
     try {
       const res = await fetch('/api/groups/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: joinCode }) });
       const d = await res.json();
-      if (res.ok) { setMsg(d.status === 'active' ? `Du bist in „${d.group}".` : `Anfrage an „${d.group}" gesendet — ein Admin muss sie annehmen.`); setJoinCode(''); }
+      if (res.ok) { track('group_joined', { via: 'settings', status: d.status }); setMsg(d.status === 'active' ? `Du bist in „${d.group}".` : `Anfrage an „${d.group}" gesendet — ein Admin muss sie annehmen.`); setJoinCode(''); }
       else setMsg(d.error ?? 'Fehler');
     } finally { setBusy(false); }
   }
