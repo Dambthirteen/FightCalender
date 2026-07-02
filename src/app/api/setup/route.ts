@@ -144,6 +144,21 @@ export async function POST(req: NextRequest) {
     // Nutzer gelten als fertig (Backfill true), neue starten auf false (siehe hard_mode-Trick).
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT true`;
     await sql`ALTER TABLE users ALTER COLUMN onboarding_completed SET DEFAULT false`;
+    // E-Mail (für Verifizierung + Passwort-Reset). Bestehende Nutzer haben keine → NULL.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false`;
+    // Einmal-Tokens für E-Mail-Verifizierung ('verify') und Passwort-Reset ('reset').
+    await sql`
+      CREATE TABLE IF NOT EXISTS auth_tokens (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        kind VARCHAR(20) NOT NULL,        -- 'verify' | 'reset'
+        token VARCHAR(64) NOT NULL UNIQUE,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        used_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
     // Benachrichtigungs-Einstellungen pro Nutzer
     await sql`
       CREATE TABLE IF NOT EXISTS notification_prefs (

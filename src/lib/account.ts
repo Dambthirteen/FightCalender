@@ -40,6 +40,7 @@ export async function deleteAllUserData(sql: Sql, userName: string): Promise<voi
   await sql`DELETE FROM badges_awarded WHERE user_name = ${userName}`;
   await sql`DELETE FROM wrapped_seen WHERE user_name = ${userName}`;
   await sql`DELETE FROM group_members WHERE user_name = ${userName}`;
+  await sql`DELETE FROM auth_tokens WHERE user_name = ${userName}`;
   await sql`UPDATE groups SET created_by = NULL WHERE created_by = ${userName}`;
   await sql`DELETE FROM users WHERE user_name = ${userName}`;
 }
@@ -53,7 +54,7 @@ export async function exportUserData(sql: Sql, userName: string): Promise<Record
     status, schedule, memberships, praisesGiven, praisesReceived, comments,
     notifications, badges,
   ] = await Promise.all([
-    sql`SELECT user_name, created_at, avatar, bio, color, martial_arts, skills, fighter_info,
+    sql`SELECT user_name, created_at, email, email_verified, avatar, bio, color, martial_arts, skills, fighter_info,
         cosmetics, profile_visibility, streak_points, longest_streak, displayed_badges
         FROM users WHERE user_name = ${userName}`,
     sql`SELECT * FROM attendance WHERE user_name = ${userName}`,

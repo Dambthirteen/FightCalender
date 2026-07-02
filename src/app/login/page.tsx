@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,7 +25,7 @@ export default function LoginPage() {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userName, password, consent }),
+        body: JSON.stringify({ userName, password, consent, email }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Fehler'); return; }
@@ -80,6 +81,19 @@ export default function LoginPage() {
                 autoFocus
               />
             </div>
+            {tab === 'register' && (
+              <div>
+                <label className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-1.5 block">E-Mail</label>
+                <input
+                  type="email"
+                  className={inputCls}
+                  placeholder="du@example.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && submit()}
+                />
+              </div>
+            )}
             <div>
               <label className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-1.5 block">Passwort</label>
               <input
@@ -123,12 +137,15 @@ export default function LoginPage() {
 
             <button
               onClick={submit}
-              disabled={loading || !userName.trim() || !password || (tab === 'register' && !consent)}
+              disabled={loading || !userName.trim() || !password || (tab === 'register' && (!consent || !email.trim()))}
               className="w-full text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'var(--accent)' }}
             >
               {loading ? '…' : tab === 'login' ? 'Anmelden' : 'Account erstellen'}
             </button>
+            {tab === 'login' && (
+              <a href="/forgot" className="block text-center text-xs text-[var(--faint)] hover:text-white transition-colors">Passwort vergessen?</a>
+            )}
           </div>
         </div>
 

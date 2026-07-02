@@ -24,7 +24,7 @@ export default function DatenschutzPage() {
           <div>
             <h2 className="text-white font-semibold mb-1">2. Welche Daten wir verarbeiten</h2>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Kontodaten: dein gewählter Name und ein Passwort (nur als Hash gespeichert).</li>
+              <li>Kontodaten: dein gewählter Name, deine E-Mail-Adresse und ein Passwort (nur als Hash gespeichert).</li>
               <li>Nutzungsdaten: Anwesenheiten, eingetragene Ausreden, Trainings-Status (krank/verletzt/Urlaub), Wettkämpfe, Streaks, Abzeichen.</li>
               <li>Soziale Inhalte: Gruppen-Mitgliedschaften, Lob/Kudos, Profil-Kommentare, Reaktionen, von dir gesetzte Profilangaben.</li>
               <li>Push-Benachrichtigungen: technische Abo-Daten deiner Geräte (nur nach ausdrücklicher Aktivierung).</li>
@@ -53,6 +53,11 @@ export default function DatenschutzPage() {
               Anwesenheit eingetragen). Es findet <em>kein</em> automatisches Erfassen beliebiger Klicks/Eingaben und
               <em>keine</em> Sitzungsaufzeichnung statt. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes
               Interesse an der Produktverbesserung) bzw. deine Einwilligung.
+            </p>
+            <p className="mt-2">
+              Für den Versand von Transaktions-E-Mails (E-Mail-Bestätigung, Passwort-Reset) nutzen wir
+              <strong> Resend</strong>. Dabei wird deine E-Mail-Adresse an den Versanddienstleister übermittelt.
+              Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung der Kontofunktionen).
             </p>
           </div>
 
