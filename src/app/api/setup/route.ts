@@ -138,6 +138,8 @@ export async function POST(req: NextRequest) {
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cosmetics JSONB NOT NULL DEFAULT '{}'::jsonb`; // Spind / Customization
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility VARCHAR(10) NOT NULL DEFAULT 'public'`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility_group INTEGER`;
+    // DSGVO: Zeitpunkt der Einwilligung in die Datenschutzerklärung (Nachweis).
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_accepted_at TIMESTAMP WITH TIME ZONE`;
     // Benachrichtigungs-Einstellungen pro Nutzer
     await sql`
       CREATE TABLE IF NOT EXISTS notification_prefs (
@@ -181,6 +183,14 @@ export async function POST(req: NextRequest) {
       )
     `;
     await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS clan_tag VARCHAR(4)`;
+    // „Harter Modus" (opt-in): schaltet die öffentlichen Shame-Mechaniken frei
+    // (Loser-Cam, öffentliche No-Shows, Bitch-des-Monats, Ausreden-Gericht).
+    // Trick für eine saubere Migration: Spalte zuerst mit DEFAULT true anlegen —
+    // das backfillt alle BESTEHENDEN Gruppen auf true (behalten ihr Verhalten) —
+    // und dann den Default auf false umstellen, damit NEUE Crews entschärft
+    // (store-/rechtssicher) starten. Beide ALTERs sind idempotent.
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS hard_mode BOOLEAN NOT NULL DEFAULT true`;
+    await sql`ALTER TABLE groups ALTER COLUMN hard_mode SET DEFAULT false`;
     await sql`ALTER TABLE classes ADD COLUMN IF NOT EXISTS group_id INTEGER`;
     await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS group_id INTEGER`;
     await sql`ALTER TABLE competitions ADD COLUMN IF NOT EXISTS group_id INTEGER`;

@@ -201,6 +201,20 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     }
   } catch { /* user_notif_log / Spalten evtl. noch nicht vorhanden */ }
 
+  // Harter Modus pro Gruppe: nur dort feuern die öffentlichen Shame-Mechaniken
+  // (Loser-Cam, öffentliche No-Shows). Neue Crews starten entschärft.
+  let hardSet = new Set<number>();
+  let hardUserSet = new Set<string>();
+  try {
+    const hg = (await sql`SELECT id FROM groups WHERE hard_mode = true`) as { id: number }[];
+    hardSet = new Set(hg.map((g) => g.id));
+    const hm = (await sql`
+      SELECT DISTINCT user_name FROM group_members
+      WHERE status = 'active' AND group_id IN (SELECT id FROM groups WHERE hard_mode = true)
+    `) as { user_name: string }[];
+    hardUserSet = new Set(hm.map((r) => r.user_name));
+  } catch { /* hard_mode-Spalte evtl. noch nicht da → alles entschärft behandeln */ }
+
   // --- Loser-Cam A: 3 geplante Trainings am Stück geschwänzt → „Guck dir diesen Loser an!" ---
   // „Geschwänzt" = nicht da UND keine Ausrede eingetragen (eine eingetragene Ausrede
   // beendet die Strähne — wir verschonen, wer es zumindest versucht). Feiertage/krank
@@ -235,6 +249,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     const isExempt = (u: string, d: string) => lstatus.some((st) => st.user_name === u && d >= st.s && d <= st.e);
 
     for (const user of [...new Set(allSubs.map((s) => s.user_name))]) {
+      if (!hardUserSet.has(user)) continue; // Loser-Cam nur für Crews im harten Modus
       const dows = dowsByUser.get(user);
       if (!dows) continue;
       // Vom jüngsten vergangenen Trainingstag rückwärts: glatte No-Shows zählen.
@@ -289,6 +304,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
         // jüngsten realen Trainingstag gefunden → bewerten und stoppen
         if (!presentSet.has(`${user}|${D}`) && !excusedSet.has(`${user}|${D}`)) {
           for (const gid of groups) {
+            if (!hardSet.has(gid)) continue; // öffentliche No-Shows nur im harten Modus
             await broadcastToGroup(sql, {
               groupId: gid, type: 'bitch', actor: user,
               body: `${user} hat ein Training geschwänzt 🐔`,
@@ -309,7 +325,8 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     try {
       const prevYm = ymPrev(ym);
       const prevPrevYm = ymPrev(prevYm);
-      const groups = (await sql`SELECT id FROM groups`) as { id: number }[];
+      // Loser-Cam B nur für Crews im harten Modus.
+      const groups = (await sql`SELECT id FROM groups WHERE hard_mode = true`) as { id: number }[];
       for (const g of groups) {
         const t1 = await resolveTitle(sql, g.id, prevYm, 'bitch');
         if (t1.status !== 'final' || !t1.winner) continue;

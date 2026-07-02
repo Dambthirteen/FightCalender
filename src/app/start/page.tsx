@@ -9,6 +9,7 @@ import { XP } from '@/lib/xp';
 export default function StartPage() {
   const { userName } = useUser();
   const [groupName, setGroupName] = useState('');
+  const [hardMode, setHardMode] = useState(false);
   const [pendingVotes, setPendingVotes] = useState(0);
   const [unread, setUnread] = useState(0);
   const [streak, setStreak] = useState({ days: 0, weeks: 0 });
@@ -17,8 +18,8 @@ export default function StartPage() {
 
   useEffect(() => {
     fetch('/api/groups').then((r) => r.json()).then((d) => {
-      const cur = (d.groups ?? []).find((g: { id: number; name: string; clan_tag?: string | null }) => g.id === d.current);
-      if (cur) setGroupName(cur.clan_tag ? `[${cur.clan_tag}] ${cur.name}` : cur.name);
+      const cur = (d.groups ?? []).find((g: { id: number; name: string; clan_tag?: string | null; hard_mode?: boolean }) => g.id === d.current);
+      if (cur) { setGroupName(cur.clan_tag ? `[${cur.clan_tag}] ${cur.name}` : cur.name); setHardMode(!!cur.hard_mode); }
     }).catch(() => {});
   }, []);
 
@@ -46,7 +47,8 @@ export default function StartPage() {
 
   const iconBtn = 'relative w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all text-lg';
   const moreRows: { icon: string; label: string; href: string; badge?: number }[] = [
-    { icon: '🗳️', label: 'Ausreden-Gericht', href: '/vote', badge: pendingVotes },
+    // Ausreden-Gericht nur im harten Modus zeigen.
+    ...(hardMode ? [{ icon: '🗳️', label: 'Ausreden-Gericht', href: '/vote', badge: pendingVotes }] : []),
     { icon: '👥', label: 'Mitglieder', href: '/mitglieder' },
     { icon: '🏥', label: 'Mein Status', href: '/account' },
     { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },

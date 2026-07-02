@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId } from '@/lib/groups';
+import { getCurrentGroupId, isHardMode } from '@/lib/groups';
 import { getCourtExcuses, pendingVoteCount } from '@/lib/court';
 import { berlinNow } from '@/lib/berlin-time';
 
@@ -19,6 +19,7 @@ export async function GET() {
     if (!me) return NextResponse.json({ pending: 0 });
     const gid = await getCurrentGroupId(me);
     if (!gid) return NextResponse.json({ pending: 0 });
+    if (!(await isHardMode(gid))) return NextResponse.json({ pending: 0 }); // Gericht aus → kein Glühen
     const sql = getSql();
     const monthStart = `${berlinNow().date.slice(0, 7)}-01`;
     const excuses = await getCourtExcuses(sql, monthStart, me, gid);

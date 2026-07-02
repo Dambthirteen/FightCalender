@@ -14,6 +14,7 @@ export default function BitchPage() {
   const [month, setMonth] = useState(new Date());
   const [data, setData] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hardMode, setHardMode] = useState<boolean | null>(null); // null = noch unbekannt
 
   const monthKey = format(month, 'yyyy-MM');
 
@@ -24,6 +25,14 @@ export default function BitchPage() {
       .then((d) => setData(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false));
   }, [monthKey]);
+
+  // Ist die Bitch-Liste in der aktuellen Gruppe überhaupt an (harter Modus)?
+  useEffect(() => {
+    fetch('/api/groups').then((r) => r.json()).then((d) => {
+      const cur = (d.groups ?? []).find((g: { id: number; hard_mode?: boolean }) => g.id === d.current);
+      setHardMode(cur ? !!cur.hard_mode : false);
+    }).catch(() => {});
+  }, []);
 
   const monthLabel = format(month, 'MMMM yyyy', { locale: de });
   const top = data[0];
@@ -40,7 +49,13 @@ export default function BitchPage() {
           <button onClick={() => setMonth((m) => addMonths(m, 1))} className="seg-btn" aria-label="Nächster Monat">›</button>
         </div>
 
-        {loading ? (
+        {hardMode === false ? (
+          <div className="card p-10 text-center anim-up">
+            <div className="text-5xl mb-3">🕊️</div>
+            <div className="text-[var(--muted)]">Die Bitch-Liste ist in dieser Crew aus.</div>
+            <div className="text-[var(--faint)] text-sm mt-1">Ein Gruppen-Admin kann den „harten Modus“ aktivieren.</div>
+          </div>
+        ) : loading ? (
           <div className="text-center text-[var(--faint)] py-20">Lädt…</div>
         ) : data.length === 0 ? (
           <div className="card p-10 text-center anim-up">

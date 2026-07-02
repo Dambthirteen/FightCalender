@@ -28,8 +28,9 @@ export default function LoserPage() {
     }
   }
 
+  // Kamera startet NUR auf ausdrückliche Nutzer-Geste (Store-/Datenschutz-sicher).
+  // Kein Auto-Start beim Öffnen — hier nur die Aufräum-Logik beim Verlassen.
   useEffect(() => {
-    start();
     return () => streamRef.current?.getTracks().forEach((t) => t.stop());
   }, []);
 
@@ -61,6 +62,11 @@ export default function LoserPage() {
       {state !== 'on' && (
         <div className="absolute inset-0 grid place-items-center px-8 text-center">
           <div>
+            {state === 'idle' && (
+              <p className="text-white/80 text-sm mb-4 max-w-xs">
+                Willst du dir selbst in die Augen schauen? Tippe auf „Kamera starten“ — freiwillig, nur für dich, nichts wird aufgezeichnet.
+              </p>
+            )}
             {state === 'denied' && (
               <p className="text-white/80 text-sm mb-4 max-w-xs">
                 Kamerazugriff wurde blockiert. Erlaube die Kamera in den Einstellungen und versuch es nochmal.

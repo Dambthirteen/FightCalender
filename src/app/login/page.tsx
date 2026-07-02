@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -22,7 +23,7 @@ export default function LoginPage() {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userName, password }),
+        body: JSON.stringify({ userName, password, consent }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Fehler'); return; }
@@ -101,6 +102,16 @@ export default function LoginPage() {
               </div>
             )}
 
+            {tab === 'register' && (
+              <label className="flex items-start gap-2.5 text-xs text-[var(--muted)] cursor-pointer">
+                <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}
+                  className="mt-0.5 shrink-0" style={{ accentColor: 'var(--accent)' }} />
+                <span>
+                  Ich akzeptiere die <a href="/datenschutz" target="_blank" rel="noreferrer" className="underline text-[var(--text)]">Datenschutzerklärung</a>.
+                </span>
+              </label>
+            )}
+
             {error && (
               <div className="rounded-xl px-4 py-2.5 text-sm" style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255,59,48,0.3)', color: 'var(--accent)' }}>
                 {error}
@@ -109,7 +120,7 @@ export default function LoginPage() {
 
             <button
               onClick={submit}
-              disabled={loading || !userName.trim() || !password}
+              disabled={loading || !userName.trim() || !password || (tab === 'register' && !consent)}
               className="w-full text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'var(--accent)' }}
             >
@@ -123,6 +134,12 @@ export default function LoginPage() {
           <button onClick={() => { setTab(tab === 'login' ? 'register' : 'login'); setError(''); }} className="text-[var(--muted)] hover:text-white transition-colors underline">
             {tab === 'login' ? 'Registrieren' : 'Anmelden'}
           </button>
+        </p>
+
+        <p className="text-center text-[11px] text-[var(--faint)] mt-3 anim-in" style={{ animationDelay: '160ms' }}>
+          <a href="/datenschutz" className="hover:text-[var(--muted)] transition-colors">Datenschutz</a>
+          {' · '}
+          <a href="/impressum" className="hover:text-[var(--muted)] transition-colors">Impressum</a>
         </p>
       </div>
     </div>

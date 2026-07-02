@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId } from '@/lib/groups';
+import { getCurrentGroupId, isHardMode } from '@/lib/groups';
 import { getCourtExcuses } from '@/lib/court';
 
 function getSql() { return neon(process.env.DATABASE_URL!); }
@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
     const me = await getCurrentUser();
     const gid = me ? await getCurrentGroupId(me) : null;
     if (!gid) return NextResponse.json([]); // alles gruppenbasiert: ohne Gruppe nichts
+    if (!(await isHardMode(gid))) return NextResponse.json([]); // Gericht nur im harten Modus
     const monthParam = req.nextUrl.searchParams.get('month');
     const voter = req.nextUrl.searchParams.get('voter') ?? me ?? '';
     const monthStart = monthParam
@@ -32,7 +33,11 @@ export async function POST(req: NextRequest) {
     if (!skipId || !voterName || !['accept', 'reject'].includes(vote)) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
-    const skip = await sql`SELECT user_name FROM skipping WHERE id = ${skipId}`;
+    const skip = await sql`SELECT user_name, group_id FROM skipping WHERE id = ${skipId}`;
+    if (!skip[0]) return NextResponse.json({ error: 'Skip not found' }, { status: 404 });
+    if (!(await isHardMode(skip[0].group_id))) {
+      return NextResponse.json({ error: 'Gericht ist in dieser Gruppe deaktiviert' }, { status: 403 });
+    }
     if (skip[0]?.user_name === voterName) {
       return NextResponse.json({ error: 'Cannot vote on own excuse' }, { status: 403 });
     }

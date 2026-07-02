@@ -14,6 +14,7 @@ export interface MyGroup {
   invite_code: string;
   role: string;
   clan_tag: string | null;
+  hard_mode: boolean;
 }
 
 /** Alle aktiven Gruppen des Nutzers. */
@@ -21,13 +22,13 @@ export async function getMyGroups(userName: string): Promise<MyGroup[]> {
   const sql = getSql();
   try {
     return (await sql`
-      SELECT g.id, g.name, g.invite_code, g.clan_tag, gm.role
+      SELECT g.id, g.name, g.invite_code, g.clan_tag, g.hard_mode, gm.role
       FROM group_members gm JOIN groups g ON g.id = gm.group_id
       WHERE gm.user_name = ${userName} AND gm.status = 'active'
       ORDER BY LOWER(g.name)
     `) as MyGroup[];
   } catch {
-    // clan_tag-Spalte evtl. noch nicht angelegt → ohne sie laden.
+    // clan_tag/hard_mode-Spalte evtl. noch nicht angelegt → ohne sie laden.
     try {
       const rows = await sql`
         SELECT g.id, g.name, g.invite_code, gm.role
@@ -35,10 +36,22 @@ export async function getMyGroups(userName: string): Promise<MyGroup[]> {
         WHERE gm.user_name = ${userName} AND gm.status = 'active'
         ORDER BY LOWER(g.name)
       `;
-      return rows.map((r) => ({ ...r, clan_tag: null })) as MyGroup[];
+      return rows.map((r) => ({ ...r, clan_tag: null, hard_mode: false })) as MyGroup[];
     } catch {
       return []; // Tabellen evtl. noch nicht angelegt → App läuft ungescoped weiter
     }
+  }
+}
+
+/** Ist der harte Modus (öffentliche Shame-Mechaniken) in dieser Gruppe an? */
+export async function isHardMode(groupId: number | null): Promise<boolean> {
+  if (!groupId) return false;
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT hard_mode FROM groups WHERE id = ${groupId}`;
+    return !!rows[0]?.hard_mode;
+  } catch {
+    return false; // Spalte evtl. noch nicht da → entschärft (fail-safe) behandeln
   }
 }
 

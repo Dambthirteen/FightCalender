@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
+import { getSql, deleteAllUserData } from '@/lib/account';
 
 export async function GET(req: NextRequest) {
   // Passwort über Header, nicht als Query-Param (landet sonst in Logs/History).
@@ -43,21 +44,7 @@ export async function DELETE(req: NextRequest) {
   if (adminPassword !== process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const sql = neon(process.env.DATABASE_URL!);
-  // Vollständige Löschung: alle nutzerbezogenen Daten entfernen, nicht nur den Login.
-  // (Früher wurde nur aus `users` gelöscht → verwaiste Daten blieben in Statistik etc.)
-  await sql`DELETE FROM excuse_votes WHERE voter_name = ${userName}`; // Votes, die der Nutzer abgegeben hat
-  await sql`DELETE FROM skipping WHERE user_name = ${userName}`;       // eigene Ausreden (cascadet Votes darauf)
-  await sql`DELETE FROM attendance WHERE user_name = ${userName}`;
-  await sql`DELETE FROM competitions WHERE user_name = ${userName}`;
-  await sql`DELETE FROM user_status WHERE user_name = ${userName}`;
-  await sql`DELETE FROM user_schedule WHERE user_name = ${userName}`;
-  await sql`DELETE FROM push_subscriptions WHERE user_name = ${userName}`;
-  await sql`DELETE FROM notification_prefs WHERE user_name = ${userName}`;
-  await sql`DELETE FROM user_notif_log WHERE user_name = ${userName}`;
-  await sql`DELETE FROM group_members WHERE user_name = ${userName}`;
-  // Gruppen NICHT löschen (gehören evtl. anderen Mitgliedern) — nur die Urheber-Spur entfernen.
-  await sql`UPDATE groups SET created_by = NULL WHERE created_by = ${userName}`;
-  await sql`DELETE FROM users WHERE user_name = ${userName}`;
+  // Vollständige Löschung über den gemeinsamen DSGVO-Helfer (deckt ALLE Tabellen ab).
+  await deleteAllUserData(getSql(), userName);
   return NextResponse.json({ ok: true });
 }

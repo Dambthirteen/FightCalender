@@ -8,7 +8,7 @@ const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'S
 const COLORS = ['red', 'blue', 'green', 'orange', 'purple'];
 const COLOR_HEX: Record<string, string> = { red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7' };
 
-interface MyGroup { id: number; name: string; invite_code: string; role: string; clan_tag: string | null }
+interface MyGroup { id: number; name: string; invite_code: string; role: string; clan_tag: string | null; hard_mode: boolean }
 interface Member { user_name: string; role: string; status: string }
 interface Cls { id: number; name: string; day_of_week: number; start_time: string; end_time: string; color: string }
 
@@ -26,6 +26,7 @@ export default function GroupsPage() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [clanTag, setClanTag] = useState('');
+  const [hardMode, setHardMode] = useState(false);
   const [form, setForm] = useState({ name: '', dayOfWeek: 1, startTime: '18:00', endTime: '19:30', color: 'red' });
 
   const load = useCallback(async () => {
@@ -38,6 +39,7 @@ export default function GroupsPage() {
     setGroups(gs);
     setCurrent(g.current ?? null);
     setClanTag(gs.find((x) => x.id === g.current)?.clan_tag ?? '');
+    setHardMode(gs.find((x) => x.id === g.current)?.hard_mode ?? false);
     setMembers(Array.isArray(m.members) ? m.members : []);
     setMyRole(m.myRole ?? null);
     setInviteCode(m.inviteCode ?? null);
@@ -72,6 +74,17 @@ export default function GroupsPage() {
     try {
       await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, clanTag }) });
       setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, clan_tag: clanTag || null } : g)));
+    } finally { setBusy(false); }
+  }
+  async function toggleHardMode() {
+    if (!current) return;
+    const next = !hardMode;
+    if (next && !confirm('Harten Modus aktivieren? Damit sind öffentliche No-Shows, Bitch des Monats, das Ausreden-Gericht und die Loser-Cam für ALLE in dieser Crew sichtbar. Nur einschalten, wenn alle einverstanden sind.')) return;
+    setBusy(true);
+    try {
+      await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, hardMode: next }) });
+      setHardMode(next);
+      setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, hard_mode: next } : g)));
     } finally { setBusy(false); }
   }
   async function switchGroup(id: number) {
@@ -146,6 +159,26 @@ export default function GroupsPage() {
             {msg && <p className="text-xs mt-2" style={{ color: 'var(--teal)' }}>{msg}</p>}
           </div>
         </section>
+
+        {/* Harter Modus (nur Admin) */}
+        {current && isAdmin && (
+          <section className="card p-4 anim-up" style={{ animationDelay: '50ms' }}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold">Harter Modus</div>
+                <p className="text-[11px] text-[var(--faint)] mt-1 leading-relaxed">
+                  Schaltet die harten Features für die ganze Crew frei: öffentliche No-Shows, Bitch des Monats, Ausreden-Gericht und Loser-Cam. Standardmäßig aus.
+                </p>
+              </div>
+              <button onClick={toggleHardMode} disabled={busy} role="switch" aria-checked={hardMode} aria-label="Harten Modus umschalten"
+                className="relative w-12 h-7 rounded-full shrink-0 transition-colors disabled:opacity-40"
+                style={{ background: hardMode ? 'var(--accent)' : 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                <span className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all"
+                  style={{ left: hardMode ? '1.35rem' : '0.15rem' }} />
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* Clantag (nur Admin) */}
         {current && isAdmin && (

@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
+import { isHardMode } from '@/lib/groups';
 
 function getSql() { return neon(process.env.DATABASE_URL!); }
 
@@ -19,6 +20,9 @@ export async function POST(req: NextRequest) {
     const skip = await sql`SELECT user_name, group_id, date::text AS date FROM skipping WHERE id = ${skipId}`;
     if (!skip[0]) return NextResponse.json({ error: 'Skip not found' }, { status: 404 });
     const { user_name: owner, group_id: groupId, date } = skip[0];
+    if (!(await isHardMode(groupId))) {
+      return NextResponse.json({ error: 'Gericht ist in dieser Gruppe deaktiviert' }, { status: 403 });
+    }
     const month = (date as string).slice(0, 7);
 
     if (action === 'unset') {

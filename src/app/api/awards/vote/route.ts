@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getRole } from '@/lib/groups';
+import { getRole, isHardMode } from '@/lib/groups';
 import { resolveTitle } from '@/lib/awards';
 
 function getSql() {
@@ -20,6 +20,10 @@ export async function POST(req: NextRequest) {
     // Nur Gruppenmitglieder dürfen über ihren Titel abstimmen.
     if (!(await getRole(user, Number(groupId)))) {
       return NextResponse.json({ error: 'Kein Mitglied dieser Gruppe' }, { status: 403 });
+    }
+    // Bitch-Titel gibt es nur im harten Modus (Macher-Titel bleibt immer erlaubt).
+    if (kind === 'bitch' && !(await isHardMode(Number(groupId)))) {
+      return NextResponse.json({ error: 'Bitch-Titel ist in dieser Gruppe deaktiviert' }, { status: 403 });
     }
     const sql = getSql();
     const st = await resolveTitle(sql, Number(groupId), month, kind);

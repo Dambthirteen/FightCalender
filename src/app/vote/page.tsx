@@ -49,6 +49,7 @@ export default function VotePage() {
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState<number | null>(null);
   const [bestBusy, setBestBusy] = useState<number | null>(null);
+  const [hardMode, setHardMode] = useState<boolean | null>(null); // null = noch unbekannt
 
   const monthKey = format(month, 'yyyy-MM');
   const monthLabel = format(month, 'MMMM yyyy', { locale: de });
@@ -62,6 +63,14 @@ export default function VotePage() {
       .then(d => setExcuses(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false));
   }, [monthKey, userName]);
+
+  // Ist das Gericht in der aktuellen Gruppe überhaupt an (harter Modus)?
+  useEffect(() => {
+    fetch('/api/groups').then(r => r.json()).then(d => {
+      const cur = (d.groups ?? []).find((g: { id: number; hard_mode?: boolean }) => g.id === d.current);
+      setHardMode(cur ? !!cur.hard_mode : false);
+    }).catch(() => {});
+  }, []);
 
   async function vote(skipId: number, v: 'accept' | 'reject') {
     if (!userName) return;
@@ -227,7 +236,7 @@ export default function VotePage() {
         </div>
 
         {/* Sofort richten: laufender Monat ist jederzeit bewertbar */}
-        {info.isCurrentMonth && (
+        {hardMode !== false && info.isCurrentMonth && (
           <div className="rounded-xl px-4 py-3 mb-6 text-center bg-yellow-500/10 border border-yellow-600/30">
             <div className="text-sm text-yellow-400 font-semibold">Richte die Ausreden</div>
             <div className="text-xs text-yellow-600 mt-0.5">Ergebnis wird am 1. {format(addMonths(month, 1), 'MMMM', { locale: de })} festgeschrieben</div>
@@ -241,7 +250,13 @@ export default function VotePage() {
         )}
 
         {/* Content */}
-        {loading ? (
+        {hardMode === false ? (
+          <div className="card p-10 text-center">
+            <div className="text-4xl mb-2">🕊️</div>
+            <div className="text-[var(--muted)] text-sm">Das Ausreden-Gericht ist in dieser Crew aus.</div>
+            <div className="text-[var(--faint)] text-xs mt-1">Ein Gruppen-Admin kann den „harten Modus“ in den Gruppen-Einstellungen aktivieren.</div>
+          </div>
+        ) : loading ? (
           <div className="text-center text-[var(--faint)] py-16">Lädt…</div>
         ) : excuses.length === 0 ? (
           <div className="card p-10 text-center">

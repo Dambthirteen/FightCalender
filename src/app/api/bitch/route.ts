@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getBitchCounts } from '@/lib/bitch-scoring';
 import { berlinNow } from '@/lib/berlin-time';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId } from '@/lib/groups';
+import { getCurrentGroupId, isHardMode } from '@/lib/groups';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
     const me = await getCurrentUser();
     const gid = me ? await getCurrentGroupId(me) : null;
     if (!gid) return NextResponse.json([]); // alles gruppenbasiert: ohne Gruppe nichts
+    if (!(await isHardMode(gid))) return NextResponse.json([]); // Bitch-Liste nur im harten Modus
     const monthParam = req.nextUrl.searchParams.get('month'); // "2026-06"
     const monthStr = monthParam ?? berlinNow().date.slice(0, 7);
     const monthStart = `${monthStr}-01`;

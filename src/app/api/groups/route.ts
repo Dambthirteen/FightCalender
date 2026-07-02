@@ -42,17 +42,24 @@ export async function POST(req: NextRequest) {
   return res;
 }
 
-/** Clantag einer Gruppe setzen (max. 4 Buchstaben) — nur Admin der Gruppe. */
+/** Gruppen-Einstellungen ändern (Clantag / harter Modus) — nur Admin der Gruppe. */
 export async function PATCH(req: NextRequest) {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { groupId, clanTag } = await req.json();
+  const { groupId, clanTag, hardMode } = await req.json();
   const gid = Number(groupId);
   if (!gid) return NextResponse.json({ error: 'Gruppe fehlt' }, { status: 400 });
   if ((await getRole(me, gid)) !== 'admin') return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
 
-  const tag = String(clanTag ?? '').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 4);
   const sql = getSql();
+
+  // Harter Modus: schaltet die öffentlichen Shame-Mechaniken für die ganze Crew frei.
+  if (typeof hardMode === 'boolean') {
+    await sql`UPDATE groups SET hard_mode = ${hardMode} WHERE id = ${gid}`;
+    return NextResponse.json({ ok: true, hardMode });
+  }
+
+  const tag = String(clanTag ?? '').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 4);
   await sql`UPDATE groups SET clan_tag = ${tag || null} WHERE id = ${gid}`;
   return NextResponse.json({ ok: true, clanTag: tag });
 }
