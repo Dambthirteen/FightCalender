@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
     await sql`INSERT INTO users (user_name, password_hash) VALUES (${name}, ${hash})`;
     // Einwilligungs-Zeitstempel festhalten (Nachweis). Spalte evtl. noch nicht da → egal.
     try { await sql`UPDATE users SET privacy_accepted_at = NOW() WHERE user_name = ${name}`; } catch {}
+    // Neue Accounts explizit als „nicht onboardet" markieren (unabhängig vom Spalten-Default).
+    try { await sql`UPDATE users SET onboarding_completed = false WHERE user_name = ${name}`; } catch {}
     await setSessionCookie(name);
     return NextResponse.json({ ok: true, userName: name });
   } catch (error) {

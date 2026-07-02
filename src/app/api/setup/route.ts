@@ -214,10 +214,21 @@ export async function POST(req: NextRequest) {
     await sql`UPDATE classes SET group_id = (SELECT MIN(id) FROM groups) WHERE group_id IS NULL AND (SELECT COUNT(*) FROM groups) = 1`;
     await sql`UPDATE skipping SET group_id = (SELECT MIN(id) FROM groups) WHERE group_id IS NULL AND (SELECT COUNT(*) FROM groups) = 1`;
     await sql`UPDATE competitions SET group_id = (SELECT MIN(id) FROM groups) WHERE group_id IS NULL AND (SELECT COUNT(*) FROM groups) = 1`;
+    // Nutzer-Migration NUR für echte Alt-Nutzer (die schon Trainings-/Ausreden-/Plan-/
+    // Wettkampfdaten haben) und noch in KEINER Gruppe sind. So werden frisch registrierte,
+    // leere Accounts nie automatisch in die Standard-Crew gesaugt (Multi-Tenant-sicher).
     await sql`
       INSERT INTO group_members (group_id, user_name, role, status)
       SELECT (SELECT MIN(id) FROM groups), u.user_name, 'member', 'active'
-      FROM users u WHERE (SELECT COUNT(*) FROM groups) = 1
+      FROM users u
+      WHERE (SELECT COUNT(*) FROM groups) = 1
+        AND NOT EXISTS (SELECT 1 FROM group_members gm WHERE gm.user_name = u.user_name)
+        AND (
+          EXISTS (SELECT 1 FROM attendance a WHERE a.user_name = u.user_name)
+          OR EXISTS (SELECT 1 FROM skipping s WHERE s.user_name = u.user_name)
+          OR EXISTS (SELECT 1 FROM user_schedule us WHERE us.user_name = u.user_name)
+          OR EXISTS (SELECT 1 FROM competitions c WHERE c.user_name = u.user_name)
+        )
       ON CONFLICT (group_id, user_name) DO NOTHING
     `;
     await sql`
