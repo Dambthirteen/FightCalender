@@ -1,18 +1,22 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface UserCtx {
   userName: string;
   loading: boolean;
+  onboardingCompleted: boolean;
   refresh: () => void;
 }
 
-const UserContext = createContext<UserCtx>({ userName: '', loading: true, refresh: () => {} });
+const UserContext = createContext<UserCtx>({ userName: '', loading: true, onboardingCompleted: true, refresh: () => {} });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [userName, setUserName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true);
+  const pathname = usePathname();
 
   async function load() {
     setLoading(true);
@@ -21,6 +25,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         setUserName(data.userName ?? '');
+        setOnboardingCompleted(data.onboardingCompleted !== false);
       } else {
         setUserName('');
       }
@@ -31,8 +36,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { load(); }, []);
 
+  // Neue Nutzer erst durch den Onboarding-Assistenten leiten (Loop-Schutz: nicht auf
+  // /onboarding oder /login umleiten).
+  useEffect(() => {
+    if (loading || !userName || onboardingCompleted) return;
+    if (pathname === '/onboarding' || pathname === '/login') return;
+    window.location.href = '/onboarding';
+  }, [loading, userName, onboardingCompleted, pathname]);
+
   return (
-    <UserContext.Provider value={{ userName, loading, refresh: load }}>
+    <UserContext.Provider value={{ userName, loading, onboardingCompleted, refresh: load }}>
       {children}
     </UserContext.Provider>
   );

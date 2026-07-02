@@ -259,7 +259,7 @@ export default function Home() {
             <p className="text-[var(--muted)] text-sm">Welche Kurse besuchst du normalerweise? Nur diese zählen für die Wertung.</p>
           </div>
           {allClasses.length === 0 ? (
-            <div className="text-[var(--faint)] text-sm py-8 text-center">Noch keine Kurse. <a href="/admin" className="text-[var(--accent)] hover:underline">Admin →</a></div>
+            <div className="text-[var(--faint)] text-sm py-8 text-center">Noch keine Kurse — tritt einer Crew bei oder leg selbst eine an. <a href="/gruppen" className="text-[var(--accent)] hover:underline">Zu den Gruppen →</a></div>
           ) : (
             <div className="space-y-5 mb-8">
               {[1, 2, 3, 4, 5, 6, 7].map((day, di) => {

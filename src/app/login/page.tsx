@@ -27,8 +27,9 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Fehler'); return; }
-      // Hard redirect so the browser sends the new session cookie fresh
-      window.location.href = '/';
+      // Hard redirect so the browser sends the new session cookie fresh.
+      // Neue Accounts zuerst in den Onboarding-Assistenten.
+      window.location.href = tab === 'register' ? '/onboarding' : '/';
     } finally {
       setLoading(false);
     }
@@ -44,7 +45,7 @@ export default function LoginPage() {
           <img src="/icon-192.png" alt="Tap In"
             className="w-20 h-20 rounded-[22px] mx-auto mb-4 ring-1 ring-white/10 shadow-2xl shadow-black/50" />
           <h1 className="font-display text-4xl tracking-wide leading-none">Tap In</h1>
-          <p className="text-[var(--muted)] text-[11px] mt-2 uppercase tracking-[0.22em]">NFT Köln · Wer kommt diese Woche?</p>
+          <p className="text-[var(--muted)] text-[11px] mt-2 uppercase tracking-[0.22em]">Wer kommt diese Woche?</p>
         </div>
 
         <div className="card overflow-hidden shadow-2xl shadow-black/40 anim-up" style={{ animationDelay: '70ms' }}>

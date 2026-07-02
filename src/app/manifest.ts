@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Tap In",
     short_name: "Tap In",
-    description: "NFT Köln — Wer kommt diese Woche?",
+    description: "Wer kommt diese Woche? Trainingsplan für deine Crew.",
     start_url: "/",
     display: "standalone",
     background_color: "#0a0a0a",

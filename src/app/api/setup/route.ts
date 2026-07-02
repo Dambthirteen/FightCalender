@@ -140,6 +140,10 @@ export async function POST(req: NextRequest) {
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility_group INTEGER`;
     // DSGVO: Zeitpunkt der Einwilligung in die Datenschutzerklärung (Nachweis).
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_accepted_at TIMESTAMP WITH TIME ZONE`;
+    // Onboarding-Assistent: neue Nutzer durchlaufen erst Profil + Gruppe. Bestehende
+    // Nutzer gelten als fertig (Backfill true), neue starten auf false (siehe hard_mode-Trick).
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT true`;
+    await sql`ALTER TABLE users ALTER COLUMN onboarding_completed SET DEFAULT false`;
     // Benachrichtigungs-Einstellungen pro Nutzer
     await sql`
       CREATE TABLE IF NOT EXISTS notification_prefs (

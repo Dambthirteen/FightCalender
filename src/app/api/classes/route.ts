@@ -7,7 +7,8 @@ export async function GET() {
   try {
     const me = await getCurrentUser();
     const gid = me ? await getCurrentGroupId(me) : null;
-    const classes = await getClasses(gid ?? undefined);
+    // Ohne aktive Gruppe KEINE Kurse zurückgeben (sonst würde man alle Crews sehen).
+    const classes = gid ? await getClasses(gid) : [];
     return NextResponse.json(classes);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

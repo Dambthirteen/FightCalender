@@ -13,7 +13,7 @@ const sans = Sora({ subsets: ["latin"], variable: "--font-body", display: "swap"
 
 export const metadata: Metadata = {
   title: "Tap In",
-  description: "NFT Köln — Wer kommt diese Woche?",
+  description: "Wer kommt diese Woche? Trainingsplan für deine Crew.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
