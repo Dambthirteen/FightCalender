@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { startOfWeek, addWeeks, subWeeks, format, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useUser } from '@/components/UserProvider';
-import { getNRWHolidays } from '@/lib/holidays';
+import { getHolidays } from '@/lib/holidays';
 import { CUTOVER } from '@/lib/bitch-scoring';
 import { colorFor } from '@/lib/avatar';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -44,6 +44,7 @@ export default function Home() {
   const [excuseText, setExcuseText] = useState('');
   const [submittingExcuse, setSubmittingExcuse] = useState(false);
   const [streakPoints, setStreakPoints] = useState(0);
+  const [bundesland, setBundesland] = useState('NW');
   const [useStreakPt, setUseStreakPt] = useState(false);
   const [userColors, setUserColors] = useState<Record<string, string | null>>({});
   const [bitchAnim, setBitchAnim] = useState(false);
@@ -78,14 +79,17 @@ export default function Home() {
     async function init() {
       try {
         // Jeder Aufruf für sich abgesichert — ein Fehler darf das Laden nie blockieren.
-        const [classData, profileData, usersData, streakData] = await Promise.all([
+        const [classData, profileData, usersData, streakData, groupsData] = await Promise.all([
           fetch('/api/classes').then(r => r.json()).catch(() => []),
           fetch(`/api/profile?user=${encodeURIComponent(userName)}`).then(r => r.json()).catch(() => []),
           fetch('/api/users').then(r => r.json()).catch(() => []),
           fetch('/api/streak').then(r => r.json()).catch(() => ({ points: 0 })),
+          fetch('/api/groups').then(r => r.json()).catch(() => ({})),
         ]);
         setAllClasses(Array.isArray(classData) ? classData : []);
         setStreakPoints(streakData?.points ?? 0);
+        const curGroup = (groupsData?.groups ?? []).find((g: { id: number; bundesland?: string }) => g.id === groupsData?.current);
+        if (curGroup?.bundesland) setBundesland(curGroup.bundesland);
         if (Array.isArray(usersData)) {
           const map: Record<string, string | null> = {};
           for (const u of usersData) map[u.user_name] = u.color ?? null;
@@ -316,9 +320,9 @@ export default function Home() {
   for (let d = 1; d <= 7; d++) classesByDay[d] = classes.filter(c => c.day_of_week === d);
 
   const weekYear = weekMonday.getFullYear();
-  const allHolidays = getNRWHolidays(weekYear);
+  const allHolidays = getHolidays(weekYear, bundesland);
   if (addDays(weekMonday, 6).getFullYear() !== weekYear)
-    allHolidays.push(...getNRWHolidays(weekYear + 1));
+    allHolidays.push(...getHolidays(weekYear + 1, bundesland));
   const holidayMap = new Map(allHolidays.map(h => [h.date, h.name]));
 
   const activeDays = [1, 2, 3, 4, 5, 6, 7].filter(day => (classesByDay[day] ?? []).length > 0);

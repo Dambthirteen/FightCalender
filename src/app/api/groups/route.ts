@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { getMyGroups, getCurrentGroupId, getRole, makeInviteCode, GROUP_COOKIE } from '@/lib/groups';
+import { normalizeBundesland } from '@/lib/holidays';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { groupId, clanTag, hardMode } = await req.json();
+  const { groupId, clanTag, hardMode, bundesland } = await req.json();
   const gid = Number(groupId);
   if (!gid) return NextResponse.json({ error: 'Gruppe fehlt' }, { status: 400 });
   if ((await getRole(me, gid)) !== 'admin') return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
@@ -57,6 +58,13 @@ export async function PATCH(req: NextRequest) {
   if (typeof hardMode === 'boolean') {
     await sql`UPDATE groups SET hard_mode = ${hardMode} WHERE id = ${gid}`;
     return NextResponse.json({ ok: true, hardMode });
+  }
+
+  // Bundesland (für Feiertage in der Wertung).
+  if (typeof bundesland === 'string') {
+    const bl = normalizeBundesland(bundesland);
+    await sql`UPDATE groups SET bundesland = ${bl} WHERE id = ${gid}`;
+    return NextResponse.json({ ok: true, bundesland: bl });
   }
 
   const tag = String(clanTag ?? '').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 4);

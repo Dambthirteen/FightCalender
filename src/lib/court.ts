@@ -1,4 +1,4 @@
-import { holidayMap } from './holidays';
+import { holidayMapFor } from './holidays';
 
 // Ausreden-Gericht: gemeinsame, GRUPPENBASIERTE Logik für /api/vote und das
 // „offen + noch nicht fertig"-Signal auf der Startseite. So stimmen Badge und
@@ -29,7 +29,8 @@ export async function getCourtExcuses(
   sql: Sql,
   monthStart: string,
   voter: string,
-  groupId: number
+  groupId: number,
+  bundesland: string = 'NW'
 ): Promise<CourtExcuse[]> {
   const rows = await sql`
     SELECT
@@ -56,7 +57,7 @@ export async function getCourtExcuses(
   `;
 
   const dates = rows.map((r) => r.date as string);
-  const hMap = holidayMap(dates.length > 0 ? dates : [monthStart]);
+  const hMap = holidayMapFor(dates.length > 0 ? dates : [monthStart], bundesland);
 
   return rows.map((r) => ({
     ...r,

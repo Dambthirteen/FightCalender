@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId, isHardMode } from '@/lib/groups';
+import { getCurrentGroupId, isHardMode, getGroupBundesland } from '@/lib/groups';
 import { getCourtExcuses } from '@/lib/court';
 
 function getSql() { return neon(process.env.DATABASE_URL!); }
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       ? `${monthParam}-01`
       : new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
 
-    const enriched = await getCourtExcuses(sql, monthStart, voter, gid);
+    const enriched = await getCourtExcuses(sql, monthStart, voter, gid, await getGroupBundesland(gid));
     return NextResponse.json(enriched);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

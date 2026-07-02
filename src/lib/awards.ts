@@ -1,5 +1,6 @@
 import { berlinNow } from './berlin-time';
 import { getBitchCounts } from './bitch-scoring';
+import { getGroupBundesland } from './groups';
 
 /**
  * „des Monats"-Titel (Macher / Bitch) — Vergabe + Gleichstand-Voting.
@@ -81,7 +82,7 @@ export async function macherCandidates(sql: Sql, groupId: number, ym: string): P
 
 /** Bitch-Kandidaten: meiste Bitch-Punkte (Hybrid-Wertung inkl. Gericht, gruppen-scoped). */
 export async function bitchCandidates(sql: Sql, groupId: number, ym: string): Promise<Candidates> {
-  const counts = await getBitchCounts(sql, ymStart(ym), awardDate(ym), groupId);
+  const counts = await getBitchCounts(sql, ymStart(ym), awardDate(ym), groupId, await getGroupBundesland(groupId));
   const max = counts[0]?.count ?? 0;
   if (max <= 0) return { names: [], score: 0 };
   return { names: counts.filter((c) => c.count === max).map((c) => c.user_name).sort(), score: max };

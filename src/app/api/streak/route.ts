@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
+import { getUserBundesland } from '@/lib/groups';
 import { getStreak } from '@/lib/streak';
 import { awardPerfectWeeks, currentWeekRef, STREAK_POINT_CAP } from '@/lib/streak-points';
 
@@ -15,8 +16,9 @@ export async function GET() {
     if (!me) return NextResponse.json({ days: 0, weeks: 0, points: 0, longest: 0, adAvailable: false });
     const sql = getSql();
 
-    await awardPerfectWeeks(sql, me); // perfekte Wochen ggf. gutschreiben
-    const { days, weeks } = await getStreak(sql, me);
+    const bl = await getUserBundesland(me);
+    await awardPerfectWeeks(sql, me, bl); // perfekte Wochen ggf. gutschreiben
+    const { days, weeks } = await getStreak(sql, me, bl);
     await sql`UPDATE users SET longest_streak = GREATEST(longest_streak, ${days}) WHERE user_name = ${me}`;
 
     const rows = (await sql`SELECT streak_points, longest_streak FROM users WHERE user_name = ${me}`) as

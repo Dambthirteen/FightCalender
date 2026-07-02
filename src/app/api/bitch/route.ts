@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getBitchCounts } from '@/lib/bitch-scoring';
 import { berlinNow } from '@/lib/berlin-time';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId, isHardMode } from '@/lib/groups';
+import { getCurrentGroupId, isHardMode, getGroupBundesland } from '@/lib/groups';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const monthStr = monthParam ?? berlinNow().date.slice(0, 7);
     const monthStart = `${monthStr}-01`;
 
-    const counts = await getBitchCounts(sql, monthStart, nextMonthStart(monthStart), gid);
+    const counts = await getBitchCounts(sql, monthStart, nextMonthStart(monthStart), gid, await getGroupBundesland(gid));
     // beide Feldnamen mitliefern (Seiten nutzen teils skip_count, teils bitch_count)
     return NextResponse.json(
       counts.map((c) => ({ user_name: c.user_name, bitch_count: c.count, skip_count: c.count }))

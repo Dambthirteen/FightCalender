@@ -1,10 +1,10 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId, getMyGroups } from '@/lib/groups';
+import { getCurrentGroupId, getMyGroups, getGroupBundesland } from '@/lib/groups';
 import { getBitchCounts } from '@/lib/bitch-scoring';
 import { currentYm, ymPrev, ymNext } from '@/lib/awards';
-import { getNRWHolidays } from '@/lib/holidays';
+import { getHolidays } from '@/lib/holidays';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     const ym = req.nextUrl.searchParams.get('month') || ymPrev(currentYm());
     const start = `${ym}-01`;
     const end = `${ymNext(ym)}-01`;
+    const bl = await getGroupBundesland(gid);
     const groups = await getMyGroups(me);
     const groupName = groups.find((g) => g.id === gid)?.name ?? 'Gruppe';
 
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
       GROUP BY a.user_name ORDER BY n DESC LIMIT 1
     `) as { user_name: string; n: number }[];
 
-    const bitchCounts = await getBitchCounts(sql, start, end, gid);
+    const bitchCounts = await getBitchCounts(sql, start, end, gid, bl);
     const topBitch = bitchCounts[0];
 
     // Beste Ausrede = meiste „Beste Ausrede des Monats"-Stimmen (best_excuse_votes),
@@ -78,7 +79,7 @@ export async function GET(req: NextRequest) {
       WHERE c.group_id = ${gid} AND a.user_name = ${me} AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
     `) as { n: number }[];
     // „Geschwänzt" = echte Fehltage: Urlaub/Krank (user_status) und Feiertage zählen NICHT.
-    const holidays = getNRWHolidays(Number(ym.slice(0, 4))).map((h) => h.date);
+    const holidays = getHolidays(Number(ym.slice(0, 4)), bl).map((h) => h.date);
     const mySkips = (await sql`
       SELECT COUNT(*)::int AS n FROM skipping s
       WHERE s.group_id = ${gid} AND s.user_name = ${me}

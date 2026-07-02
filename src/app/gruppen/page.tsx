@@ -3,12 +3,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { colorFor, initials } from '@/lib/avatar';
+import { BUNDESLAENDER } from '@/lib/holidays';
 
 const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 const COLORS = ['red', 'blue', 'green', 'orange', 'purple'];
 const COLOR_HEX: Record<string, string> = { red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7' };
 
-interface MyGroup { id: number; name: string; invite_code: string; role: string; clan_tag: string | null; hard_mode: boolean }
+interface MyGroup { id: number; name: string; invite_code: string; role: string; clan_tag: string | null; hard_mode: boolean; bundesland: string }
 interface Member { user_name: string; role: string; status: string }
 interface Cls { id: number; name: string; day_of_week: number; start_time: string; end_time: string; color: string }
 
@@ -27,6 +28,7 @@ export default function GroupsPage() {
   const [busy, setBusy] = useState(false);
   const [clanTag, setClanTag] = useState('');
   const [hardMode, setHardMode] = useState(false);
+  const [bundesland, setBundesland] = useState('NW');
   const [form, setForm] = useState({ name: '', dayOfWeek: 1, startTime: '18:00', endTime: '19:30', color: 'red' });
 
   const load = useCallback(async () => {
@@ -40,6 +42,7 @@ export default function GroupsPage() {
     setCurrent(g.current ?? null);
     setClanTag(gs.find((x) => x.id === g.current)?.clan_tag ?? '');
     setHardMode(gs.find((x) => x.id === g.current)?.hard_mode ?? false);
+    setBundesland(gs.find((x) => x.id === g.current)?.bundesland ?? 'NW');
     setMembers(Array.isArray(m.members) ? m.members : []);
     setMyRole(m.myRole ?? null);
     setInviteCode(m.inviteCode ?? null);
@@ -85,6 +88,15 @@ export default function GroupsPage() {
       await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, hardMode: next }) });
       setHardMode(next);
       setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, hard_mode: next } : g)));
+    } finally { setBusy(false); }
+  }
+  async function saveBundesland(bl: string) {
+    if (!current) return;
+    setBundesland(bl);
+    setBusy(true);
+    try {
+      await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, bundesland: bl }) });
+      setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, bundesland: bl } : g)));
     } finally { setBusy(false); }
   }
   async function switchGroup(id: number) {
@@ -191,6 +203,18 @@ export default function GroupsPage() {
               <button onClick={saveClanTag} disabled={busy} className="text-white font-bold px-4 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>Speichern</button>
             </div>
             <p className="text-[11px] text-[var(--faint)] mt-2">Erscheint vor dem Gruppennamen.</p>
+          </section>
+        )}
+
+        {/* Bundesland (nur Admin) — steuert die Feiertage in der Wertung */}
+        {current && isAdmin && (
+          <section className="card p-4 anim-up" style={{ animationDelay: '70ms' }}>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-2.5">Bundesland (Feiertage)</div>
+            <select value={bundesland} onChange={(e) => saveBundesland(e.target.value)} disabled={busy}
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--accent)]">
+              {BUNDESLAENDER.map((b) => <option key={b.code} value={b.code}>{b.label}</option>)}
+            </select>
+            <p className="text-[11px] text-[var(--faint)] mt-2">Bestimmt, welche Feiertage in der Wertung als frei gelten (Standard: NRW).</p>
           </section>
         )}
 

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { neon } from '@neondatabase/serverless';
+import { normalizeBundesland } from './holidays';
 
 // Multi-Gruppen-Helfer: aktuelle Gruppe (Cookie), Mitgliedschaften, Rollen.
 function getSql() {
@@ -15,6 +16,7 @@ export interface MyGroup {
   role: string;
   clan_tag: string | null;
   hard_mode: boolean;
+  bundesland: string;
 }
 
 /** Alle aktiven Gruppen des Nutzers. */
@@ -22,13 +24,13 @@ export async function getMyGroups(userName: string): Promise<MyGroup[]> {
   const sql = getSql();
   try {
     return (await sql`
-      SELECT g.id, g.name, g.invite_code, g.clan_tag, g.hard_mode, gm.role
+      SELECT g.id, g.name, g.invite_code, g.clan_tag, g.hard_mode, g.bundesland, gm.role
       FROM group_members gm JOIN groups g ON g.id = gm.group_id
       WHERE gm.user_name = ${userName} AND gm.status = 'active'
       ORDER BY LOWER(g.name)
     `) as MyGroup[];
   } catch {
-    // clan_tag/hard_mode-Spalte evtl. noch nicht angelegt → ohne sie laden.
+    // clan_tag/hard_mode/bundesland-Spalte evtl. noch nicht angelegt → ohne sie laden.
     try {
       const rows = await sql`
         SELECT g.id, g.name, g.invite_code, gm.role
@@ -36,7 +38,7 @@ export async function getMyGroups(userName: string): Promise<MyGroup[]> {
         WHERE gm.user_name = ${userName} AND gm.status = 'active'
         ORDER BY LOWER(g.name)
       `;
-      return rows.map((r) => ({ ...r, clan_tag: null, hard_mode: false })) as MyGroup[];
+      return rows.map((r) => ({ ...r, clan_tag: null, hard_mode: false, bundesland: 'NW' })) as MyGroup[];
     } catch {
       return []; // Tabellen evtl. noch nicht angelegt → App läuft ungescoped weiter
     }
@@ -53,6 +55,24 @@ export async function isHardMode(groupId: number | null): Promise<boolean> {
   } catch {
     return false; // Spalte evtl. noch nicht da → entschärft (fail-safe) behandeln
   }
+}
+
+/** Bundesland einer Gruppe (für Feiertage). Default NW. */
+export async function getGroupBundesland(groupId: number | null): Promise<string> {
+  if (!groupId) return 'NW';
+  try {
+    const sql = getSql();
+    const rows = await sql`SELECT bundesland FROM groups WHERE id = ${groupId}`;
+    return normalizeBundesland(rows[0]?.bundesland as string | undefined);
+  } catch {
+    return 'NW'; // Spalte evtl. noch nicht da
+  }
+}
+
+/** Bundesland des Nutzers = das seiner aktuellen Gruppe (für persönliche Wertung wie Streaks). */
+export async function getUserBundesland(userName: string): Promise<string> {
+  const gid = await getCurrentGroupId(userName);
+  return getGroupBundesland(gid);
 }
 
 /** Aktuelle Gruppe = Cookie (falls Mitglied), sonst erste Gruppe. */

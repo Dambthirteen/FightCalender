@@ -1,5 +1,5 @@
 import { berlinNow, weekStartOf } from './berlin-time';
-import { isHoliday } from './holidays';
+import { isHolidayIn } from './holidays';
 import { CUTOVER } from './bitch-scoring';
 
 /**
@@ -30,7 +30,7 @@ function addDaysStr(dateStr: string, n: number): string {
 
 export interface Streak { days: number; weeks: number; }
 
-export async function getStreak(sql: Sql, user: string): Promise<Streak> {
+export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW'): Promise<Streak> {
   const schedRows = (await sql`
     SELECT DISTINCT c.day_of_week::int AS dow
     FROM user_schedule us JOIN classes c ON c.id = us.class_id
@@ -64,7 +64,7 @@ export async function getStreak(sql: Sql, user: string): Promise<Streak> {
   let d = today;
   for (let guard = 0; guard < 400 && d >= CUTOVER; guard++, d = addDaysStr(d, -1)) {
     if (!dows.has(isodow(d))) continue;
-    if (isHoliday(d)) continue;
+    if (isHolidayIn(d, bundesland)) continue;
     if (exempt(d)) continue;
     if (present.has(d)) { days++; continue; }
     if (protectedDays.has(d)) continue;       // geschützt → neutral
@@ -84,7 +84,7 @@ export async function getStreak(sql: Sql, user: string): Promise<Streak> {
     for (let off = 0; off < 7; off++) {
       const wd = addDaysStr(ws, off);
       if (!dows.has(isodow(wd))) continue;
-      if (isHoliday(wd)) continue;
+      if (isHolidayIn(wd, bundesland)) continue;
       if (exempt(wd)) continue;
       hadScheduled = true;
       if (present.has(wd)) continue;

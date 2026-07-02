@@ -195,6 +195,8 @@ export async function POST(req: NextRequest) {
     // (store-/rechtssicher) starten. Beide ALTERs sind idempotent.
     await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS hard_mode BOOLEAN NOT NULL DEFAULT true`;
     await sql`ALTER TABLE groups ALTER COLUMN hard_mode SET DEFAULT false`;
+    // Bundesland pro Gruppe → korrekte Feiertage (Wertung). Default NW (bisheriges Verhalten).
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS bundesland VARCHAR(2) NOT NULL DEFAULT 'NW'`;
     await sql`ALTER TABLE classes ADD COLUMN IF NOT EXISTS group_id INTEGER`;
     await sql`ALTER TABLE skipping ADD COLUMN IF NOT EXISTS group_id INTEGER`;
     await sql`ALTER TABLE competitions ADD COLUMN IF NOT EXISTS group_id INTEGER`;

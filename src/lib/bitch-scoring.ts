@@ -1,4 +1,4 @@
-import { getNRWHolidays } from './holidays';
+import { getHolidays } from './holidays';
 import { berlinNow, weekStartOf } from './berlin-time';
 
 /**
@@ -24,11 +24,11 @@ function addDaysStr(dateStr: string, n: number): string {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
-function holidaysFor(start: string, endExclusive: string): string[] {
+function holidaysFor(start: string, endExclusive: string, bundesland: string): string[] {
   const y0 = parseInt(start.slice(0, 4));
   const y1 = parseInt(endExclusive.slice(0, 4));
   const out: string[] = [];
-  for (let y = y0; y <= y1; y++) out.push(...getNRWHolidays(y).map((h) => h.date));
+  for (let y = y0; y <= y1; y++) out.push(...getHolidays(y, bundesland).map((h) => h.date));
   return out;
 }
 
@@ -43,7 +43,8 @@ export async function getBitchCounts(
   sql: Sql,
   start: string,
   endExclusive: string,
-  groupId: number
+  groupId: number,
+  bundesland: string = 'NW'
 ): Promise<BitchScore[]> {
   const today = berlinNow().date; // Berlin: „heute" — bis hierher (exklusiv) sind Tage vorbei
   const counts = new Map<string, number>();
@@ -52,7 +53,7 @@ export async function getBitchCounts(
   // ---------- TEIL A: vor dem Stichtag — ALTE Logik (Historie unverändert) ----------
   const aEnd = endExclusive < CUTOVER ? endExclusive : CUTOVER; // min(endExclusive, CUTOVER)
   if (start < aEnd) {
-    const holidays = holidaysFor(start, aEnd);
+    const holidays = holidaysFor(start, aEnd, bundesland);
     const rowsA = (await sql`
       SELECT s.user_name, COUNT(*)::int AS n
       FROM skipping s
@@ -81,7 +82,7 @@ export async function getBitchCounts(
   const bStart = start > CUTOVER ? start : CUTOVER;          // max(start, CUTOVER)
   const bEnd = endExclusive < today ? endExclusive : today; // nur vergangene Tage (< heute)
   if (bStart < bEnd) {
-    const holidaySet = new Set(holidaysFor(bStart, bEnd));
+    const holidaySet = new Set(holidaysFor(bStart, bEnd, bundesland));
 
     const scheduleRows = (await sql`
       SELECT us.user_name, c.day_of_week::int AS dow

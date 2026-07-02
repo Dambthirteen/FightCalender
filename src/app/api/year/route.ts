@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getBitchCounts } from '@/lib/bitch-scoring';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId } from '@/lib/groups';
+import { getCurrentGroupId, getGroupBundesland } from '@/lib/groups';
 
 function getSql() { return neon(process.env.DATABASE_URL!); }
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     `;
 
     // --- Bitch des Jahres (neue Hybrid-Wertung; vor dem Stichtag unverändert) ---
-    const bitchCounts = await getBitchCounts(sql, `${year}-01-01`, `${year + 1}-01-01`, gid);
+    const bitchCounts = await getBitchCounts(sql, `${year}-01-01`, `${year + 1}-01-01`, gid, await getGroupBundesland(gid));
     const bitch = bitchCounts.map((c) => ({ user_name: c.user_name, total: c.count }));
 
     // Monthly breakdown for charts (nur diese Gruppe)

@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { canViewProfile, getMyGroups } from '@/lib/groups';
+import { canViewProfile, getMyGroups, getUserBundesland } from '@/lib/groups';
 import { getStreak } from '@/lib/streak';
 import { earnedBadges, earnedFightBadges, badgeById, ADMIN_BADGE, DOPPELMORAL_BADGE, type BadgeDef } from '@/lib/badges';
 import { createNotification } from '@/lib/notify';
@@ -37,7 +37,7 @@ async function computeEarned(sql: Sql, user: string, weeks: number): Promise<{ b
   if (judged >= 20) {
     let bitch = 0;
     for (const g of await getMyGroups(user)) {
-      const counts = await getBitchCounts(sql, CUTOVER, '2999-01-01', g.id);
+      const counts = await getBitchCounts(sql, CUTOVER, '2999-01-01', g.id, g.bundesland);
       bitch += counts.find((cc) => cc.user_name === user)?.count ?? 0;
     }
     if (bitch >= 10) badges.push(DOPPELMORAL_BADGE);
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
     if (!(await canViewProfile(me, user))) return NextResponse.json({ private: true });
     const sql = getSql();
 
-    const { days, weeks } = await getStreak(sql, user);
+    const { days, weeks } = await getStreak(sql, user, await getUserBundesland(user));
     await sql`UPDATE users SET longest_streak = GREATEST(longest_streak, ${days}) WHERE user_name = ${user}`;
     const { badges: earned, competitions } = await computeEarned(sql, user, weeks);
 
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(badges)) return NextResponse.json({ error: 'Ungültig' }, { status: 400 });
     const sql = getSql();
 
-    const { weeks } = await getStreak(sql, me);
+    const { weeks } = await getStreak(sql, me, await getUserBundesland(me));
     const { badges: earnedList } = await computeEarned(sql, me, weeks);
     const earnedIds = new Set(earnedList.map((b) => b.id));
 
