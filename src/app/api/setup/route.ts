@@ -342,6 +342,8 @@ export async function POST(req: NextRequest) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `;
+    // Optionales Pinnwand-Bild (client-seitig komprimierte JPEG-Data-URL).
+    await sql`ALTER TABLE profile_comments ADD COLUMN IF NOT EXISTS image TEXT`;
     // --- Skilltree-Anfechtungen (Vorschlag → Übernehmen/Ablehnen) ---
     await sql`
       CREATE TABLE IF NOT EXISTS skill_challenges (

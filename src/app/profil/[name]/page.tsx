@@ -65,6 +65,34 @@ function resizeImage(file: File): Promise<string> {
   });
 }
 
+// Pinnwand-Foto: Seitenverhältnis behalten, progressiv verkleinern (max 1280px) und
+// JPEG-Qualität senken, bis die Data-URL sicher unter ~700 KB liegt.
+function compressPhoto(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const tries: Array<[number, number]> = [[1280, 0.72], [1280, 0.6], [1024, 0.6], [800, 0.55], [640, 0.5]];
+      let out = '';
+      for (const [maxDim, q] of tries) {
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('no ctx')); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        out = canvas.toDataURL('image/jpeg', q);
+        if (out.length <= 700_000) { resolve(out); return; }
+      }
+      resolve(out); // bestmögliche (kleinste) Version
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 function Stat({ value, label, color }: { value: number | string; label: string; color: string }) {
   return (
     <div className="card flex-1 min-w-0 px-2 py-3.5 text-center">
@@ -156,7 +184,9 @@ export default function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Kommentare, Skilltree-Anfechtungen, Lob/Gigalob
-  const [comments, setComments] = useState<{ id: number; author_name: string; body: string; created_at: string }[]>([]);
+  const [comments, setComments] = useState<{ id: number; author_name: string; body: string; image?: string | null; created_at: string }[]>([]);
+  const [commentImage, setCommentImage] = useState<string | null>(null);
+  const [imgBusy, setImgBusy] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [postingComment, setPostingComment] = useState(false);
   const [challenges, setChallenges] = useState<{ id: number; challenger_name: string; proposal: Record<string, number>; note: string; created_at: string }[]>([]);
@@ -170,6 +200,7 @@ export default function ProfilePage() {
   const [praiseReason, setPraiseReason] = useState('');
   const [givingPraise, setGivingPraise] = useState(false);
   const [praiseMsg, setPraiseMsg] = useState('');
+  const [confirmPraise, setConfirmPraise] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [tab, setTab] = useState<Tab>('fighter');
   const [badgeData, setBadgeData] = useState<BadgeData | null>(null);
@@ -310,15 +341,23 @@ export default function ProfilePage() {
   // --- Kommentare ---
   async function postComment() {
     const text = newComment.trim();
-    if (!text || postingComment) return;
+    if ((!text && !commentImage) || postingComment || imgBusy) return;
     setPostingComment(true);
     try {
       const res = await fetch('/api/comments', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile: name, body: text }),
+        body: JSON.stringify({ profile: name, body: text, image: commentImage }),
       });
-      if (res.ok) { const cm = await res.json(); setComments((prev) => [...prev, cm]); setNewComment(''); }
+      if (res.ok) { const cm = await res.json(); setComments((prev) => [...prev, cm]); setNewComment(''); setCommentImage(null); }
     } finally { setPostingComment(false); }
+  }
+  async function onPickCommentImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImgBusy(true);
+    try { setCommentImage(await compressPhoto(file)); }
+    catch { /* ignorieren */ }
+    finally { setImgBusy(false); e.target.value = ''; }
   }
   async function deleteComment(id: number) {
     await fetch('/api/comments', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }).catch(() => {});
@@ -378,7 +417,7 @@ export default function ProfilePage() {
       } else {
         setPraiseMsg(d.error ?? 'Fehler');
       }
-    } finally { setGivingPraise(false); }
+    } finally { setGivingPraise(false); setConfirmPraise(false); }
   }
 
   // Werbung-Platzhalter: 1 Streak-Punkt (max. 1×/Woche).
@@ -414,63 +453,65 @@ export default function ProfilePage() {
   const frame = avatarFrame(cosmetics.avatarFrame, c); // Spind: Avatar-Rahmen
   const streakDays = badgeData?.streakDays ?? 0;
 
-  // Abzeichen-Karte (gehört zu „Ehrungen") — Streak-Fortschritt + Ausstellen + Übersicht.
+  // Ausgestellte Abzeichen (für die read-only-Anzeige auf fremden Profilen).
+  const displayedBadgeInfos = (badgeData?.earned ?? []).filter((b) => (badgeData?.displayed ?? []).includes(b.id));
+  // Abzeichen-Karte nur zeigen, wenn eigenes Profil ODER die Person Abzeichen ausgestellt hat.
+  const showBadgesCard = isSelf || displayedBadgeInfos.length > 0;
   const badgesCard = (
     <div className="card px-4 py-4">
-      <div className="flex items-center justify-between mb-1">
-        <div className="section-label">Abzeichen</div>
-        <span className="text-xs font-semibold" style={{ color: 'var(--accent-2)' }}>🔥 {badgeData?.streakDays ?? 0} {(badgeData?.streakDays ?? 0) === 1 ? 'Tag' : 'Tage'}</span>
-      </div>
-      <div className="text-[11px] text-[var(--faint)] mb-3">
-        {badgeData?.streakWeeks ?? 0} {(badgeData?.streakWeeks ?? 0) === 1 ? 'Woche' : 'Wochen'} am Stück · Rekord: {badgeData?.longest ?? 0} Tage
-      </div>
-      {isSelf && nextBadge && (
-        <div className="text-xs text-[var(--muted)] mb-3">
-          Noch {nextBadge.threshold - (badgeData?.streakWeeks ?? 0)} Wo. bis <strong>{nextBadge.emoji} {nextBadge.label}</strong>
-        </div>
-      )}
-      {isSelf && (
-        <div className="text-xs text-[var(--muted)] mb-3">
-          Streak-Punkte: <strong style={{ color: 'var(--text)' }}>{badgeData?.points ?? 0}</strong>
-          {badgeData?.adAvailable && (
-            <button onClick={claimAdPoint} disabled={claimingAd}
-              className="ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border border-[var(--border)] disabled:opacity-40"
-              style={{ color: 'var(--accent-2)' }}>
-              {claimingAd ? '…' : 'Werbung'}
-            </button>
-          )}
-        </div>
-      )}
-      {/* Volles Raster nur im Bearbeiten-Modus — sonst überlädt das Profil.
-          Ausgestellte Badges erscheinen ohnehin als Chips unter dem Namen. */}
-      {editing && (
-        badgeData && badgeData.earned.length > 0 ? (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              {badgeData.earned.map((b) => {
-                const on = badgeData.displayed.includes(b.id);
-                const cls = 'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all active:scale-95';
-                const style = on
-                  ? { background: 'var(--accent-soft)', borderColor: 'var(--accent-2)' }
-                  : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)' };
-                return (
-                  <button key={b.id} onClick={() => toggleBadge(b.id)} className={cls} style={style}>
-                    <span className="text-2xl leading-none">{b.emoji}</span>
-                    <span className="text-[10px] font-semibold leading-tight">{b.label}</span>
-                  </button>
-                );
-              })}
+      <div className="section-label mb-3">Abzeichen</div>
+      {isSelf ? (
+        <>
+          {nextBadge && (
+            <div className="text-xs text-[var(--muted)] mb-3">
+              Noch {nextBadge.threshold - (badgeData?.streakWeeks ?? 0)} Wo. bis <strong>{nextBadge.emoji} {nextBadge.label}</strong>
             </div>
-            <p className="text-[10px] text-[var(--faint)] mt-2">Tippe an, um bis zu 4 auszustellen</p>
-          </>
-        ) : (
-          <div className="text-sm text-[var(--faint)]">Noch keine Abzeichen — bleib dran.</div>
-        )
-      )}
-      {isSelf && (
-        <button onClick={() => setShowAllBadges(true)} className="mt-3 text-xs font-semibold" style={{ color: 'var(--teal)' }}>
-          Alle Achievements anzeigen ›
-        </button>
+          )}
+          <div className="text-xs text-[var(--muted)] mb-3">
+            Streak-Punkte: <strong style={{ color: 'var(--text)' }}>{badgeData?.points ?? 0}</strong>
+            {badgeData?.adAvailable && (
+              <button onClick={claimAdPoint} disabled={claimingAd}
+                className="ml-2 text-[11px] font-semibold px-2 py-1 rounded-lg border border-[var(--border)] disabled:opacity-40"
+                style={{ color: 'var(--accent-2)' }}>
+                {claimingAd ? '…' : 'Werbung'}
+              </button>
+            )}
+          </div>
+          {/* Volles Raster nur im Bearbeiten-Modus — sonst überlädt das Profil. */}
+          {editing && badgeData && badgeData.earned.length > 0 && (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {badgeData.earned.map((b) => {
+                  const on = badgeData.displayed.includes(b.id);
+                  const cls = 'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all active:scale-95';
+                  const style = on
+                    ? { background: 'var(--accent-soft)', borderColor: 'var(--accent-2)' }
+                    : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)' };
+                  return (
+                    <button key={b.id} onClick={() => toggleBadge(b.id)} className={cls} style={style}>
+                      <span className="text-2xl leading-none">{b.emoji}</span>
+                      <span className="text-[10px] font-semibold leading-tight">{b.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-[var(--faint)] mt-2">Tippe an, um bis zu 4 auszustellen</p>
+            </>
+          )}
+          <button onClick={() => setShowAllBadges(true)} className="mt-3 text-xs font-semibold" style={{ color: 'var(--teal)' }}>
+            Alle Achievements anzeigen ›
+          </button>
+        </>
+      ) : (
+        <div className="grid grid-cols-4 gap-2">
+          {displayedBadgeInfos.map((b) => (
+            <div key={b.id} className="flex flex-col items-center gap-1 rounded-xl border p-2 text-center"
+              style={{ background: 'var(--surface-2)', borderColor: 'var(--border-soft)' }}>
+              <span className="text-2xl leading-none">{b.emoji}</span>
+              <span className="text-[9px] font-semibold leading-tight">{b.label}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -522,11 +563,6 @@ export default function ProfilePage() {
             const weeks = badgeData?.streakWeeks ?? 0;
             const longest = badgeData?.longest ?? 0;
             const flameIcon = <span style={{ filter: flameFilter(cosmetics.flame), display: 'inline-block' }}>🔥</span>;
-            const flame = streakDays > 0 ? (
-              <span className="text-xs font-semibold" style={{ color: 'var(--accent-2)' }}>
-                {flameIcon} {streakDays} {streakDays === 1 ? 'Tag' : 'Tage'}
-              </span>
-            ) : undefined;
             // Streak-Ansicht: gleiche Optik wie die XP-Leiste, Balken = Fortschritt zur nächsten Streak-Stufe.
             const streakPct = nextBadge ? Math.min(1, weeks / nextBadge.threshold) : 1;
             const streakView = (
@@ -544,7 +580,10 @@ export default function ProfilePage() {
             if (xp) return (
               <button type="button" onClick={() => setStatMode((m) => (m === 'xp' ? 'streak' : 'xp'))}
                 className="w-full mt-3 text-left active:opacity-80 transition-opacity" aria-label="Zwischen XP und Streak wechseln">
-                {statMode === 'xp' ? <XpBar data={xp} right={flame} color={xpBarColor(cosmetics.xpbar)} /> : streakView}
+                {statMode === 'xp'
+                  ? <XpBar data={xp} color={xpBarColor(cosmetics.xpbar)}
+                      right={<span className="text-[10px] text-[var(--faint)] tnum">noch {Math.max(0, xp.span - xp.into)} XP</span>} />
+                  : streakView}
               </button>
             );
             return <div className="mt-2">{streakView}</div>;
@@ -555,22 +594,6 @@ export default function ProfilePage() {
             <Belt clanTag={badgeData?.clanTag ?? null} badges={displayedBadges} onBadge={setBeltBadge} skin={cosmetics.belt} />
           </div>
 
-          {/* Bio */}
-          {editing ? (
-            <div className="w-full max-w-xs mt-2">
-              <textarea
-                value={bioEdit} onChange={(e) => setBioEdit(e.target.value)} maxLength={300} rows={2}
-                placeholder="Kurze Beschreibung über dich…"
-                className="field resize-none text-center" />
-              {bioEdit !== bio && (
-                <button onClick={saveBio} disabled={savingBio} className="btn btn-primary mt-2 text-xs px-4 py-1.5">
-                  {savingBio ? 'Speichern…' : 'Bio speichern'}
-                </button>
-              )}
-            </div>
-          ) : (
-            bio && <p className="text-sm text-[var(--muted)] mt-2 max-w-xs">{bio}</p>
-          )}
         </div>
 
         {priv ? (
@@ -640,6 +663,26 @@ export default function ProfilePage() {
                     <div className="text-sm text-[var(--faint)]">Noch keine Angaben.</div>
                   )}
                 </div>
+
+                {/* Über mich */}
+                {(editing || bio) && (
+                  <div className="card px-4 py-4">
+                    <div className="section-label mb-2.5">Über mich</div>
+                    {editing ? (
+                      <>
+                        <textarea value={bioEdit} onChange={(e) => setBioEdit(e.target.value)} maxLength={300} rows={3}
+                          placeholder="Kurze Beschreibung über dich…" className="field resize-none" />
+                        {bioEdit !== bio && (
+                          <button onClick={saveBio} disabled={savingBio} className="btn btn-primary mt-2 text-xs px-4 py-1.5">
+                            {savingBio ? 'Speichern…' : 'Speichern'}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-[var(--muted)] whitespace-pre-wrap break-words">{bio}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Kampfsport */}
                 <div className="card px-4 py-4">
@@ -887,7 +930,7 @@ export default function ProfilePage() {
             {/* --- Tab: Ehrungen --- */}
             {tab === 'ehrungen' && (
               <div className="space-y-4 anim-in">
-                {badgesCard}
+                {showBadgesCard && badgesCard}
                 {!isSelf && canInteract && (
                   <div className="card px-4 py-4">
                     <div className="section-label mb-2.5">Würdigung geben</div>
@@ -911,7 +954,7 @@ export default function ProfilePage() {
                           placeholder="Warum hat die Person es verdient?" className="field resize-none" />
                         <div className="flex gap-2 mt-2">
                           <button onClick={() => { setPraiseKind(null); setPraiseReason(''); }} className="btn btn-ghost flex-1">Abbrechen</button>
-                          <button onClick={givePraise} disabled={givingPraise}
+                          <button onClick={() => setConfirmPraise(true)} disabled={givingPraise}
                             className="flex-1 text-xs font-bold py-2.5 rounded-xl text-black disabled:opacity-40" style={{ background: praiseKind === 'gigalob' ? 'var(--accent)' : 'var(--gold)' }}>
                             {givingPraise ? '…' : 'Senden'}
                           </button>
@@ -919,7 +962,6 @@ export default function ProfilePage() {
                       </>
                     )}
                     {praiseMsg && <p className="text-xs mt-2 text-[var(--muted)]">{praiseMsg}</p>}
-                    <p className="text-[10px] text-[var(--faint)] mt-2">Lob 1×/Woche · Gigalob 1×/Monat</p>
                   </div>
                 )}
 
@@ -958,19 +1000,37 @@ export default function ProfilePage() {
                             <button onClick={() => deleteComment(cm.id)} className="text-[var(--faint)] hover:text-[var(--accent)] text-xs px-1">✕</button>
                           )}
                         </div>
-                        <p className="text-sm text-[var(--text)] mt-1 whitespace-pre-wrap break-words">{cm.body}</p>
+                        {cm.body && <p className="text-sm text-[var(--text)] mt-1 whitespace-pre-wrap break-words">{cm.body}</p>}
+                        {cm.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={cm.image} alt="" className="mt-2 rounded-lg w-full max-h-80 object-cover" />
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
                 {canInteract && (
-                  <div className="flex gap-2">
-                    <input value={newComment} onChange={(e) => setNewComment(e.target.value)} maxLength={500}
-                      onKeyDown={(e) => e.key === 'Enter' && postComment()}
-                      placeholder="Kommentar schreiben…" className="field flex-1" />
-                    <button onClick={postComment} disabled={postingComment || !newComment.trim()} className="btn btn-primary">
-                      {postingComment ? '…' : 'Senden'}
-                    </button>
+                  <div className="space-y-2">
+                    {commentImage && (
+                      <div className="relative w-fit">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={commentImage} alt="" className="rounded-lg max-h-40 object-cover" />
+                        <button onClick={() => setCommentImage(null)}
+                          className="absolute -top-2 -right-2 w-6 h-6 grid place-items-center rounded-full text-white text-xs" style={{ background: 'var(--accent)' }}>✕</button>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <label className="shrink-0 w-11 grid place-items-center rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-white cursor-pointer transition-colors" title="Bild anhängen">
+                        {imgBusy ? '…' : '📎'}
+                        <input type="file" accept="image/*" hidden onChange={onPickCommentImage} />
+                      </label>
+                      <input value={newComment} onChange={(e) => setNewComment(e.target.value)} maxLength={500}
+                        onKeyDown={(e) => e.key === 'Enter' && postComment()}
+                        placeholder="Kommentar schreiben…" className="field flex-1" />
+                      <button onClick={postComment} disabled={postingComment || imgBusy || (!newComment.trim() && !commentImage)} className="btn btn-primary">
+                        {postingComment ? '…' : 'Senden'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1006,6 +1066,26 @@ export default function ProfilePage() {
           </>
         )}
       </main>
+
+      {/* Würdigung bestätigen */}
+      {confirmPraise && praiseKind && (
+        <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm anim-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setConfirmPraise(false); }}>
+          <div className="card w-full max-w-sm p-5 anim-up rounded-b-none sm:rounded-2xl">
+            <h2 className="font-display text-xl tracking-wide mb-1">{praiseKind === 'gigalob' ? 'Gigalob' : 'Lob'} wirklich geben?</h2>
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Du kannst {praiseKind === 'gigalob' ? 'nur 1× pro Monat ein Gigalob' : 'nur 1× pro Woche ein Lob'} vergeben — nutze es mit Bedacht.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmPraise(false)} className="btn btn-ghost flex-1">Abbrechen</button>
+              <button onClick={givePraise} disabled={givingPraise}
+                className="flex-1 text-sm font-bold py-2.5 rounded-xl text-black disabled:opacity-40" style={{ background: praiseKind === 'gigalob' ? 'var(--accent)' : 'var(--gold)' }}>
+                {givingPraise ? '…' : 'Ja, geben'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Badge-Detail (Klick auf ein Belt-Abzeichen) */}
       {beltBadge && (

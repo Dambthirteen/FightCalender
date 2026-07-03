@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     if (!(await canViewProfile(me, user))) return NextResponse.json([]);
     const sql = getSql();
     const rows = await sql`
-      SELECT id, author_name, body, created_at FROM profile_comments
+      SELECT id, author_name, body, image, created_at FROM profile_comments
       WHERE profile_name = ${user} ORDER BY created_at ASC
     `;
     return NextResponse.json(rows);
@@ -33,18 +33,26 @@ export async function POST(req: NextRequest) {
   try {
     const me = await getCurrentUser();
     if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const { profile, body } = await req.json();
+    const { profile, body, image } = await req.json();
     const text = String(body ?? '').trim();
-    if (!profile || !text) return NextResponse.json({ error: 'Leerer Kommentar' }, { status: 400 });
+    // Bild optional: nur JPEG/PNG-Data-URL, max ~750 KB (client komprimiert vorab).
+    let img: string | null = null;
+    if (image) {
+      const s = String(image);
+      if (!/^data:image\/(jpeg|png|webp);base64,/.test(s)) return NextResponse.json({ error: 'Ungültiges Bild' }, { status: 400 });
+      if (s.length > 750_000) return NextResponse.json({ error: 'Bild zu groß' }, { status: 400 });
+      img = s;
+    }
+    if (!profile || (!text && !img)) return NextResponse.json({ error: 'Leerer Kommentar' }, { status: 400 });
     if (!(await canViewProfile(me, profile))) return NextResponse.json({ error: 'Kein Zugriff' }, { status: 403 });
     const sql = getSql();
     const ins = await sql`
-      INSERT INTO profile_comments (profile_name, author_name, body)
-      VALUES (${profile}, ${me}, ${text.slice(0, 500)})
-      RETURNING id, author_name, body, created_at
+      INSERT INTO profile_comments (profile_name, author_name, body, image)
+      VALUES (${profile}, ${me}, ${text.slice(0, 500)}, ${img})
+      RETURNING id, author_name, body, image, created_at
     `;
     if (me !== profile) {
-      const preview = text.length > 80 ? `${text.slice(0, 80)}…` : text;
+      const preview = !text ? '📷 Bild' : text.length > 80 ? `${text.slice(0, 80)}…` : text;
       await createNotification(sql, {
         user: profile,
         type: 'comment',
