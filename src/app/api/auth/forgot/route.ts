@@ -16,7 +16,10 @@ export async function POST(req: NextRequest) {
         const user = rows[0].user_name as string;
         const token = await createToken(sql, user, 'reset', 60); // 1 Stunde
         const { subject, html } = resetPasswordHtml(req.nextUrl.origin, token);
-        await sendEmail({ to: mail, subject, html });
+        const sent = await sendEmail({ to: mail, subject, html });
+        if (!sent) console.error(`[forgot] Mail NICHT gesendet für "${user}" — RESEND_API_KEY fehlt oder Resend hat abgelehnt (Domain nicht verifiziert / Testmodus?).`);
+      } else {
+        console.warn(`[forgot] Keine (eindeutige) E-Mail-Übereinstimmung — Treffer: ${rows.length}. Hat der Account eine E-Mail?`);
       }
     }
     return NextResponse.json({ ok: true });
