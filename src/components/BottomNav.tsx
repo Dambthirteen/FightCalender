@@ -36,8 +36,10 @@ export default function BottomNav() {
                 width: 46, height: 35,
                 background: '#fff',
                 border: '1px solid #fff',
-                transform: t.active ? 'translateY(-8px)' : 'none',
-                boxShadow: t.active ? '0 7px 15px rgba(0,0,0,0.48)' : '0 2px 5px rgba(0,0,0,0.3)',
+                transform: t.active ? 'translateY(-7px)' : 'none',
+                boxShadow: t.active
+                  ? '0 0 0 2px rgba(255,59,48,0.45), 0 0 16px 2px rgba(255,59,48,0.55), 0 6px 14px rgba(0,0,0,0.4)'
+                  : '0 2px 5px rgba(0,0,0,0.3)',
                 opacity: t.active ? 1 : 0.82,
               }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
