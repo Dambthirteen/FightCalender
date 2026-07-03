@@ -1,8 +1,9 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId, getMyGroups, getGroupBundesland } from '@/lib/groups';
+import { getCurrentGroupId, getMyGroups, getGroupBundesland, getUserBundesland } from '@/lib/groups';
 import { getBitchCounts } from '@/lib/bitch-scoring';
+import { getStreak } from '@/lib/streak';
 import { currentYm, ymPrev, ymNext } from '@/lib/awards';
 import { getHolidays } from '@/lib/holidays';
 
@@ -98,6 +99,16 @@ export async function GET(req: NextRequest) {
 
     const seenRows = (await sql`SELECT 1 FROM wrapped_seen WHERE user_name = ${me} AND month = ${ym}`) as unknown[];
 
+    // Aktuelle Streak (für die Rückblick-Karte).
+    let streak = { days: 0, weeks: 0 };
+    try { streak = await getStreak(sql, me, await getUserBundesland(me)); } catch { /* egal */ }
+    // Bemerkenswertes Lob mit Kommentar, das der Nutzer diesen Monat erhalten hat.
+    const praiseRows = (await sql`
+      SELECT from_user, reason, kind FROM praises
+      WHERE to_user = ${me} AND created_at >= ${start}::timestamptz AND created_at < ${end}::timestamptz AND reason != ''
+      ORDER BY (kind = 'gigalob') DESC, created_at DESC LIMIT 1
+    `) as { from_user: string; reason: string; kind: string }[];
+
     const macher = macherRows[0] ? { user: macherRows[0].user_name, count: macherRows[0].n } : null;
     const bitch = topBitch ? { user: topBitch.user_name, count: topBitch.count } : null;
     const available = !!(macher || bitch || (myAtt[0]?.n ?? 0) > 0);
@@ -114,6 +125,8 @@ export async function GET(req: NextRequest) {
       topJudge: judgeRows[0] ? { user: judgeRows[0].voter_name, count: judgeRows[0].n } : null,
       lobKing: lobRows[0] ? { user: lobRows[0].to_user, count: lobRows[0].n } : null,
       me: { trainings: myAtt[0]?.n ?? 0, skips: mySkips[0]?.n ?? 0, lobe: myLob[0]?.n ?? 0, bitch: myBitch },
+      streak,
+      praiseComment: praiseRows[0] ? { from: praiseRows[0].from_user, reason: praiseRows[0].reason, kind: praiseRows[0].kind } : null,
     });
   } catch (error) {
     return NextResponse.json({ available: false, error: String(error) });
