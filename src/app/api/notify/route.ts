@@ -231,6 +231,23 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       if (!dowsByUser.has(r.user_name)) dowsByUser.set(r.user_name, new Set());
       dowsByUser.get(r.user_name)!.add(r.dow);
     }
+    // KW-Abweichungen (Wochenplan) — überschreiben pro (user, KW) den festen Plan.
+    let wsAll: { user_name: string; w: string; dow: number }[] = [];
+    try {
+      wsAll = (await sql`
+        SELECT ws.user_name, ws.week_start::text AS w, c.day_of_week::int AS dow
+        FROM weekly_schedule ws JOIN classes c ON c.id = ws.class_id
+      `) as { user_name: string; w: string; dow: number }[];
+    } catch { /* Tabelle evtl. noch nicht da */ }
+    const weekDowsByUser = new Map<string, Set<number>>();
+    for (const r of wsAll) {
+      const k = `${r.user_name}|${r.w}`;
+      if (!weekDowsByUser.has(k)) weekDowsByUser.set(k, new Set());
+      weekDowsByUser.get(k)!.add(r.dow);
+    }
+    const EMPTY_DOWS: Set<number> = new Set();
+    const plannedDows = (u: string, dateStr: string): Set<number> =>
+      weekDowsByUser.get(`${u}|${weekStartOf(dateStr)}`) ?? dowsByUser.get(u) ?? EMPTY_DOWS;
     const pres = (await sql`
       SELECT a.user_name, (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
       FROM attendance a JOIN classes c ON c.id = a.class_id
@@ -258,7 +275,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       for (let ds = 1; ds <= LB; ds++) {
         const D = addD(today, -ds);
         if (D < CUTOVER) break;
-        if (!dows.has(isoDayOfWeek(D))) continue; // an dem Wochentag nichts geplant
+        if (!plannedDows(user, D).has(isoDayOfWeek(D))) continue; // an dem Wochentag nichts geplant (KW-Plan)
         if (isHoliday(D)) continue;               // Feiertag → neutral
         if (isExempt(user, D)) continue;          // krank/Urlaub → neutral
         if (presentSet.has(`${user}|${D}`)) break; // war da → Strähne endet
@@ -292,13 +309,13 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       if (!groupsByUser.has(r.user_name)) groupsByUser.set(r.user_name, []);
       groupsByUser.get(r.user_name)!.push(r.group_id);
     }
-    for (const [user, dows] of dowsByUser) {
+    for (const user of dowsByUser.keys()) {
       const groups = groupsByUser.get(user);
       if (!groups || groups.length === 0) continue;
       for (let ds = 1; ds <= 3; ds++) {
         const D = addD(today, -ds);
         if (D < CUTOVER) break;
-        if (!dows.has(isoDayOfWeek(D))) continue; // an dem Wochentag kein Training
+        if (!plannedDows(user, D).has(isoDayOfWeek(D))) continue; // an dem Wochentag kein Training (KW-Plan)
         if (isHoliday(D)) continue;
         if (isExempt(user, D)) continue;
         // jüngsten realen Trainingstag gefunden → bewerten und stoppen

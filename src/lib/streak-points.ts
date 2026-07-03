@@ -60,12 +60,18 @@ export async function awardPerfectWeeks(sql: Sql, user: string, bundesland: stri
   const exempt = (d: string) => statusRows.some((x) => d >= x.s && d <= x.e);
 
   const curWeekStart = weekStartOf(berlinNow().date);
-  const cutoverWeek = weekStartOf(CUTOVER);
+  // Rückwirkend bis zur Konto-Erstellung (statt hartem CUTOVER). Bereits vergebene Wochen
+  // vorab laden → keine redundanten INSERTs pro Aufruf; der 5er-Cap begrenzt den Kontostand.
+  const cRows = (await sql`SELECT created_at::date::text AS d FROM users WHERE user_name = ${user}`) as { d: string }[];
+  const floorWeek = weekStartOf(cRows[0]?.d ?? CUTOVER);
+  const granted = new Set(
+    ((await sql`SELECT ref FROM streak_point_log WHERE user_name = ${user} AND kind = 'perfect_week'`) as { ref: string }[]).map((r) => r.ref)
+  );
 
-  // Letzte 8 abgeschlossene Wochen prüfen (deckt typische Login-Lücken ab; Cap begrenzt eh).
-  for (let i = 1; i <= 8; i++) {
+  for (let i = 1; i <= 60; i++) {
     const ws = addDaysStr(curWeekStart, -7 * i);
-    if (ws < cutoverWeek) break;
+    if (ws < floorWeek) break;
+    if (granted.has(ws)) continue; // schon vergeben → überspringen
     let hadScheduled = false;
     let perfect = true;
     const wdows = plan.dowsFor(ws);
