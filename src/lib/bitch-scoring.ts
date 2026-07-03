@@ -95,6 +95,27 @@ export async function getBitchCounts(
       userDows.get(r.user_name)!.add(r.dow);
     }
 
+    // Wochenplan-Abweichungen der Gruppe: optional pro Nutzer & KW → überschreibt für
+    // diese Woche den festen Plan (sonst gilt der feste Plan). Tabelle evtl. noch nicht da.
+    let wsRows: { user_name: string; w: string; dow: number }[] = [];
+    try {
+      wsRows = (await sql`
+        SELECT ws.user_name, ws.week_start::text AS w, c.day_of_week::int AS dow
+        FROM weekly_schedule ws JOIN classes c ON c.id = ws.class_id
+        WHERE c.group_id = ${groupId}
+      `) as { user_name: string; w: string; dow: number }[];
+    } catch { /* kein Wochenplan → nur fester Plan */ }
+    const weekDows = new Map<string, Set<number>>(); // `${user}|${week_start}` → dows
+    for (const r of wsRows) {
+      const k = `${r.user_name}|${r.w}`;
+      if (!weekDows.has(k)) weekDows.set(k, new Set());
+      weekDows.get(k)!.add(r.dow);
+    }
+    const EMPTY: Set<number> = new Set();
+    const dowsFor = (user: string, dateStr: string): Set<number> =>
+      weekDows.get(`${user}|${weekStartOf(dateStr)}`) ?? userDows.get(user) ?? EMPTY;
+    const allUsers = new Set<string>([...userDows.keys(), ...wsRows.map((r) => r.user_name)]);
+
     const presentRows = (await sql`
       SELECT a.user_name, (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
       FROM attendance a JOIN classes c ON c.id = a.class_id
@@ -126,10 +147,10 @@ export async function getBitchCounts(
     const exempt = (u: string, d: string) =>
       statusRows.some((st) => st.user_name === u && d >= st.s && d <= st.e);
 
-    for (const [user, dows] of userDows) {
+    for (const user of allUsers) {
       let n = 0;
       for (let d = bStart; d < bEnd; d = addDaysStr(d, 1)) {
-        if (!dows.has(isodow(d))) continue;          // an dem Wochentag nichts geplant
+        if (!dowsFor(user, d).has(isodow(d))) continue;   // an dem Wochentag nichts geplant (KW-Plan)
         if (holidaySet.has(d)) continue;             // Feiertag
         if (exempt(user, d)) continue;               // krank/Urlaub
         if (present.has(`${user}|${d}`)) continue;   // war da → kein Bitch
