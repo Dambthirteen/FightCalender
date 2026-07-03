@@ -6,7 +6,7 @@ import { colorFor, initials } from '@/lib/avatar';
 
 export default function MitgliederPage() {
   const { userName } = useUser();
-  const [users, setUsers] = useState<{ user_name: string; color?: string | null; avatar?: string | null }[]>([]);
+  const [users, setUsers] = useState<{ user_name: string; color?: string | null; avatar?: string | null; streak?: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,6 +46,8 @@ export default function MitgliederPage() {
                     </span>
                   )}
                   <span className="font-semibold flex-1 min-w-0 truncate">{u.user_name}</span>
+                  <span className="text-xs font-semibold tnum shrink-0" title="Aktuelle Streak"
+                    style={{ color: (u.streak ?? 0) > 0 ? 'var(--accent)' : 'var(--faint)' }}>🔥 {u.streak ?? 0}</span>
                   {me && <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>Du</span>}
                   <span className="text-[var(--faint)]">›</span>
                 </a>

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   }
   if (!allowed) {
     return sku && isMonetizationActive()
-      ? NextResponse.json({ error: 'Mit Tap In Plus freischaltbar.', upsell: 'plus' }, { status: 402 })
+      ? NextResponse.json({ error: 'Mit Supporter freischaltbar.', upsell: 'supporter' }, { status: 402 })
       : NextResponse.json({ error: `Erst ab Level ${min} freigeschaltet.` }, { status: 403 });
   }
 

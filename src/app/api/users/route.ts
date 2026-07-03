@@ -1,7 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId } from '@/lib/groups';
+import { getCurrentGroupId, getGroupBundesland } from '@/lib/groups';
+import { getStreak } from '@/lib/streak';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -17,13 +18,22 @@ export async function GET(req: NextRequest) {
     const sql = getSql();
     // Avatare (base64) nur auf Anfrage mitliefern (für die Mitgliederliste) — hält den Kalender-Aufruf leicht.
     const withAvatars = req.nextUrl.searchParams.get('avatars') === '1';
-    const rows = withAvatars
-      ? await sql`
+    if (withAvatars) {
+      // Mitgliederliste: Avatare + aktuelle Streak je Mitglied (getStreak wie im Profil).
+      const rows = (await sql`
           SELECT u.user_name, u.color, u.avatar
           FROM group_members gm JOIN users u ON u.user_name = gm.user_name
           WHERE gm.group_id = ${gid} AND gm.status = 'active'
-          ORDER BY LOWER(u.user_name)`
-      : await sql`
+          ORDER BY LOWER(u.user_name)`) as { user_name: string; color: string | null; avatar: string | null }[];
+      const bl = await getGroupBundesland(gid);
+      const withStreak = await Promise.all(rows.map(async (u) => {
+        let streak = 0;
+        try { streak = (await getStreak(sql, u.user_name, bl)).days; } catch { /* Streak optional */ }
+        return { ...u, streak };
+      }));
+      return NextResponse.json(withStreak);
+    }
+    const rows = await sql`
           SELECT u.user_name, u.color
           FROM group_members gm JOIN users u ON u.user_name = gm.user_name
           WHERE gm.group_id = ${gid} AND gm.status = 'active'

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { consumeToken } from '@/lib/auth-tokens';
-import { isReferralPromoActive, grantEntitlement, hasPlus, SKU_PLUS, REFERRAL_TARGET } from '@/lib/entitlements';
+import { isReferralPromoActive, grantEntitlement, hasSupporter, SKU_SUPPORTER, REFERRAL_TARGET } from '@/lib/entitlements';
 
 /** E-Mail-Verifizierung: Token einlösen → email_verified = true. */
 export async function POST(req: NextRequest) {
@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
             SELECT COUNT(*)::int AS n FROM users
             WHERE referred_by = ${referrer} AND email_verified = true AND referral_credited = true
           `) as { n: number }[];
-          if ((cnt[0]?.n ?? 0) >= REFERRAL_TARGET && !(await hasPlus(referrer))) {
-            await grantEntitlement(referrer, SKU_PLUS, 'referral', { via: user });
+          if ((cnt[0]?.n ?? 0) >= REFERRAL_TARGET && !(await hasSupporter(referrer))) {
+            await grantEntitlement(referrer, SKU_SUPPORTER, 'referral', { via: user });
           }
         }
       } catch { /* Referral optional */ }

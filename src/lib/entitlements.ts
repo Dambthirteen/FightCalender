@@ -7,11 +7,11 @@ function getSql() {
   return neon(process.env.DATABASE_URL!);
 }
 
-/** Aktuelle SKUs. Bislang nur „Plus" (einmaliger Lifetime-Unlock pro Account). */
-export const SKU_PLUS = 'plus';
+/** Aktuelle SKUs. Bislang nur „Supporter" (einmaliger Lifetime-Unlock pro Account). */
+export const SKU_SUPPORTER = 'supporter';
 
-/** Quelle eines Entitlements. */
-export type EntitlementSource = 'purchase' | 'referral' | 'gift' | 'admin';
+/** Quelle eines Entitlements. 'grandfather' = Bestandsnutzer beim Umstieg. */
+export type EntitlementSource = 'purchase' | 'referral' | 'gift' | 'admin' | 'grandfather';
 
 /**
  * Bezahl-/Cap-Pipelines scharf? Steuert Cosmetics-Gate, Crew-Cap und Checkout.
@@ -42,9 +42,9 @@ export async function getEntitlements(userName: string): Promise<Set<string>> {
   }
 }
 
-/** Hat der Nutzer „Plus"? */
-export async function hasPlus(userName: string): Promise<boolean> {
-  return (await getEntitlements(userName)).has(SKU_PLUS);
+/** Hat der Nutzer den „Supporter"-Status? */
+export async function hasSupporter(userName: string): Promise<boolean> {
+  return (await getEntitlements(userName)).has(SKU_SUPPORTER);
 }
 
 /**

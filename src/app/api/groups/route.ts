@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { getMyGroups, getCurrentGroupId, getRole, makeInviteCode, GROUP_COOKIE } from '@/lib/groups';
-import { hasPlus, isMonetizationActive } from '@/lib/entitlements';
+import { hasSupporter, isMonetizationActive } from '@/lib/entitlements';
 import { normalizeBundesland } from '@/lib/holidays';
 
 function getSql() {
@@ -29,14 +29,14 @@ export async function POST(req: NextRequest) {
 
   // Multi-Crew-Cap (schläft ohne MONETIZATION_ACTIVE): Non-Plus dürfen genau 1 eigene Crew
   // gründen. Nur Erstellen wird gedeckelt — Beitreten bleibt frei. Bestehende Crews bleiben.
-  if (isMonetizationActive() && !(await hasPlus(me))) {
+  if (isMonetizationActive() && !(await hasSupporter(me))) {
     const owned = (await sql`
       SELECT COUNT(*)::int AS n FROM group_members
       WHERE user_name = ${me} AND role = 'admin' AND status = 'active'
     `) as { n: number }[];
     if ((owned[0]?.n ?? 0) >= 1) {
       return NextResponse.json(
-        { error: 'Mit Tap In Plus kannst du weitere eigene Crews gründen.', upsell: 'plus', reason: 'multi_crew' },
+        { error: 'Als Supporter kannst du weitere eigene Crews gründen.', upsell: 'supporter', reason: 'multi_crew' },
         { status: 402 },
       );
     }

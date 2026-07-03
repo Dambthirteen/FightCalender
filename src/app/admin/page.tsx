@@ -19,7 +19,7 @@ export default function AdminPage() {
   const [classes, setClasses] = useState<GymClass[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
 
-  interface UserRow { user_name: string; created_at: string | null; has_account: boolean; attend_count: number; skip_count: number; schedule_count: number; }
+  interface UserRow { user_name: string; created_at: string | null; has_account: boolean; attend_count: number; skip_count: number; schedule_count: number; is_supporter: boolean; }
   const [users, setUsers] = useState<UserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
@@ -95,6 +95,20 @@ export default function AdminPage() {
       setUsers(Array.isArray(data) ? data : []);
     } finally {
       setUsersLoading(false);
+    }
+  }
+
+  // Supporter-Status pro Nutzer vergeben/entziehen (optimistisch, mit Rollback).
+  async function toggleSupporter(userName: string, next: boolean) {
+    setUsers(prev => prev.map(u => u.user_name === userName ? { ...u, is_supporter: next } : u));
+    try {
+      const res = await fetch('/api/admin/entitlements', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-password': password },
+        body: JSON.stringify({ userName, action: next ? 'grant' : 'revoke' }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setUsers(prev => prev.map(u => u.user_name === userName ? { ...u, is_supporter: !next } : u));
     }
   }
 
@@ -418,6 +432,11 @@ export default function AdminPage() {
                   <div className="flex items-center gap-3 shrink-0 tnum">
                     <span className="text-xs font-semibold" style={{ color: 'var(--gold)' }}>💪 {u.attend_count}</span>
                     <span className="text-xs font-semibold" style={{ color: 'var(--bitch)' }}>🐔 {u.skip_count}</span>
+                    <button onClick={() => toggleSupporter(u.user_name, !u.is_supporter)}
+                      title={u.is_supporter ? 'Supporter entziehen' : 'Supporter geben'}
+                      className="text-sm px-1 transition-opacity" style={{ opacity: u.is_supporter ? 1 : 0.3 }}>
+                      ⭐
+                    </button>
                     <button onClick={() => deleteUser(u.user_name)}
                       className="text-[var(--faint)] hover:text-[var(--accent)] transition-colors text-sm px-1">
                       ✕

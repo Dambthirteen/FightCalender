@@ -28,7 +28,7 @@ function resizeImage(file: File): Promise<string> {
   });
 }
 
-type Step = 'profile' | 'group' | 'invite';
+type Step = 'profile' | 'group' | 'invite' | 'referral';
 
 export default function OnboardingPage() {
   const { userName, loading, onboardingCompleted } = useUser();
@@ -52,6 +52,10 @@ export default function OnboardingPage() {
   const [inviteMsg, setInviteMsg] = useState('');
   const [qrUrl, setQrUrl] = useState('');
   const [showQr, setShowQr] = useState(false);
+  // Werber-Frage (letzter Schritt)
+  const [refYes, setRefYes] = useState<boolean | null>(null);
+  const [refEmail, setRefEmail] = useState('');
+  const [refSaving, setRefSaving] = useState(false);
 
   // Wer schon fertig ist, hat hier nichts zu suchen.
   useEffect(() => {
@@ -87,9 +91,20 @@ export default function OnboardingPage() {
     finally { setSavingProfile(false); setStep('group'); }
   }
 
-  async function finish() {
+  // Abschluss-Trigger führen jetzt zuerst zur Werber-Frage (letzter Wizard-Schritt).
+  function finish() { setStep('referral'); }
+
+  async function completeOnboarding() {
+    if (refSaving) return;
+    setRefSaving(true);
     track('onboarding_completed');
-    try { await fetch('/api/onboarding', { method: 'POST' }); } catch { /* egal */ }
+    const referrerEmail = refYes && refEmail.trim() ? refEmail.trim() : undefined;
+    try {
+      await fetch('/api/onboarding', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referrerEmail }),
+      });
+    } catch { /* egal */ }
     window.location.href = '/';
   }
 
@@ -275,7 +290,7 @@ export default function OnboardingPage() {
               Erstmal ohne Gruppe fortfahren →
             </button>
           </>
-        ) : (
+        ) : step === 'invite' ? (
           <>
             <div>
               <h1 className="font-display text-3xl tracking-wide">Crew steht!</h1>
@@ -299,6 +314,38 @@ export default function OnboardingPage() {
               {inviteMsg && <p className="text-xs mt-2 text-center" style={{ color: 'var(--teal)' }}>{inviteMsg}</p>}
             </section>
             <button onClick={finish} className="w-full text-white font-bold py-3 rounded-xl" style={{ background: 'var(--accent)' }}>Los geht’s</button>
+          </>
+        ) : (
+          <>
+            <div>
+              <h1 className="font-display text-3xl tracking-wide">Fast fertig!</h1>
+              <p className="text-[var(--muted)] text-sm mt-1">Wurdest du von jemandem geworben?</p>
+            </div>
+            <section className="card p-5 space-y-4">
+              <div className="flex gap-2">
+                <button onClick={() => setRefYes(true)}
+                  className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-colors"
+                  style={{ borderColor: refYes === true ? 'var(--accent)' : 'var(--border)', background: refYes === true ? 'var(--accent-soft)' : 'transparent', color: refYes === true ? 'var(--text)' : 'var(--muted)' }}>
+                  Ja
+                </button>
+                <button onClick={() => { setRefYes(false); setRefEmail(''); }}
+                  className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-colors"
+                  style={{ borderColor: refYes === false ? 'var(--accent)' : 'var(--border)', background: refYes === false ? 'var(--accent-soft)' : 'transparent', color: refYes === false ? 'var(--text)' : 'var(--muted)' }}>
+                  Nein
+                </button>
+              </div>
+              {refYes && (
+                <div>
+                  <div className="section-label mb-2">E-Mail der Person, die dich geworben hat</div>
+                  <input type="email" value={refEmail} onChange={e => setRefEmail(e.target.value)}
+                    placeholder="freund@example.com" className={inputCls} />
+                </div>
+              )}
+            </section>
+            <button onClick={completeOnboarding} disabled={refSaving || (refYes === true && !refEmail.trim())}
+              className="w-full text-white font-bold py-3 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>
+              {refSaving ? 'Speichern…' : 'Los geht’s'}
+            </button>
           </>
         )}
       </main>

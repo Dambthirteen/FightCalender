@@ -136,6 +136,7 @@ export default function ProfilePage() {
   const [fighterInfo, setFighterInfo] = useState<FighterInfo>({});
   const [xp, setXp] = useState<XpData | null>(null);
   const [cosmetics, setCosmetics] = useState<Record<string, string>>({});
+  const [supporter, setSupporter] = useState(false);
   const [priv, setPriv] = useState(false);
   const [savingBio, setSavingBio] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -171,6 +172,7 @@ export default function ProfilePage() {
       if (d && !d.error) {
         setPriv(d.private === true);
         setAvatar(d.avatar ?? null); setColor(d.color ?? null);
+        setSupporter(!!d.supporter);
         if (!d.private) {
           setBio(d.bio ?? ''); setBioEdit(d.bio ?? '');
           setArts(Array.isArray(d.martial_arts) ? d.martial_arts : []);
@@ -481,7 +483,12 @@ export default function ProfilePage() {
             )}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
-          <div className="font-display text-3xl tracking-wide leading-none" style={nameplateStyle(cosmetics.nameplate)}>{name}</div>
+          <div className="flex items-center justify-center gap-1.5">
+            <div className="font-display text-3xl tracking-wide leading-none" style={nameplateStyle(cosmetics.nameplate)}>{name}</div>
+            {supporter && (
+              <img src="/supporter-star.png" alt="Supporter" title="Supporter" width={22} height={22} className="shrink-0" style={{ marginTop: 2 }} />
+            )}
+          </div>
 
           {(() => {
             const weeks = badgeData?.streakWeeks ?? 0;

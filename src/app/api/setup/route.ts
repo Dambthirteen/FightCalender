@@ -163,8 +163,9 @@ export async function POST(req: NextRequest) {
     // --- Monetarisierung „Tap In Plus" (schläft ohne MONETIZATION_ACTIVE / PROMO_REFERRAL_ACTIVE) ---
     // Werber (user_name), einmalig beim Signup gesetzt; Gutschrift-Flag für die Referral-Werbephase.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by_email TEXT`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_credited BOOLEAN NOT NULL DEFAULT false`;
-    // Freigeschaltete SKUs (z. B. 'plus'). source = 'purchase' | 'referral' | 'gift' | 'admin'.
+    // Freigeschaltete SKUs (z. B. 'supporter'). source = 'purchase' | 'referral' | 'gift' | 'admin' | 'grandfather'.
     await sql`
       CREATE TABLE IF NOT EXISTS user_entitlements (
         id SERIAL PRIMARY KEY,
@@ -177,6 +178,27 @@ export async function POST(req: NextRequest) {
       )
     `;
     await sql`CREATE INDEX IF NOT EXISTS user_entitlements_user_idx ON user_entitlements (user_name)`;
+    // Einmalige App-weite Flags (z. B. „Supporter-Backfill schon gelaufen").
+    await sql`
+      CREATE TABLE IF NOT EXISTS app_flags (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        set_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+      )
+    `;
+    // Bestandsschutz: alle JETZT existierenden Nutzer bekommen einmalig den Supporter-Status.
+    // Der Guard (app_flags) sorgt dafür, dass später neu angelegte Nutzer NICHT nachträglich erfasst werden.
+    const supporterBackfill = await sql`
+      INSERT INTO app_flags (key, value) VALUES ('supporter_backfill', 'done')
+      ON CONFLICT (key) DO NOTHING RETURNING key
+    `;
+    if (supporterBackfill.length > 0) {
+      await sql`
+        INSERT INTO user_entitlements (user_name, sku, source)
+        SELECT user_name, 'supporter', 'grandfather' FROM users
+        ON CONFLICT (user_name, sku) DO NOTHING
+      `;
+    }
     // Einmal-Tokens für E-Mail-Verifizierung ('verify') und Passwort-Reset ('reset').
     await sql`
       CREATE TABLE IF NOT EXISTS auth_tokens (

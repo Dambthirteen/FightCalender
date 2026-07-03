@@ -1,4 +1,6 @@
-# Sprint-Paket: „Tap In Plus" (Monetarisierung)
+# Sprint-Paket: „Supporter" (Monetarisierung)
+
+> **STATUS 2026-07-03:** Paket „Plus" → **„Supporter"** umbenannt. **Gebaut & committed (flag-gated, schlafend):** M0 Entitlements, M1 Cosmetics-Gate, M2 Crew-Cap, M4 Referral (jetzt **E-Mail-Abfrage am Wizard-Ende**), Supporter-Backfill aller Bestandsnutzer, Admin-⭐-Toggle, Profil-Stern, Streak in der Mitgliederliste. **Offen für „offiziell":** Stripe M3 (Checkout+Webhook), Spind-Premium-UI + Upsell-Modal, Promo-Karte (0/2). Flags `MONETIZATION_ACTIVE` / `PROMO_REFERRAL_ACTIVE` default aus.
 
 Geschlossenes Paket, das **am Ende** (nach Domain + Stripe-Setup) dazugeschaltet wird.
 Ziel: rein optionale Optik + Komfort verkaufen, **keine Grundfunktion sperren, kein Pay-to-win**.

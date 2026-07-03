@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { canViewProfile, getMyGroups } from '@/lib/groups';
+import { hasSupporter } from '@/lib/entitlements';
 import { broadcastToGroup } from '@/lib/feed';
 import { berlinNow } from '@/lib/berlin-time';
 
@@ -63,10 +64,11 @@ export async function GET(req: NextRequest) {
   }
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+  const supporter = await hasSupporter(user);
   if (!(await canViewProfile(me, user))) {
-    return NextResponse.json({ user_name: row.user_name, avatar: row.avatar, color: row.color, private: true });
+    return NextResponse.json({ user_name: row.user_name, avatar: row.avatar, color: row.color, supporter, private: true });
   }
-  return NextResponse.json({ ...row, private: false });
+  return NextResponse.json({ ...row, supporter, private: false });
 }
 
 /** Eigenes Profil aktualisieren (nur gesetzte Felder). */
