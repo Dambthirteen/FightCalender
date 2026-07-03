@@ -55,6 +55,18 @@ export async function renderWrappedCard(d: WrappedForCard): Promise<Blob | null>
   const ACCENT = '#ff3b30';
   const font = (spec: string) => { ctx.font = `${spec} system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`; };
 
+  // Display-Schrift (Bebas Neue, von next/font geladen) fürs Poster-Feeling wiederverwenden.
+  let displayFam = 'system-ui, -apple-system, sans-serif';
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--font-display').trim();
+    if (v) {
+      displayFam = `${v}, system-ui, sans-serif`;
+      const primary = v.split(',')[0].trim().replace(/['"]/g, '');
+      if (primary) await document.fonts.load(`400 120px "${primary}"`);
+    }
+  } catch { /* Fallback bleibt System-Schrift */ }
+  const display = (sizePx: number) => { ctx.font = `400 ${sizePx}px ${displayFam}`; };
+
   // Hintergrund + Glow
   ctx.fillStyle = '#08080a';
   ctx.fillRect(0, 0, W, H);
@@ -71,8 +83,8 @@ export async function renderWrappedCard(d: WrappedForCard): Promise<Blob | null>
   font('700 44px');
   ctx.fillText('T A P   I N', cx, 180);
   ctx.fillStyle = '#ececf0';
-  font('800 96px');
-  ctx.fillText(monthLabel(d.month), cx, 312);
+  display(108);
+  ctx.fillText(monthLabel(d.month), cx, 320);
   ctx.fillStyle = '#8a8a92';
   font('400 38px');
   ctx.fillText(`${d.groupName} · Rückblick`, cx, 372);
@@ -82,8 +94,8 @@ export async function renderWrappedCard(d: WrappedForCard): Promise<Blob | null>
   font('600 42px');
   ctx.fillText('SO OFT TRAINIERT', cx, 560);
   ctx.fillStyle = ACCENT;
-  font('800 232px');
-  ctx.fillText(String(d.me.trainings), cx, 792);
+  display(260);
+  ctx.fillText(String(d.me.trainings), cx, 806);
   ctx.fillStyle = '#c9c9d0';
   font('500 44px');
   ctx.fillText(d.me.trainings === 1 ? 'Training' : 'Trainings', cx, 866);
