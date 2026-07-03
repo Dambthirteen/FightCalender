@@ -25,7 +25,7 @@ export default function BottomNav() {
         WebkitBackdropFilter: 'blur(14px)',
         borderTop: '1px solid var(--border-soft)',
       }}>
-      <div className="max-w-md mx-auto flex items-stretch pt-2.5 pb-1.5">
+      <div className="max-w-md mx-auto flex items-stretch pt-5 pb-1">
         {tabs.map((t) => (
           <a key={t.label} href={t.href}
             className="flex-1 flex flex-col items-center justify-end gap-1 h-full active:opacity-80">
