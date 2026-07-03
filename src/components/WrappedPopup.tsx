@@ -52,22 +52,43 @@ function buildCards(d: WrappedData): Card[] {
   const meLines = [`${d.me.skips}× geschwänzt`, `${d.me.bitch} Bitch-Punkte`, `${d.me.lobe} Würdigungen erhalten`];
   if (d.streak && d.streak.weeks >= 1) meLines.unshift(`🔥 ${d.streak.weeks} ${d.streak.weeks === 1 ? 'Woche' : 'Wochen'} Streak`);
   cards.push({ emoji: '💪', label: 'Dein Monat', big: `${d.me.trainings}× trainiert`, lines: meLines, color: 'var(--accent-2)' });
-  cards.push({ emoji: '🥊', label: 'Weiter geht’s', big: 'Bis nächsten Monat!', sub: 'Bleib am Start.', color: 'var(--accent)' });
   return cards;
 }
 
 function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
   const cards = buildCards(data);
+  const total = cards.length + 1;              // + Zusammenfassungs-Karte am Ende
   const [i, setI] = useState(0);
+  const isSummary = i >= cards.length;
   const card = cards[i];
-  const next = () => (i < cards.length - 1 ? setI(i + 1) : onClose());
+  const glowColor = card ? card.color : 'var(--accent)';
+  const next = () => (i < total - 1 ? setI(i + 1) : onClose());
   const prev = () => setI((v) => Math.max(0, v - 1));
   const [sharing, setSharing] = useState(false);
+  const [cardUrl, setCardUrl] = useState<string | null>(null);
+  const cardBlob = useRef<Blob | null>(null);
+
+  // Teilbare Karte einmal vorab rendern (dient als letzter Slide UND fürs Teilen).
+  useEffect(() => {
+    let url: string | null = null;
+    renderWrappedCard({
+      month: data.month, groupName: data.groupName,
+      trainingDays: data.trainingDays ?? data.me.trainings,
+      streak: data.streak, youMacher: data.youMacher, topClass: data.topClass,
+    }).then((blob) => {
+      if (!blob) return;
+      cardBlob.current = blob;
+      url = URL.createObjectURL(blob);
+      setCardUrl(url);
+    }).catch(() => {});
+    return () => { if (url) URL.revokeObjectURL(url); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function share() {
     setSharing(true);
     try {
-      const blob = await renderWrappedCard({
+      const blob = cardBlob.current ?? await renderWrappedCard({
         month: data.month, groupName: data.groupName,
         trainingDays: data.trainingDays ?? data.me.trainings,
         streak: data.streak, youMacher: data.youMacher, topClass: data.topClass,
@@ -90,11 +111,11 @@ function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
     <div className="fixed inset-0 z-[1000] flex flex-col" style={{ background: '#08080a' }}>
       {/* Hintergrund-Glow in Kartenfarbe */}
       <div className="absolute inset-0 pointer-events-none transition-colors duration-300"
-        style={{ background: `radial-gradient(120% 80% at 50% 0%, ${card.color}22, transparent 60%)` }} />
+        style={{ background: `radial-gradient(120% 80% at 50% 0%, ${glowColor}22, transparent 60%)` }} />
 
       {/* Fortschritts-Balken */}
       <div className="relative flex gap-1 px-3 pt-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
-        {cards.map((_, idx) => (
+        {Array.from({ length: total }).map((_, idx) => (
           <div key={idx} className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.18)' }}>
             <div className="h-full rounded-full" style={{ width: idx <= i ? '100%' : '0%', background: '#fff', transition: 'width 0.3s' }} />
           </div>
@@ -108,19 +129,30 @@ function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
       <button aria-label="Zurück" onClick={prev} className="absolute left-0 top-0 bottom-0 w-1/3 z-10" />
       <button aria-label="Weiter" onClick={next} className="absolute right-0 top-0 bottom-0 w-2/3 z-10" />
 
-      {/* Karte */}
-      <div className="relative flex-1 flex flex-col items-center justify-center text-center px-8">
-        <div key={i} className="anim-pop">
-          <div className="text-6xl mb-4">{card.emoji}</div>
-          <div className="section-label mb-2" style={{ color: card.color }}>{card.label}</div>
-          <div className="font-display text-4xl tracking-wide leading-tight">{card.big}</div>
-          {card.sub && <div className="text-[var(--muted)] mt-3 max-w-xs mx-auto">{card.sub}</div>}
-          {card.lines && (
-            <div className="mt-4 space-y-1.5">
-              {card.lines.map((l) => <div key={l} className="text-[var(--muted)]">{l}</div>)}
-            </div>
-          )}
-        </div>
+      {/* Karte bzw. Zusammenfassung */}
+      <div className="relative flex-1 flex flex-col items-center justify-center text-center px-8 min-h-0">
+        {isSummary ? (
+          <div key="summary" className="anim-pop flex items-center justify-center w-full">
+            {cardUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={cardUrl} alt="Dein Rückblick" className="max-w-full rounded-2xl shadow-2xl shadow-black/50" style={{ maxHeight: '72vh' }} />
+            ) : (
+              <div className="text-[var(--muted)] text-sm">Karte wird erstellt…</div>
+            )}
+          </div>
+        ) : card ? (
+          <div key={i} className="anim-pop">
+            <div className="text-6xl mb-4">{card.emoji}</div>
+            <div className="section-label mb-2" style={{ color: card.color }}>{card.label}</div>
+            <div className="font-display text-4xl tracking-wide leading-tight">{card.big}</div>
+            {card.sub && <div className="text-[var(--muted)] mt-3 max-w-xs mx-auto">{card.sub}</div>}
+            {card.lines && (
+              <div className="mt-4 space-y-1.5">
+                {card.lines.map((l) => <div key={l} className="text-[var(--muted)]">{l}</div>)}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <div className="relative z-20 flex flex-col items-center gap-3 pb-8" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}>
