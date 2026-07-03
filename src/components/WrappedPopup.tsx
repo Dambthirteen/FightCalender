@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useUser } from './UserProvider';
+import { renderWrappedCard } from '@/lib/wrapped-card';
+import { track } from '@/lib/analytics';
 
 interface Highlight { user: string; count: number }
 interface ExcuseHi { user: string; excuse: string; accept?: number; reject?: number }
@@ -55,6 +57,27 @@ function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
   const card = cards[i];
   const next = () => (i < cards.length - 1 ? setI(i + 1) : onClose());
   const prev = () => setI((v) => Math.max(0, v - 1));
+  const [sharing, setSharing] = useState(false);
+
+  async function share() {
+    setSharing(true);
+    try {
+      const blob = await renderWrappedCard({
+        month: data.month, groupName: data.groupName, me: data.me, macher: data.macher, bitch: data.bitch,
+      });
+      if (!blob) return;
+      track('wrapped_shared', { month: data.month });
+      const file = new File([blob], `tapin-wrapped-${data.month}.png`, { type: 'image/png' });
+      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      if (nav.canShare && nav.canShare({ files: [file] }) && navigator.share) {
+        try { await navigator.share({ files: [file], title: 'Tap In', text: 'Mein Trainingsmonat' }); } catch { /* abgebrochen */ }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
+        URL.revokeObjectURL(url);
+      }
+    } finally { setSharing(false); }
+  }
 
   return (
     <div className="fixed inset-0 z-[1000] flex flex-col" style={{ background: '#08080a' }}>
@@ -93,7 +116,13 @@ function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
         </div>
       </div>
 
-      <div className="relative pb-8 text-center text-[11px] text-[var(--faint)]">Tippen zum Weiterblättern</div>
+      <div className="relative z-20 flex flex-col items-center gap-3 pb-8" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}>
+        <button onClick={(e) => { e.stopPropagation(); share(); }} disabled={sharing}
+          className="text-sm font-bold text-white px-6 py-2.5 rounded-full disabled:opacity-50" style={{ background: 'var(--accent)' }}>
+          {sharing ? 'Erstelle Bild…' : 'Teilen'}
+        </button>
+        <div className="text-[11px] text-[var(--faint)]">Tippen zum Weiterblättern</div>
+      </div>
     </div>
   );
 }
