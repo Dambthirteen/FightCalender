@@ -9,7 +9,7 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export async function POST(req: NextRequest) {
   try {
-    const { userName, password, consent, email } = await req.json();
+    const { userName, password, consent, email, ref } = await req.json();
     const name = String(userName ?? '').trim();
     const mail = String(email ?? '').trim().toLowerCase();
     if (name.length < 2 || name.length > 100) {
@@ -37,6 +37,14 @@ export async function POST(req: NextRequest) {
     // Neue Accounts explizit als „nicht onboardet" markieren (unabhängig vom Spalten-Default).
     try { await sql`UPDATE users SET onboarding_completed = false WHERE user_name = ${name}`; } catch {}
     try { await sql`UPDATE users SET email = ${mail} WHERE user_name = ${name}`; } catch {}
+    // Referral-Attribution (benigne Metadaten): Werber merken, wenn gültig & nicht man selbst.
+    try {
+      const refName = String(ref ?? '').trim();
+      if (refName && refName !== name) {
+        const r = await sql`SELECT 1 FROM users WHERE user_name = ${refName}`;
+        if (r.length > 0) await sql`UPDATE users SET referred_by = ${refName} WHERE user_name = ${name}`;
+      }
+    } catch { /* Spalte evtl. noch nicht da → egal */ }
 
     // Verifizierungs-Mail (best effort; no-op ohne RESEND_API_KEY).
     try {

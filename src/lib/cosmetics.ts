@@ -6,7 +6,7 @@
 import type { CSSProperties } from 'react';
 
 export type CosmeticCategory = 'nameplate' | 'avatarFrame' | 'flame' | 'belt';
-export interface CosmeticItem { id: string; label: string; minLevel: number }
+export interface CosmeticItem { id: string; label: string; minLevel: number; sku?: string }
 
 /** Gürtel-Skins. Gleiches Template (8779×2000) → identische Plattengeometrie,
  *  nur Bild + Clantag-Farbe unterscheiden sich. */
@@ -62,6 +62,12 @@ export function minLevelFor(category: string, itemId: string): number {
   const cat = COSMETICS[category as CosmeticCategory];
   if (!cat) return -1;
   return cat.items.find((i) => i.id === itemId)?.minLevel ?? -1;
+}
+
+/** SKU (z. B. 'plus'), falls das Item nur per Kauf/Entitlement freischaltbar ist — sonst null. */
+export function skuFor(category: string, itemId: string): string | null {
+  const cat = COSMETICS[category as CosmeticCategory];
+  return cat?.items.find((i) => i.id === itemId)?.sku ?? null;
 }
 
 // ---- Style-Resolver (im UI angewandt) ----

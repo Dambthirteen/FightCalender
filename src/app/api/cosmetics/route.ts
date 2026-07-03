@@ -2,7 +2,8 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { computeXp, levelForXp } from '@/lib/xp';
-import { COSMETICS, minLevelFor, type CosmeticCategory } from '@/lib/cosmetics';
+import { COSMETICS, minLevelFor, skuFor, type CosmeticCategory } from '@/lib/cosmetics';
+import { isMonetizationActive, getEntitlements } from '@/lib/entitlements';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -20,7 +21,8 @@ export async function GET() {
     const [row] = (await sql`SELECT cosmetics FROM users WHERE user_name = ${me}`) as { cosmetics: Record<string, string> | null }[];
     cosmetics = row?.cosmetics ?? {};
   } catch { /* Spalte evtl. noch nicht angelegt */ }
-  return NextResponse.json({ level, cosmetics });
+  const owned = await getEntitlements(me);
+  return NextResponse.json({ level, cosmetics, owned: [...owned], monetization: isMonetizationActive() });
 }
 
 /** Ein Cosmetic ausrüsten (nur wenn per Level freigeschaltet). */
@@ -37,8 +39,16 @@ export async function POST(req: NextRequest) {
   const sql = getSql();
   const { xp } = await computeXp(sql, me);
   const level = levelForXp(xp);
-  if (level < min) {
-    return NextResponse.json({ error: `Erst ab Level ${min} freigeschaltet.` }, { status: 403 });
+  // Freischaltung: per Level ODER (Premium-Item + Besitz). Premium schläft ohne MONETIZATION_ACTIVE.
+  const sku = skuFor(category, itemId);
+  let allowed = level >= min;
+  if (!allowed && sku && isMonetizationActive()) {
+    allowed = (await getEntitlements(me)).has(sku);
+  }
+  if (!allowed) {
+    return sku && isMonetizationActive()
+      ? NextResponse.json({ error: 'Mit Tap In Plus freischaltbar.', upsell: 'plus' }, { status: 402 })
+      : NextResponse.json({ error: `Erst ab Level ${min} freigeschaltet.` }, { status: 403 });
   }
 
   let current: Record<string, string> = {};

@@ -160,6 +160,23 @@ export async function POST(req: NextRequest) {
     // E-Mail (für Verifizierung + Passwort-Reset). Bestehende Nutzer haben keine → NULL.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false`;
+    // --- Monetarisierung „Tap In Plus" (schläft ohne MONETIZATION_ACTIVE / PROMO_REFERRAL_ACTIVE) ---
+    // Werber (user_name), einmalig beim Signup gesetzt; Gutschrift-Flag für die Referral-Werbephase.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_credited BOOLEAN NOT NULL DEFAULT false`;
+    // Freigeschaltete SKUs (z. B. 'plus'). source = 'purchase' | 'referral' | 'gift' | 'admin'.
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_entitlements (
+        id SERIAL PRIMARY KEY,
+        user_name TEXT NOT NULL,
+        sku TEXT NOT NULL,
+        source TEXT NOT NULL,
+        meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+        granted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+        UNIQUE (user_name, sku)
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS user_entitlements_user_idx ON user_entitlements (user_name)`;
     // Einmal-Tokens für E-Mail-Verifizierung ('verify') und Passwort-Reset ('reset').
     await sql`
       CREATE TABLE IF NOT EXISTS auth_tokens (
