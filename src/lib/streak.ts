@@ -57,12 +57,19 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
   `) as { s: string; e: string }[];
   const exempt = (d: string) => statusRows.some((x) => d >= x.s && d <= x.e);
 
+  // Streak zählt ab Konto-Erstellung (statt ab dem harten CUTOVER). Kann eine Streak
+  // nur VERLÄNGERN, nie verkürzen — sie bricht weiterhin am ersten geplanten Tag ohne
+  // Anwesenheits-Eintrag. Fallback auf CUTOVER, falls kein Datum vorliegt.
+  const cRows = (await sql`SELECT created_at::date::text AS d FROM users WHERE user_name = ${user}`) as { d: string }[];
+  const floor = cRows[0]?.d ?? CUTOVER;
+  const floorWeek = weekStartOf(floor);
+
   const today = berlinNow().date;
 
   // --- Tage: geplante Trainings am Stück (rückwärts ab heute) ---
   let days = 0;
   let d = today;
-  for (let guard = 0; guard < 400 && d >= CUTOVER; guard++, d = addDaysStr(d, -1)) {
+  for (let guard = 0; guard < 400 && d >= floor; guard++, d = addDaysStr(d, -1)) {
     if (!dows.has(isodow(d))) continue;
     if (isHolidayIn(d, bundesland)) continue;
     if (exempt(d)) continue;
@@ -74,11 +81,10 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
 
   // --- Wochen: abgeschlossene saubere Wochen am Stück (für Badges) ---
   const curWeekStart = weekStartOf(today);
-  const cutoverWeek = weekStartOf(CUTOVER);
   let weeks = 0;
   for (let i = 1; i <= 60; i++) {
     const ws = addDaysStr(curWeekStart, -7 * i);
-    if (ws < cutoverWeek) break;
+    if (ws < floorWeek) break;
     let hadScheduled = false;
     let broke = false;
     for (let off = 0; off < 7; off++) {
