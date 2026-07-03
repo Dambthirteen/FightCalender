@@ -486,7 +486,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-center gap-1.5">
             <div className="font-display text-3xl tracking-wide leading-none" style={nameplateStyle(cosmetics.nameplate)}>{name}</div>
             {supporter && (
-              <img src="/supporter-star.png" alt="Supporter" title="Supporter" width={22} height={22} className="shrink-0" style={{ marginTop: 2 }} />
+              <img src="/supporter-star.png" alt="Supporter" title="Supporter" width={15} height={15} className="shrink-0 self-center" />
             )}
           </div>
 
