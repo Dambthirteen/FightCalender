@@ -31,9 +31,9 @@ export default function BottomNav() {
             className="flex-1 flex flex-col items-center justify-end gap-1 h-full active:opacity-80">
             {/* Weiße Kapsel; darin die schwarze Icon-Scheibe (transparentes Logo scheint durch).
                 Aktiver Tab hebt sich stärker an + kräftigerer Schatten. */}
-            <span className="grid place-items-center rounded-xl transition-all duration-200"
+            <span className="inline-grid place-items-center rounded-xl transition-all duration-200"
               style={{
-                width: 46, height: 35,
+                padding: 3,
                 background: '#fff',
                 border: '1px solid #fff',
                 transform: t.active ? 'translateY(-7px)' : 'none',
@@ -43,7 +43,7 @@ export default function BottomNav() {
                 opacity: t.active ? 1 : 0.82,
               }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={t.icon} alt="" className="object-contain" style={{ width: 34, height: 34 }} />
+              <img src={t.icon} alt="" className="object-contain block" style={{ width: 34, height: 34 }} />
             </span>
             <span className="text-[10px] font-semibold tracking-wide"
               style={{ color: t.active ? 'var(--accent)' : 'var(--faint)', marginTop: t.active ? -6 : 0 }}>{t.label}</span>
