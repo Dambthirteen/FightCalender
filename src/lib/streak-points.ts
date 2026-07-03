@@ -1,6 +1,7 @@
 import { berlinNow, weekStartOf } from './berlin-time';
 import { isHolidayIn } from './holidays';
 import { CUTOVER } from './bitch-scoring';
+import { loadWeekPlan } from './schedule';
 
 /**
  * Streak-Punkte verdienen (gedeckelt) + Vergabe-Ledger gegen Doppel-Vergabe.
@@ -42,13 +43,8 @@ export function currentWeekRef(): string {
 
 /** Vergibt Punkte für zuletzt abgeschlossene PERFEKTE Wochen (alle geplanten Tage anwesend). */
 export async function awardPerfectWeeks(sql: Sql, user: string, bundesland: string = 'NW'): Promise<void> {
-  const schedRows = (await sql`
-    SELECT DISTINCT c.day_of_week::int AS dow
-    FROM user_schedule us JOIN classes c ON c.id = us.class_id
-    WHERE us.user_name = ${user}
-  `) as { dow: number }[];
-  const dows = new Set(schedRows.map((r) => r.dow));
-  if (dows.size === 0) return;
+  const plan = await loadWeekPlan(sql, user);
+  if (!plan.hasAny) return;
 
   const attRows = (await sql`
     SELECT (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
@@ -72,9 +68,10 @@ export async function awardPerfectWeeks(sql: Sql, user: string, bundesland: stri
     if (ws < cutoverWeek) break;
     let hadScheduled = false;
     let perfect = true;
+    const wdows = plan.dowsFor(ws);
     for (let off = 0; off < 7; off++) {
       const d = addDaysStr(ws, off);
-      if (!dows.has(isodow(d))) continue;
+      if (!wdows.has(isodow(d))) continue;
       if (isHolidayIn(d, bundesland)) continue;
       if (exempt(d)) continue;
       hadScheduled = true;

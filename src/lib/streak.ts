@@ -1,6 +1,7 @@
 import { berlinNow, weekStartOf } from './berlin-time';
 import { isHolidayIn } from './holidays';
 import { CUTOVER } from './bitch-scoring';
+import { loadWeekPlan } from './schedule';
 
 /**
  * Persönliche Trainings-Streak in zwei Einheiten:
@@ -32,13 +33,9 @@ function addDaysStr(dateStr: string, n: number): string {
 export interface Streak { days: number; weeks: number; }
 
 export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW'): Promise<Streak> {
-  const schedRows = (await sql`
-    SELECT DISTINCT c.day_of_week::int AS dow
-    FROM user_schedule us JOIN classes c ON c.id = us.class_id
-    WHERE us.user_name = ${user}
-  `) as { dow: number }[];
-  const dows = new Set(schedRows.map((r) => r.dow));
-  if (dows.size === 0) return { days: 0, weeks: 0 };
+  // Geplante Tage pro KW: fester Plan, überschrieben durch eine KW-Abweichung, falls gesetzt.
+  const plan = await loadWeekPlan(sql, user);
+  if (!plan.hasAny) return { days: 0, weeks: 0 };
 
   const attRows = (await sql`
     SELECT (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
@@ -96,7 +93,7 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
   let days = 0;
   let d = today;
   for (let guard = 0; guard < 400 && d >= floor; guard++, d = addDaysStr(d, -1)) {
-    if (!dows.has(isodow(d))) continue;
+    if (!plan.dowsFor(weekStartOf(d)).has(isodow(d))) continue;
     if (isHolidayIn(d, bundesland)) continue;
     if (exempt(d)) continue;
     if (present.has(d)) { days++; continue; }
@@ -113,9 +110,10 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
     if (ws < floorWeek) break;
     let hadScheduled = false;
     let broke = false;
+    const wdows = plan.dowsFor(ws);
     for (let off = 0; off < 7; off++) {
       const wd = addDaysStr(ws, off);
-      if (!dows.has(isodow(wd))) continue;
+      if (!wdows.has(isodow(wd))) continue;
       if (isHolidayIn(wd, bundesland)) continue;
       if (exempt(wd)) continue;
       hadScheduled = true;

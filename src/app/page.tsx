@@ -46,6 +46,9 @@ export default function Home() {
   const [submittingExcuse, setSubmittingExcuse] = useState(false);
   const [streakPoints, setStreakPoints] = useState(0);
   const [bundesland, setBundesland] = useState('NW');
+  const [showWeekPlan, setShowWeekPlan] = useState(false);
+  const [weekPlan, setWeekPlan] = useState<Set<number>>(new Set());
+  const [weekPlanOverride, setWeekPlanOverride] = useState(false);
   const [useStreakPt, setUseStreakPt] = useState(false);
   const [userColors, setUserColors] = useState<Record<string, string | null>>({});
   const [bitchAnim, setBitchAnim] = useState(false);
@@ -113,6 +116,34 @@ export default function Home() {
   useEffect(() => {
     if (step === 'done' && userName) fetchCalendarData(weekStart);
   }, [weekStart, step, userName, fetchCalendarData]);
+
+  // Wochenplan dieser KW laden (Abweichung oder fester Plan).
+  useEffect(() => {
+    if (step !== 'done' || !userName) return;
+    fetch(`/api/weekly-schedule?week=${weekStart}`).then(r => r.json()).then(d => {
+      setWeekPlan(new Set(Array.isArray(d.classIds) ? d.classIds : []));
+      setWeekPlanOverride(!!d.isOverride);
+    }).catch(() => {});
+  }, [weekStart, step, userName]);
+
+  async function saveWeekPlan(ids: Set<number>) {
+    setWeekPlan(new Set(ids));
+    const res = await fetch('/api/weekly-schedule', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ week: weekStart, classIds: [...ids] }),
+    }).then(r => r.json()).catch(() => null);
+    if (res) setWeekPlanOverride(!!res.isOverride);
+  }
+  function toggleWeekClass(id: number) {
+    const next = new Set(weekPlan);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    saveWeekPlan(next);
+  }
+  async function resetWeekPlan() {
+    await fetch('/api/weekly-schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ week: weekStart, reset: true }) }).catch(() => {});
+    const d = await fetch(`/api/weekly-schedule?week=${weekStart}`).then(r => r.json()).catch(() => null);
+    if (d) { setWeekPlan(new Set(Array.isArray(d.classIds) ? d.classIds : [])); setWeekPlanOverride(!!d.isOverride); }
+  }
 
   async function saveSchedule() {
     setSavingSchedule(true);
@@ -535,6 +566,45 @@ export default function Home() {
               );
             })}
             <p className="text-center text-[11px] text-[var(--faint)] pt-2">Tippe auf einen Kurs, um dich ein- oder auszutragen.</p>
+
+            {/* Wochenplan dieser KW anpassen */}
+            <div className="pt-2">
+              <button onClick={() => setShowWeekPlan(v => !v)} className="w-full text-center text-xs text-[var(--muted)] hover:text-white transition-colors py-2">
+                {showWeekPlan ? 'Wochenplan schließen' : `⚙︎ Wochenplan diese Woche${weekPlanOverride ? ' · angepasst' : ''}`}
+              </button>
+              {showWeekPlan && (
+                <div className="card p-4 anim-up">
+                  <p className="text-[11px] text-[var(--faint)] mb-3 leading-relaxed">Nur für diese KW: welche Kurse für Streak &amp; Wertung zählen. Gut, wenn du mal tauschst (z.B. Di statt Mi) — dann bricht die Streak nicht.</p>
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4, 5, 6, 7].map(day => {
+                      const dc = classesByDay[day] ?? [];
+                      if (!dc.length) return null;
+                      return (
+                        <div key={day}>
+                          <div className="text-[10px] text-[var(--faint)] uppercase tracking-[0.16em] font-semibold mb-1.5">{DAY_NAMES_FULL[day - 1]}</div>
+                          <div className="flex flex-wrap gap-2">
+                            {dc.map(cls => {
+                              const on = weekPlan.has(cls.id);
+                              const c = hex(cls.color);
+                              return (
+                                <button key={cls.id} onClick={() => toggleWeekClass(cls.id)}
+                                  className="text-xs px-3 py-1.5 rounded-full border transition-colors"
+                                  style={{ borderColor: on ? c : 'var(--border)', background: on ? `${c}22` : 'transparent', color: on ? 'var(--text)' : 'var(--muted)' }}>
+                                  {cls.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {weekPlanOverride && (
+                    <button onClick={resetWeekPlan} className="mt-3 text-xs text-[var(--faint)] hover:text-[var(--accent)]">↺ Auf festen Plan zurücksetzen</button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>

@@ -81,6 +81,19 @@ export async function POST(req: NextRequest) {
         UNIQUE(user_name, class_id)
       )
     `;
+    // Wochenplan: pro Nutzer & KW abweichende Kurse (überschreibt den festen Plan NUR
+    // für diese Woche). Existieren Zeilen für (user, week_start), gelten genau diese
+    // Kurse; sonst der feste user_schedule-Plan. week_start = Montag (ISO).
+    await sql`
+      CREATE TABLE IF NOT EXISTS weekly_schedule (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        week_start DATE NOT NULL,
+        class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+        UNIQUE(user_name, week_start, class_id)
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS weekly_schedule_uw_idx ON weekly_schedule (user_name, week_start)`;
     await sql`
       CREATE TABLE IF NOT EXISTS excuse_votes (
         id SERIAL PRIMARY KEY,
