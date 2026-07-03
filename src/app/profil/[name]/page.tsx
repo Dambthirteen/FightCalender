@@ -130,6 +130,7 @@ export default function ProfilePage() {
   const [macherYear, setMacherYear] = useState<number | null>(null);
   const [bitchYear, setBitchYear] = useState<number | null>(null);
   const [stats, setStats] = useState<{ macherTitles: number; bitchTitles: number; daysOut: number } | null>(null);
+  const [statMode, setStatMode] = useState<'xp' | 'streak'>('xp'); // Tap auf die Leiste wechselt XP ↔ Streak
   const [arts, setArts] = useState<MartialArtEntry[]>([]);
   const [skills, setSkills] = useState<Skills>({});
   const [fighterInfo, setFighterInfo] = useState<FighterInfo>({});
@@ -483,15 +484,35 @@ export default function ProfilePage() {
           <div className="font-display text-3xl tracking-wide leading-none" style={nameplateStyle(cosmetics.nameplate)}>{name}</div>
 
           {(() => {
+            const weeks = badgeData?.streakWeeks ?? 0;
+            const longest = badgeData?.longest ?? 0;
+            const flameIcon = <span style={{ filter: flameFilter(cosmetics.flame), display: 'inline-block' }}>🔥</span>;
             const flame = streakDays > 0 ? (
               <span className="text-xs font-semibold" style={{ color: 'var(--accent-2)' }}>
-                <span style={{ filter: flameFilter(cosmetics.flame), display: 'inline-block' }}>🔥</span> {streakDays} {streakDays === 1 ? 'Tag' : 'Tage'}
+                {flameIcon} {streakDays} {streakDays === 1 ? 'Tag' : 'Tage'}
               </span>
             ) : undefined;
-            // Level/XP volle Breite (= Gürtel); Streak sitzt rechts in derselben Zeile.
-            if (xp) return <div className="w-full mt-3"><XpBar data={xp} right={flame} /></div>;
-            if (flame) return <div className="mt-2">{flame}</div>;
-            return null;
+            // Streak-Ansicht: gleiche Optik wie die XP-Leiste, Balken = Fortschritt zur nächsten Streak-Stufe.
+            const streakPct = nextBadge ? Math.min(1, weeks / nextBadge.threshold) : 1;
+            const streakView = (
+              <div className="w-full">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold" style={{ color: 'var(--accent-2)' }}>{flameIcon} {streakDays} {streakDays === 1 ? 'Tag' : 'Tage'} Streak</span>
+                  <span className="text-[10px] text-[var(--faint)] tnum">{weeks} Wo · Rekord {longest}</span>
+                </div>
+                <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.max(3, Math.round(streakPct * 100))}%`, background: 'linear-gradient(90deg, var(--accent-2), var(--accent))', transition: 'width .6s ease' }} />
+                </div>
+              </div>
+            );
+            // Level/XP volle Breite (= Gürtel). Tap wechselt zwischen XP und Streak.
+            if (xp) return (
+              <button type="button" onClick={() => setStatMode((m) => (m === 'xp' ? 'streak' : 'xp'))}
+                className="w-full mt-3 text-left active:opacity-80 transition-opacity" aria-label="Zwischen XP und Streak wechseln">
+                {statMode === 'xp' ? <XpBar data={xp} right={flame} /> : streakView}
+              </button>
+            );
+            return <div className="mt-2">{streakView}</div>;
           })()}
 
           {/* Championship-Belt: Clantag + ausgestellte Badges */}
