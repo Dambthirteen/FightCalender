@@ -43,7 +43,7 @@ export default function BottomNav() {
                 opacity: t.active ? 1 : 0.82,
               }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={t.icon} alt="" className="object-contain" style={{ width: 27, height: 27 }} />
+              <img src={t.icon} alt="" className="object-contain" style={{ width: 34, height: 34 }} />
             </span>
             <span className="text-[10px] font-semibold tracking-wide"
               style={{ color: t.active ? 'var(--accent)' : 'var(--faint)', marginTop: t.active ? -6 : 0 }}>{t.label}</span>
