@@ -137,6 +137,10 @@ export default function ProfilePage() {
   const [xp, setXp] = useState<XpData | null>(null);
   const [cosmetics, setCosmetics] = useState<Record<string, string>>({});
   const [supporter, setSupporter] = useState(false);
+  // Trainingsplan (fester Plan je Gruppe) fürs Profil.
+  const [planGroups, setPlanGroups] = useState<{ id: number; name: string }[]>([]);
+  const [planClasses, setPlanClasses] = useState<{ id: number; name: string; day_of_week: number; start_time: string; end_time: string; color: string; group_id: number }[]>([]);
+  const [planGroupSel, setPlanGroupSel] = useState<number | null>(null);
   const [priv, setPriv] = useState(false);
   const [savingBio, setSavingBio] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -194,6 +198,13 @@ export default function ProfilePage() {
     fetch(`/api/praise?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setPraises(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`/api/badges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setBadgeData(d); }).catch(() => {});
     fetch(`/api/xp?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setXp(d); }).catch(() => {});
+    fetch(`/api/profile/plan?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
+      if (d && !d.error) {
+        const gs = Array.isArray(d.groups) ? d.groups : [];
+        setPlanGroups(gs); setPlanClasses(Array.isArray(d.classes) ? d.classes : []);
+        setPlanGroupSel((prev) => prev ?? gs[0]?.id ?? null);
+      }
+    }).catch(() => {});
   }, [name]);
 
   // Lob/Gigalob-Verfügbarkeit des Betrachters (für die Buttons auf fremden Profilen)
@@ -553,6 +564,47 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
+            {/* Trainingsplan (fester Plan; bei mehreren Gruppen wählbar) */}
+            {planGroups.length > 0 && (() => {
+              const gid = planGroupSel ?? planGroups[0]?.id ?? null;
+              const cs = planClasses.filter((c) => c.group_id === gid);
+              const DOW = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+              const byDay = new Map<number, typeof cs>();
+              for (const c of cs) { if (!byDay.has(c.day_of_week)) byDay.set(c.day_of_week, []); byDay.get(c.day_of_week)!.push(c); }
+              return (
+                <div className="card p-4 mt-5 anim-in">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="section-label">Trainingsplan</div>
+                    {planGroups.length > 1 && (
+                      <select value={gid ?? ''} onChange={(e) => setPlanGroupSel(Number(e.target.value))}
+                        className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-[var(--accent)]">
+                        {planGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                  {cs.length === 0 ? (
+                    <div className="text-xs text-[var(--faint)] py-1">Kein fester Plan hinterlegt.</div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {[1, 2, 3, 4, 5, 6, 7].filter((d) => byDay.has(d)).map((d) => (
+                        <div key={d} className="flex items-start gap-3">
+                          <span className="w-7 text-xs font-bold text-[var(--muted)] pt-1 shrink-0">{DOW[d - 1]}</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {byDay.get(d)!.map((c) => (
+                              <span key={c.id} className="text-xs px-2 py-1 rounded-lg" style={{ background: 'var(--surface-2)' }}>
+                                <span className="font-semibold">{c.name}</span>
+                                <span className="text-[var(--faint)] tnum ml-1.5">{c.start_time?.slice(0, 5)}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Tabs */}
             <div className="flex border-b border-[var(--border-soft)] mt-5 mb-4">
               {TABS.map(([key, label]) => (

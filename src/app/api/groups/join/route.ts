@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
+import { countMyGroupMemberships, MAX_GROUPS } from '@/lib/groups';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
   const existing = await sql`SELECT status FROM group_members WHERE group_id = ${gid} AND user_name = ${me}`;
   if (existing.length > 0) {
     return NextResponse.json({ ok: true, status: existing[0].status, group: g[0].name });
+  }
+  // Harte Obergrenze: max. 3 Gruppen (aktiv + offene Anfragen) pro Nutzer.
+  if ((await countMyGroupMemberships(me)) >= MAX_GROUPS) {
+    return NextResponse.json({ error: `Du kannst höchstens ${MAX_GROUPS} Gruppen beitreten.` }, { status: 403 });
   }
   await sql`
     INSERT INTO group_members (group_id, user_name, role, status)

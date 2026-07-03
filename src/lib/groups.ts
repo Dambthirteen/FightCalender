@@ -121,6 +121,23 @@ export async function canViewProfile(viewer: string | null, target: string): Pro
   }
 }
 
+/** Harte Obergrenze: jeder darf höchstens so vielen Gruppen angehören. */
+export const MAX_GROUPS = 3;
+
+/** Anzahl Gruppen, denen der Nutzer angehört ODER beitreten möchte (active + pending). */
+export async function countMyGroupMemberships(userName: string): Promise<number> {
+  try {
+    const sql = getSql();
+    const rows = await sql`
+      SELECT COUNT(*)::int AS n FROM group_members
+      WHERE user_name = ${userName} AND status IN ('active', 'pending')
+    `;
+    return (rows[0]?.n as number) ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function makeInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // ohne verwechselbare 0/O/1/I
   let s = '';

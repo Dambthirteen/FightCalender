@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getMyGroups, getCurrentGroupId, getRole, makeInviteCode, GROUP_COOKIE } from '@/lib/groups';
+import { getMyGroups, getCurrentGroupId, getRole, makeInviteCode, GROUP_COOKIE, countMyGroupMemberships, MAX_GROUPS } from '@/lib/groups';
 import { hasSupporter, isMonetizationActive } from '@/lib/entitlements';
 import { normalizeBundesland } from '@/lib/holidays';
 
@@ -26,6 +26,11 @@ export async function POST(req: NextRequest) {
   if (!name || !String(name).trim()) return NextResponse.json({ error: 'Name fehlt' }, { status: 400 });
 
   const sql = getSql();
+
+  // Harte Obergrenze für alle: max. 3 Gruppen (aktiv + offene Anfragen).
+  if ((await countMyGroupMemberships(me)) >= MAX_GROUPS) {
+    return NextResponse.json({ error: `Du kannst höchstens ${MAX_GROUPS} Gruppen angehören.` }, { status: 403 });
+  }
 
   // Multi-Crew-Cap (schläft ohne MONETIZATION_ACTIVE): Non-Plus dürfen genau 1 eigene Crew
   // gründen. Nur Erstellen wird gedeckelt — Beitreten bleibt frei. Bestehende Crews bleiben.
