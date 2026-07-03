@@ -7,12 +7,13 @@ import { CUTOVER } from './bitch-scoring';
  *  - days:  besuchte geplante Trainings am Stück (Hauptzahl, granular)
  *  - weeks: abgeschlossene Wochen ohne Trainings-Skip am Stück (für Badges)
  *
- * Ein geplanter Tag bricht die Streak nur, wenn: kein Feiertag, nicht krank/Urlaub,
- * NICHT anwesend UND nicht mit einem Streak-Punkt geschützt (streak_protected).
- * Geschützte/befreite/Feiertags-Tage sind neutral (kein Bruch, kein +). Heute ist
- * neutral, solange noch nichts eingetragen ist (Training evtl. noch ausstehend).
+ * Ein geplanter Tag bricht die Streak nur, wenn er ein BESTÄTIGTER Bitch-Punkt ist:
+ * nicht anwesend, nicht krank/Urlaub, nicht geschützt (streak_protected), kein Feiertag,
+ * außerhalb der 3-Tage-Kulanz UND ohne (nicht abgelehnte) Ausrede. Frische Fehltage
+ * (Kulanz) und offene/angenommene Ausreden sind neutral — so bricht die Streak nicht,
+ * nur weil man mal kurzfristig getauscht oder sich gemeldet hat.
  *
- * Bewusst PERSÖNLICH (über alle Gruppen) und erst ab dem Stichtag (CUTOVER).
+ * Bewusst PERSÖNLICH (über alle Gruppen); zählt zurück bis zur Konto-Erstellung.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,6 +58,19 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
   `) as { s: string; e: string }[];
   const exempt = (d: string) => statusRows.some((x) => d >= x.s && d <= x.e);
 
+  // Ausreden je Tag mit ihren Gericht-Stimmen. Für die Streak-Kulanz gilt: eine
+  // eingetragene Ausrede verschont den Tag, SOLANGE sie nicht abgelehnt ist
+  // (reject > accept). So bricht die Streak nicht, während die Ausrede noch offen ist.
+  const exRows = (await sql`
+    SELECT s.date::text AS d,
+      COUNT(*) FILTER (WHERE ev.vote = 'accept')::int AS accept,
+      COUNT(*) FILTER (WHERE ev.vote = 'reject')::int AS reject
+    FROM skipping s LEFT JOIN excuse_votes ev ON ev.skip_id = s.id
+    WHERE s.user_name = ${user} AND s.excuse != ''
+    GROUP BY s.date
+  `) as { d: string; accept: number; reject: number }[];
+  const excuseByDay = new Map(exRows.map((r) => [r.d, { accept: r.accept, reject: r.reject }]));
+
   // Streak zählt ab Konto-Erstellung (statt ab dem harten CUTOVER). Kann eine Streak
   // nur VERLÄNGERN, nie verkürzen — sie bricht weiterhin am ersten geplanten Tag ohne
   // Anwesenheits-Eintrag. Fallback auf CUTOVER, falls kein Datum vorliegt.
@@ -65,6 +79,18 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
   const floorWeek = weekStartOf(floor);
 
   const today = berlinNow().date;
+
+  // 3 Tage Kulanz: ein Fehltag wird erst danach ein bestätigter Bitch-Punkt.
+  const graceCutoff = addDaysStr(today, -3);
+  // Bricht dieser geplante, nicht besuchte, nicht befreite, nicht geschützte Tag die Streak?
+  // Nur wenn er ein BESTÄTIGTER Bitch-Punkt ist: außerhalb der 3-Tage-Kulanz UND ohne
+  // (nicht abgelehnte) Ausrede. Solange in Kulanz oder Ausrede offen → neutral, kein Bruch.
+  const breaksStreak = (dd: string): boolean => {
+    if (dd > graceCutoff) return false;                 // noch in der Kulanz
+    const ex = excuseByDay.get(dd);
+    if (ex && ex.accept >= ex.reject) return false;     // Ausrede eingetragen & nicht abgelehnt
+    return true;                                         // bestätigter Bitch-Punkt
+  };
 
   // --- Tage: geplante Trainings am Stück (rückwärts ab heute) ---
   let days = 0;
@@ -75,8 +101,8 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
     if (exempt(d)) continue;
     if (present.has(d)) { days++; continue; }
     if (protectedDays.has(d)) continue;       // geschützt → neutral
-    if (d === today) continue;                // heute noch offen → neutral
-    break;                                     // ungeschützter No-Show in der Vergangenheit → Bruch
+    if (!breaksStreak(d)) continue;           // 3-Tage-Kulanz / offene Ausrede → neutral
+    break;                                     // bestätigter Bitch-Punkt → Bruch
   }
 
   // --- Wochen: abgeschlossene saubere Wochen am Stück (für Badges) ---
@@ -95,6 +121,7 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
       hadScheduled = true;
       if (present.has(wd)) continue;
       if (protectedDays.has(wd)) continue;
+      if (!breaksStreak(wd)) continue;
       broke = true;
       break;
     }
