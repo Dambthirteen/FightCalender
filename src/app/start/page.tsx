@@ -3,43 +3,38 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { resetAnalytics } from '@/lib/analytics';
-import { nextStreakBadge, flameTier } from '@/lib/badges';
-import XpBar, { type XpData } from '@/components/XpBar';
+import { nextStreakBadge, flameTier, STREAK_BADGES } from '@/lib/badges';
+import FullscreenLoader from '@/components/FullscreenLoader';
 import { XP } from '@/lib/xp';
 
 export default function StartPage() {
-  const { userName } = useUser();
+  const { userName, loading: userLoading } = useUser();
   const [groupName, setGroupName] = useState('');
   const [hardMode, setHardMode] = useState(false);
   const [pendingVotes, setPendingVotes] = useState(0);
   const [unread, setUnread] = useState(0);
   const [streak, setStreak] = useState({ days: 0, weeks: 0 });
-  const [xp, setXp] = useState<XpData | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [streakOpen, setStreakOpen] = useState(false);
+  const [ready, setReady] = useState(false);
 
+  // Alles laden, dann erst die Seite zeigen (kein sichtbarer Aufbau).
   useEffect(() => {
-    fetch('/api/groups').then((r) => r.json()).then((d) => {
-      const cur = (d.groups ?? []).find((g: { id: number; name: string; clan_tag?: string | null; hard_mode?: boolean }) => g.id === d.current);
-      if (cur) { setGroupName(cur.clan_tag ? `[${cur.clan_tag}] ${cur.name}` : cur.name); setHardMode(!!cur.hard_mode); }
-    }).catch(() => {});
-  }, []);
-
-  // Offene Gericht-Stimmen (Glühen), ungelesene Benachrichtigungen, Streak.
-  useEffect(() => {
-    if (!userName) return;
-    fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {});
-    fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {});
-    fetch('/api/streak').then((r) => r.json()).then((d) => setStreak({ days: d.days ?? 0, weeks: d.weeks ?? 0 })).catch(() => {});
-    fetch('/api/xp').then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setXp(d); }).catch(() => {});
-  }, [userName]);
+    if (userLoading) return;
+    if (!userName) { setReady(true); return; }
+    Promise.all([
+      fetch('/api/groups').then((r) => r.json()).then((d) => {
+        const cur = (d.groups ?? []).find((g: { id: number; name: string; clan_tag?: string | null; hard_mode?: boolean }) => g.id === d.current);
+        if (cur) { setGroupName(cur.clan_tag ? `[${cur.clan_tag}] ${cur.name}` : cur.name); setHardMode(!!cur.hard_mode); }
+      }).catch(() => {}),
+      fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {}),
+      fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {}),
+      fetch('/api/streak').then((r) => r.json()).then((d) => setStreak({ days: d.days ?? 0, weeks: d.weeks ?? 0 })).catch(() => {}),
+    ]).finally(() => setReady(true));
+  }, [userLoading, userName]);
 
   const nextBadge = nextStreakBadge(streak.weeks);
   const flames = '🔥'.repeat(Math.max(1, flameTier(streak.weeks)));
-  const streakHint = streak.days === 0
-    ? 'Trainiere deinen Plan, um zu starten.'
-    : nextBadge
-      ? `${streak.weeks} ${streak.weeks === 1 ? 'Woche' : 'Wochen'} · noch ${nextBadge.threshold - streak.weeks} bis „${nextBadge.label}"`
-      : `${streak.weeks} Wochen · Maximalstufe`;
 
   async function logout() {
     resetAnalytics();
@@ -56,6 +51,8 @@ export default function StartPage() {
     { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },
   ];
 
+  if (userLoading || !ready) return <FullscreenLoader />;
+
   return (
     <div className="min-h-screen text-[var(--text)]">
       <header className="max-w-md mx-auto px-4 pt-6 pb-3 flex items-start justify-between gap-3 anim-in">
@@ -63,7 +60,7 @@ export default function StartPage() {
           <h1 className="font-display text-3xl tracking-wide">Startseite</h1>
           <button onClick={() => (window.location.href = '/gruppen')}
             className="mt-1 flex items-center gap-1.5 text-sm truncate" style={{ color: 'var(--teal)' }}>
-            {groupName || 'Gruppe'} <span style={{ color: 'var(--faint)' }}>· wechseln ›</span>
+            {groupName || 'Gruppe'} <span style={{ color: 'var(--faint)' }}>· anpassen ›</span>
           </button>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -80,46 +77,27 @@ export default function StartPage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 pb-28 space-y-3">
-        {/* Streak — immer sichtbar */}
-        <a href={`/profil/${encodeURIComponent(userName ?? '')}`}
-          className="card px-4 py-3 flex items-center gap-3 active:scale-[0.99] transition-transform anim-up"
-          style={streak.days > 0 ? { borderColor: 'var(--accent-2)' } : undefined}>
-          <span className="text-2xl leading-none" style={streak.days === 0 ? { filter: 'grayscale(1)', opacity: 0.6 } : undefined}>{flames}</span>
-          <div className="flex-1 min-w-0">
-            <div className="font-display text-xl tracking-wide leading-none tnum">
-              {streak.days} <span className="text-base">{streak.days === 1 ? 'Tag' : 'Tage'} Streak</span>
-            </div>
-            <div className="text-[11px] text-[var(--muted)] mt-1">{streakHint}</div>
-          </div>
-        </a>
-
-        {/* Level / XP */}
-        {xp && (
-          <a href={`/profil/${encodeURIComponent(userName ?? '')}`}
-            className="card px-4 py-3 block active:scale-[0.99] transition-transform anim-up">
-            <XpBar data={xp} />
-          </a>
-        )}
+        {/* Streak — zentriert; Klick öffnet Details */}
+        <button onClick={() => setStreakOpen(true)}
+          className="w-full flex flex-col items-center pt-3 pb-4 active:scale-[0.99] transition-transform anim-up">
+          <span className="leading-none" style={{ fontSize: '64px', ...(streak.days === 0 ? { filter: 'grayscale(1)', opacity: 0.55 } : {}) }}>{flames}</span>
+          <div className="font-display text-5xl tracking-wide tnum mt-2 leading-none">{streak.days}</div>
+          <div className="text-[11px] uppercase tracking-[0.22em] text-[var(--muted)] mt-1">{streak.days === 1 ? 'Tag' : 'Tage'} Streak</div>
+        </button>
 
         {/* Feature: Statistiken */}
         <a href="/statistik"
-          className="card px-5 py-5 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up">
+          className="card px-5 py-4 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up">
           <span className="text-3xl">📊</span>
-          <div className="flex-1 min-w-0">
-            <div className="font-display text-2xl tracking-wide leading-none">Statistiken</div>
-            <div className="text-xs text-[var(--muted)] mt-1.5">Macher · Chicken · Jahr</div>
-          </div>
+          <div className="flex-1 min-w-0 font-display text-2xl tracking-wide leading-none">Statistiken</div>
           <span className="text-[var(--faint)] text-lg">›</span>
         </a>
 
         {/* Feature: Wettkämpfe */}
         <a href="/competitions"
-          className="card px-5 py-5 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up" style={{ animationDelay: '40ms' }}>
+          className="card px-5 py-4 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up" style={{ animationDelay: '40ms' }}>
           <span className="text-3xl">🏆</span>
-          <div className="flex-1 min-w-0">
-            <div className="font-display text-2xl tracking-wide leading-none">Wettkämpfe</div>
-            <div className="text-xs text-[var(--muted)] mt-1.5">Termine & Countdown</div>
-          </div>
+          <div className="flex-1 min-w-0 font-display text-2xl tracking-wide leading-none">Wettkämpfe</div>
           <span className="text-[var(--faint)] text-lg">›</span>
         </a>
 
@@ -159,6 +137,51 @@ export default function StartPage() {
           ⓘ Wie bekomme ich XP & Level?
         </button>
       </main>
+
+      {/* Streak-Details */}
+      {streakOpen && (
+        <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm anim-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setStreakOpen(false); }}>
+          <div className="card w-full max-w-md max-h-[85vh] overflow-y-auto p-5 anim-up rounded-b-none sm:rounded-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display text-2xl tracking-wide">Deine Streak</h2>
+              <button onClick={() => setStreakOpen(false)} className="text-[var(--faint)] hover:text-white text-lg px-1">✕</button>
+            </div>
+
+            {/* Aktuelle Werte */}
+            <div className="flex flex-col items-center pb-4">
+              <span className="leading-none" style={{ fontSize: '52px', ...(streak.days === 0 ? { filter: 'grayscale(1)', opacity: 0.55 } : {}) }}>{flames}</span>
+              <div className="font-display text-4xl tracking-wide tnum mt-1.5 leading-none">{streak.days} <span className="text-lg">{streak.days === 1 ? 'Tag' : 'Tage'}</span></div>
+              <div className="text-xs text-[var(--muted)] mt-1.5 text-center px-2">
+                {streak.weeks} {streak.weeks === 1 ? 'Woche' : 'Wochen'} ohne Skip
+                {nextBadge ? ` · noch ${nextBadge.threshold - streak.weeks} bis „${nextBadge.label}"` : ' · Maximalstufe erreicht'}
+              </div>
+            </div>
+
+            <div className="section-label mb-2">Trophäen</div>
+            <div className="space-y-1.5">
+              {STREAK_BADGES.map((b) => {
+                const got = streak.weeks >= b.threshold;
+                return (
+                  <div key={b.id} className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                    style={{ background: got ? 'var(--accent-soft)' : 'var(--surface-2)' }}>
+                    <span className="text-xl" style={got ? undefined : { filter: 'grayscale(1)', opacity: 0.6 }}>{b.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold">{b.label}</div>
+                      <div className="text-[11px] text-[var(--muted)]">{b.hint}</div>
+                    </div>
+                    <span className="text-[11px] font-bold tnum shrink-0" style={{ color: got ? 'var(--accent-2)' : 'var(--faint)' }}>
+                      {got ? '✓ erreicht' : `${b.threshold} Wo`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button onClick={() => setStreakOpen(false)} className="btn btn-primary w-full mt-5">Schließen</button>
+          </div>
+        </div>
+      )}
 
       {/* Hilfe / Erklärung */}
       {helpOpen && (

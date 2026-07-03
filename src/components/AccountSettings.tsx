@@ -31,7 +31,8 @@ export default function AccountSettings() {
     } finally { setSaving(false); }
   }
 
-  const field = 'w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)]';
+  // min-w-0 verhindert, dass der native Date-Input breiter wird als das E-Mail-Feld.
+  const field = 'w-full min-w-0 box-border bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)]';
 
   return (
     <section className="card p-5">

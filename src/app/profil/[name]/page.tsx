@@ -7,6 +7,7 @@ import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
+import FullscreenLoader from '@/components/FullscreenLoader';
 import { nameplateStyle, avatarFrame, flameFilter, beltSkin } from '@/lib/cosmetics';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
@@ -127,9 +128,10 @@ function trainingLabel(since: string): string {
 export default function ProfilePage() {
   const params = useParams();
   const name = decodeURIComponent((params.name as string) ?? '');
-  const { userName } = useUser();
+  const { userName, loading: userLoading } = useUser();
   const isSelf = userName === name;
 
+  const [ready, setReady] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [bio, setBio] = useState('');
   const [bioEdit, setBioEdit] = useState('');
@@ -192,7 +194,7 @@ export default function ProfilePage() {
           setCosmetics(d.cosmetics && typeof d.cosmetics === 'object' ? d.cosmetics : {});
         }
       }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setReady(true));
     fetch(`/api/profile-stats?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
       if (d && !d.error) setStats(d);
     }).catch(() => {});
@@ -466,6 +468,8 @@ export default function ProfilePage() {
       )}
     </div>
   );
+
+  if (userLoading || !ready) return <FullscreenLoader />;
 
   return (
     <div className="min-h-screen text-[var(--text)]">
