@@ -30,10 +30,6 @@ export default function AccountPage() {
   const [form, setForm] = useState({ statusType: 'sick' as StatusType, startDate: today(), endDate: today(), note: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [delOpen, setDelOpen] = useState(false);
-  const [delPw, setDelPw] = useState('');
-  const [delBusy, setDelBusy] = useState(false);
-  const [delErr, setDelErr] = useState('');
 
   useEffect(() => {
     if (!userName) return;
@@ -64,20 +60,6 @@ export default function AccountPage() {
   async function deleteStatus(id: number) {
     await fetch(`/api/status/${id}`, { method: 'DELETE' });
     setStatuses(prev => prev.filter(s => s.id !== id));
-  }
-
-  async function deleteAccount() {
-    if (!delPw) { setDelErr('Passwort erforderlich'); return; }
-    if (!confirm('Konto und ALLE deine Daten unwiderruflich löschen?')) return;
-    setDelBusy(true); setDelErr('');
-    try {
-      const res = await fetch('/api/account/delete', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: delPw }),
-      });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); setDelErr(d.error ?? 'Fehler'); return; }
-      window.location.href = '/login';
-    } finally { setDelBusy(false); }
   }
 
   const now = today();
@@ -179,37 +161,6 @@ export default function AccountPage() {
           </section>
         )}
 
-        {/* Meine Daten (DSGVO) */}
-        <section className="card p-5">
-          <h2 className="font-display text-xl tracking-wide mb-1">Meine Daten</h2>
-          <p className="text-[var(--muted)] text-xs mb-4">Auskunft und Löschung deiner personenbezogenen Daten.</p>
-          <a href="/api/account/export"
-            className="block w-full text-center border border-[var(--border)] rounded-xl py-2.5 text-sm font-semibold text-[var(--text)] hover:border-[var(--accent)] transition-colors">
-            Meine Daten exportieren (JSON)
-          </a>
-
-          <div className="mt-4 pt-4 border-t border-[var(--border-soft)]">
-            {!delOpen ? (
-              <button onClick={() => setDelOpen(true)} className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>
-                Konto löschen
-              </button>
-            ) : (
-              <div className="space-y-2.5">
-                <p className="text-xs text-[var(--muted)]">Das löscht dein Konto und ALLE Daten unwiderruflich. Zur Bestätigung dein Passwort:</p>
-                <input type="password" value={delPw} onChange={e => setDelPw(e.target.value)} placeholder="Passwort" className="field" />
-                {delErr && <p className="text-[var(--accent)] text-xs">{delErr}</p>}
-                <div className="flex gap-2">
-                  <button onClick={deleteAccount} disabled={delBusy}
-                    className="flex-1 text-white font-bold py-2.5 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>
-                    {delBusy ? 'Löschen…' : 'Endgültig löschen'}
-                  </button>
-                  <button onClick={() => { setDelOpen(false); setDelPw(''); setDelErr(''); }}
-                    className="px-4 rounded-xl border border-[var(--border)] text-[var(--muted)] text-sm">Abbrechen</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
       </main>
     </div>
   );

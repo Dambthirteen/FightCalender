@@ -23,6 +23,7 @@ export default function DatenschutzPage() {
             <h2 className="text-white font-semibold mb-1">2. Welche Daten wir verarbeiten</h2>
             <ul className="list-disc pl-5 space-y-1">
               <li>Kontodaten: dein gewählter Name, deine E-Mail-Adresse und ein Passwort (nur als Hash gespeichert).</li>
+              <li>Geburtsdatum: freiwillig, <strong>nicht öffentlich</strong> — dient nur der eindeutigen Zuordnung von Profilen und der Altersprüfung; für andere Nutzer nicht sichtbar.</li>
               <li>Nutzungsdaten: Anwesenheiten, eingetragene Ausreden, Trainings-Status, Wettkämpfe, Streaks, Abzeichen.</li>
               <li>Soziale Inhalte: Gruppen-Mitgliedschaften, Lob/Kudos, Profil-Kommentare, Reaktionen, von dir gesetzte Profilangaben (inkl. optionalem Profilbild).</li>
               <li>Push-Benachrichtigungen: technische Abo-Daten deiner Geräte (nur nach ausdrücklicher Aktivierung).</li>

@@ -160,6 +160,8 @@ export async function POST(req: NextRequest) {
     // E-Mail (für Verifizierung + Passwort-Reset). Bestehende Nutzer haben keine → NULL.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false`;
+    // Geburtsdatum: nicht öffentlich, nur zur Zuordnung/Altersprüfung der Profile.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS birthdate DATE`;
     // --- Monetarisierung „Tap In Plus" (schläft ohne MONETIZATION_ACTIVE / PROMO_REFERRAL_ACTIVE) ---
     // Werber (user_name), einmalig beim Signup gesetzt; Gutschrift-Flag für die Referral-Werbephase.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT`;
