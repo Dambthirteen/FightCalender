@@ -5,8 +5,18 @@
  */
 import type { CSSProperties } from 'react';
 
-export type CosmeticCategory = 'nameplate' | 'avatarFrame' | 'flame' | 'belt';
+export type CosmeticCategory = 'nameplate' | 'avatarFrame' | 'flame' | 'belt' | 'xpbar';
 export interface CosmeticItem { id: string; label: string; minLevel: number; sku?: string }
+
+/** Premium-Farben der XP-Leiste (Supporter). 'default' = Rangfarbe (kein Override). */
+export const XPBAR_COLORS: Record<string, string> = {
+  crimson: '#ff3b30', orange: '#f59e0b', gold: '#f5c518', lime: '#84cc16', green: '#22c55e',
+  teal: '#2dd4bf', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', pink: '#ec4899',
+};
+export function xpBarColor(id?: string): string | null {
+  if (!id || id === 'default') return null;
+  return XPBAR_COLORS[id] ?? null;
+}
 
 /** Gürtel-Skins. Gleiches Template (8779×2000) → identische Plattengeometrie,
  *  nur Bild + Clantag-Farbe unterscheiden sich. */
@@ -53,6 +63,22 @@ export const COSMETICS: Record<CosmeticCategory, { label: string; items: Cosmeti
     items: [
       { id: 'default', label: 'Klassisch', minLevel: 1 },
       { id: 'ice', label: 'Eis', minLevel: 1 }, // zum Testen auf Level 1
+    ],
+  },
+  xpbar: {
+    label: 'XP-Leiste',
+    items: [
+      { id: 'default', label: 'Standard', minLevel: 1 },
+      { id: 'crimson', label: 'Rot', minLevel: 1, sku: 'supporter' },
+      { id: 'orange', label: 'Orange', minLevel: 1, sku: 'supporter' },
+      { id: 'gold', label: 'Gold', minLevel: 1, sku: 'supporter' },
+      { id: 'lime', label: 'Limette', minLevel: 1, sku: 'supporter' },
+      { id: 'green', label: 'Grün', minLevel: 1, sku: 'supporter' },
+      { id: 'teal', label: 'Türkis', minLevel: 1, sku: 'supporter' },
+      { id: 'sky', label: 'Himmel', minLevel: 1, sku: 'supporter' },
+      { id: 'blue', label: 'Blau', minLevel: 1, sku: 'supporter' },
+      { id: 'purple', label: 'Lila', minLevel: 1, sku: 'supporter' },
+      { id: 'pink', label: 'Pink', minLevel: 1, sku: 'supporter' },
     ],
   },
 };

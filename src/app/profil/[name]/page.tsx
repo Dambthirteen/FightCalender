@@ -8,7 +8,7 @@ import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type Mart
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
 import FullscreenLoader from '@/components/FullscreenLoader';
-import { nameplateStyle, avatarFrame, flameFilter, beltSkin } from '@/lib/cosmetics';
+import { nameplateStyle, avatarFrame, flameFilter, beltSkin, xpBarColor } from '@/lib/cosmetics';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
 interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; clanTag?: string | null; points?: number; adAvailable?: boolean }
@@ -544,7 +544,7 @@ export default function ProfilePage() {
             if (xp) return (
               <button type="button" onClick={() => setStatMode((m) => (m === 'xp' ? 'streak' : 'xp'))}
                 className="w-full mt-3 text-left active:opacity-80 transition-opacity" aria-label="Zwischen XP und Streak wechseln">
-                {statMode === 'xp' ? <XpBar data={xp} right={flame} /> : streakView}
+                {statMode === 'xp' ? <XpBar data={xp} right={flame} color={xpBarColor(cosmetics.xpbar)} /> : streakView}
               </button>
             );
             return <div className="mt-2">{streakView}</div>;
@@ -582,7 +582,7 @@ export default function ProfilePage() {
         ) : (
           <>
             {/* Tabs */}
-            <div className="flex gap-6 border-b border-[var(--border-soft)] mt-5 mb-4 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+            <div className="flex gap-6 justify-center border-b border-[var(--border-soft)] mt-5 mb-4 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
               {TABS.map(([key, label]) => (
                 <button key={key} onClick={() => setTab(key)}
                   className="shrink-0 pb-2.5 -mb-px text-[13px] font-semibold border-b-2 whitespace-nowrap transition-colors"

@@ -4,18 +4,19 @@ import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials } from '@/lib/avatar';
-import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, beltSkin, type CosmeticCategory } from '@/lib/cosmetics';
+import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, beltSkin, xpBarColor, type CosmeticCategory } from '@/lib/cosmetics';
 
 export default function SpindPage() {
   const { userName } = useUser();
   const [level, setLevel] = useState(1);
   const [cos, setCos] = useState<Record<string, string>>({});
+  const [owned, setOwned] = useState<string[]>([]);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
     fetch('/api/cosmetics').then((r) => r.json()).then((d) => {
-      if (d && !d.error) { setLevel(d.level ?? 1); setCos(d.cosmetics ?? {}); }
+      if (d && !d.error) { setLevel(d.level ?? 1); setCos(d.cosmetics ?? {}); setOwned(Array.isArray(d.owned) ? d.owned : []); }
     }).catch(() => {});
   }, []);
 
@@ -58,6 +59,14 @@ export default function SpindPage() {
       // eslint-disable-next-line @next/next/no-img-element
       return <img src={beltSkin(id).src} alt="" className="w-full" style={{ maxHeight: 40, objectFit: 'contain' }} />;
     }
+    if (category === 'xpbar') {
+      const col = xpBarColor(id);
+      return (
+        <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--surface)' }}>
+          <div className="h-full rounded-full" style={{ width: '72%', background: col ?? 'linear-gradient(90deg, var(--gold), var(--accent))' }} />
+        </div>
+      );
+    }
     return <span className="text-2xl" style={{ filter: flameFilter(id), display: 'inline-block' }}>🔥</span>;
   }
 
@@ -79,6 +88,9 @@ export default function SpindPage() {
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={beltSkin(cos.belt).src} alt="Gürtel" className="w-full mt-4" style={{ aspectRatio: '1400 / 319', objectFit: 'contain' }} />
+          <div className="w-full mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+            <div className="h-full rounded-full" style={{ width: '72%', background: xpBarColor(cos.xpbar) ?? 'linear-gradient(90deg, var(--gold), var(--accent))' }} />
+          </div>
           <div className="text-[11px] text-[var(--faint)] mt-3">Dein Level: <strong style={{ color: 'var(--text)' }}>{level}</strong></div>
         </div>
 
@@ -92,7 +104,10 @@ export default function SpindPage() {
               <div className="section-label mb-2.5">{cat.label}</div>
               <div className="grid grid-cols-2 gap-2">
                 {cat.items.map((item) => {
-                  const locked = level < item.minLevel;
+                  // Premium-Item (sku): freigeschaltet nur mit Entitlement (Supporter).
+                  // Sonst per Level. Bei Premium zeigt der Lock „⭐ Supporter" statt eines Levels.
+                  const premium = !!item.sku;
+                  const locked = premium ? !owned.includes(item.sku!) : level < item.minLevel;
                   const on = equipped === item.id;
                   return (
                     <button key={item.id} onClick={() => equip(catKey, item.id, locked)} disabled={locked || busy === catKey + item.id}
@@ -103,7 +118,7 @@ export default function SpindPage() {
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-sm font-semibold truncate">{item.label}</span>
                         {locked
-                          ? <span className="text-[10px] text-[var(--faint)] shrink-0">🔒 Lvl {item.minLevel}</span>
+                          ? <span className="text-[10px] text-[var(--faint)] shrink-0">{premium ? '⭐ Supporter' : `🔒 Lvl ${item.minLevel}`}</span>
                           : on ? <span className="text-xs shrink-0" style={{ color: 'var(--good)' }}>✓ aktiv</span> : null}
                       </div>
                       <div className="h-10 flex items-center" style={locked ? { filter: 'grayscale(1)', opacity: 0.5 } : undefined}>

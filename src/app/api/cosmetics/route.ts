@@ -39,15 +39,16 @@ export async function POST(req: NextRequest) {
   const sql = getSql();
   const { xp } = await computeXp(sql, me);
   const level = levelForXp(xp);
-  // Freischaltung: per Level ODER (Premium-Item + Besitz). Premium schläft ohne MONETIZATION_ACTIVE.
+  // Freischaltung: per Level ODER (Premium-Item + Besitz des Entitlements). Ein Supporter
+  // darf seine Premium-Cosmetics IMMER nutzen — unabhängig vom Verkaufs-Flag.
   const sku = skuFor(category, itemId);
   let allowed = level >= min;
-  if (!allowed && sku && isMonetizationActive()) {
+  if (!allowed && sku) {
     allowed = (await getEntitlements(me)).has(sku);
   }
   if (!allowed) {
-    return sku && isMonetizationActive()
-      ? NextResponse.json({ error: 'Mit Supporter freischaltbar.', upsell: 'supporter' }, { status: 402 })
+    return sku
+      ? NextResponse.json({ error: 'Nur für Supporter.', upsell: 'supporter' }, { status: 402 })
       : NextResponse.json({ error: `Erst ab Level ${min} freigeschaltet.` }, { status: 403 });
   }
 
