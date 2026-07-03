@@ -31,6 +31,8 @@ export default function GroupsPage() {
   const [hardMode, setHardMode] = useState(false);
   const [bundesland, setBundesland] = useState('NW');
   const [inviteMsg, setInviteMsg] = useState('');
+  const [qrUrl, setQrUrl] = useState('');
+  const [showQr, setShowQr] = useState(false);
   const [form, setForm] = useState({ name: '', dayOfWeek: 1, startTime: '18:00', endTime: '19:30', color: 'red' });
 
   const load = useCallback(async () => {
@@ -121,6 +123,16 @@ export default function GroupsPage() {
     track('invite_shared', { method: 'copy' });
     try { await navigator.clipboard.writeText(inviteUrl()); setInviteMsg('Link kopiert.'); } catch {}
   }
+  async function toggleQr() {
+    if (showQr) { setShowQr(false); return; }
+    if (!inviteCode) return;
+    track('invite_shared', { method: 'qr' });
+    try {
+      const QRCode = (await import('qrcode')).default;
+      setQrUrl(await QRCode.toDataURL(inviteUrl(), { width: 240, margin: 1, color: { dark: '#0a0a0c', light: '#ffffff' } }));
+      setShowQr(true);
+    } catch { /* egal */ }
+  }
   async function memberAction(action: string, user_name?: string) {
     if (action === 'leave' && !confirm('Gruppe wirklich verlassen?')) return;
     if (action === 'remove' && !confirm(`„${user_name}" entfernen?`)) return;
@@ -200,6 +212,15 @@ export default function GroupsPage() {
               <button onClick={copyInvite} className="px-4 rounded-xl border border-[var(--border)] text-[var(--muted)] text-sm">Link kopieren</button>
             </div>
             <div className="text-center text-[11px] text-[var(--faint)] mt-3 font-mono tracking-widest">Code: {inviteCode}</div>
+            <button onClick={toggleQr} className="w-full mt-2 text-xs text-[var(--muted)] hover:text-white transition-colors">
+              {showQr ? 'QR-Code ausblenden' : 'QR-Code zum Scannen'}
+            </button>
+            {showQr && qrUrl && (
+              <div className="mt-3 flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrUrl} alt="Einladungs-QR-Code" width={200} height={200} className="rounded-xl" style={{ background: '#fff', padding: 10 }} />
+              </div>
+            )}
             {inviteMsg && <p className="text-xs mt-2 text-center" style={{ color: 'var(--teal)' }}>{inviteMsg}</p>}
           </section>
         )}

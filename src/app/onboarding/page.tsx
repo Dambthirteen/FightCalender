@@ -28,7 +28,7 @@ function resizeImage(file: File): Promise<string> {
   });
 }
 
-type Step = 'profile' | 'group';
+type Step = 'profile' | 'group' | 'invite';
 
 export default function OnboardingPage() {
   const { userName, loading, onboardingCompleted } = useUser();
@@ -47,6 +47,11 @@ export default function OnboardingPage() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  // Nach dem Crew-Erstellen: direkt einladen.
+  const [createdCode, setCreatedCode] = useState('');
+  const [inviteMsg, setInviteMsg] = useState('');
+  const [qrUrl, setQrUrl] = useState('');
+  const [showQr, setShowQr] = useState(false);
 
   // Wer schon fertig ist, hat hier nichts zu suchen.
   useEffect(() => {
@@ -93,9 +98,34 @@ export default function OnboardingPage() {
     setBusy(true); setMsg('');
     try {
       const res = await fetch('/api/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-      if (res.ok) { track('group_created', { via: 'onboarding' }); await finish(); return; }
-      const d = await res.json().catch(() => ({})); setMsg(d.error ?? 'Konnte Gruppe nicht erstellen.');
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { track('group_created', { via: 'onboarding' }); setCreatedCode(d.invite_code ?? ''); setStep('invite'); return; }
+      setMsg(d.error ?? 'Konnte Gruppe nicht erstellen.');
     } finally { setBusy(false); }
+  }
+
+  function inviteUrl() { return `${window.location.origin}/join?code=${createdCode}`; }
+  async function shareInvite() {
+    setInviteMsg('');
+    track('invite_shared', { method: 'share', via: 'onboarding' });
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ title: 'Tap In', text: 'Komm in unsere Crew!', url: inviteUrl() }); } catch { /* abgebrochen */ }
+    } else {
+      try { await navigator.clipboard.writeText(inviteUrl()); setInviteMsg('Link kopiert.'); } catch {}
+    }
+  }
+  async function copyInvite() {
+    track('invite_shared', { method: 'copy', via: 'onboarding' });
+    try { await navigator.clipboard.writeText(inviteUrl()); setInviteMsg('Link kopiert.'); } catch {}
+  }
+  async function toggleQr() {
+    if (showQr) { setShowQr(false); return; }
+    track('invite_shared', { method: 'qr', via: 'onboarding' });
+    try {
+      const QRCode = (await import('qrcode')).default;
+      setQrUrl(await QRCode.toDataURL(inviteUrl(), { width: 240, margin: 1, color: { dark: '#0a0a0c', light: '#ffffff' } }));
+      setShowQr(true);
+    } catch { /* egal */ }
   }
 
   async function joinGroup() {
@@ -119,7 +149,7 @@ export default function OnboardingPage() {
         {/* Fortschritt */}
         <div className="flex items-center gap-2">
           <div className="h-1 flex-1 rounded-full" style={{ background: 'var(--accent)' }} />
-          <div className="h-1 flex-1 rounded-full" style={{ background: step === 'group' ? 'var(--accent)' : 'var(--surface-2)' }} />
+          <div className="h-1 flex-1 rounded-full" style={{ background: step !== 'profile' ? 'var(--accent)' : 'var(--surface-2)' }} />
         </div>
 
         {step === 'profile' ? (
@@ -215,7 +245,7 @@ export default function OnboardingPage() {
               <button onClick={() => setStep('group')} className="px-4 rounded-xl border border-[var(--border)] text-[var(--muted)] text-sm">Überspringen</button>
             </div>
           </>
-        ) : (
+        ) : step === 'group' ? (
           <>
             <div>
               <button onClick={() => { setStep('profile'); setMsg(''); }} className="text-sm text-[var(--muted)] hover:text-white transition-colors">← Zurück</button>
@@ -244,6 +274,31 @@ export default function OnboardingPage() {
             <button onClick={finish} disabled={busy} className="w-full text-center text-sm text-[var(--muted)] hover:text-white transition-colors py-2">
               Erstmal ohne Gruppe fortfahren →
             </button>
+          </>
+        ) : (
+          <>
+            <div>
+              <h1 className="font-display text-3xl tracking-wide">Crew steht!</h1>
+              <p className="text-[var(--muted)] text-sm mt-1">Lad deine Leute ein — mit einem Tap sind sie dabei.</p>
+            </div>
+            <section className="card p-5">
+              <div className="flex gap-2">
+                <button onClick={shareInvite} className="flex-1 text-white font-bold py-2.5 rounded-xl" style={{ background: 'var(--accent)' }}>Einladung teilen</button>
+                <button onClick={copyInvite} className="px-4 rounded-xl border border-[var(--border)] text-[var(--muted)] text-sm">Link kopieren</button>
+              </div>
+              <div className="text-center text-[11px] text-[var(--faint)] mt-3 font-mono tracking-widest">Code: {createdCode}</div>
+              <button onClick={toggleQr} className="w-full mt-2 text-xs text-[var(--muted)] hover:text-white transition-colors">
+                {showQr ? 'QR-Code ausblenden' : 'QR-Code zum Scannen'}
+              </button>
+              {showQr && qrUrl && (
+                <div className="mt-3 flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrUrl} alt="Einladungs-QR-Code" width={200} height={200} className="rounded-xl" style={{ background: '#fff', padding: 10 }} />
+                </div>
+              )}
+              {inviteMsg && <p className="text-xs mt-2 text-center" style={{ color: 'var(--teal)' }}>{inviteMsg}</p>}
+            </section>
+            <button onClick={finish} className="w-full text-white font-bold py-3 rounded-xl" style={{ background: 'var(--accent)' }}>Los geht’s</button>
           </>
         )}
       </main>
