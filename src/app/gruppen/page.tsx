@@ -86,7 +86,7 @@ export default function GroupsPage() {
   async function toggleHardMode() {
     if (!current) return;
     const next = !hardMode;
-    if (next && !confirm('Harten Modus aktivieren? Damit sind öffentliche No-Shows, Bitch des Monats, das Ausreden-Gericht und die Loser-Cam für ALLE in dieser Crew sichtbar. Nur einschalten, wenn alle einverstanden sind.')) return;
+    if (next && !confirm('Harten Modus aktivieren? Damit sind öffentliche No-Shows, Chicken des Monats und das Ausreden-Gericht für ALLE in dieser Crew sichtbar. Nur einschalten, wenn alle einverstanden sind.')) return;
     setBusy(true);
     try {
       await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, hardMode: next }) });
@@ -232,7 +232,7 @@ export default function GroupsPage() {
               <div className="min-w-0">
                 <div className="text-sm font-semibold">Harter Modus</div>
                 <p className="text-[11px] text-[var(--faint)] mt-1 leading-relaxed">
-                  Schaltet die harten Features für die ganze Crew frei: öffentliche No-Shows, Bitch des Monats, Ausreden-Gericht und Loser-Cam. Standardmäßig aus.
+                  Schaltet die harten Features für die ganze Crew frei: öffentliche No-Shows, Chicken des Monats und Ausreden-Gericht. Standardmäßig aus.
                 </p>
               </div>
               <button onClick={toggleHardMode} disabled={busy} role="switch" aria-checked={hardMode} aria-label="Harten Modus umschalten"

@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
     `;
     await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS clan_tag VARCHAR(4)`;
     // „Harter Modus" (opt-in): schaltet die öffentlichen Shame-Mechaniken frei
-    // (Loser-Cam, öffentliche No-Shows, Bitch-des-Monats, Ausreden-Gericht).
+    // (öffentliche No-Shows, Chicken-des-Monats, Ausreden-Gericht).
     // Trick für eine saubere Migration: Spalte zuerst mit DEFAULT true anlegen —
     // das backfillt alle BESTEHENDEN Gruppen auf true (behalten ihr Verhalten) —
     // und dann den Default auf false umstellen, damit NEUE Crews entschärft

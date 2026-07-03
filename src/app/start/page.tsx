@@ -107,7 +107,7 @@ export default function StartPage() {
           <span className="text-3xl">📊</span>
           <div className="flex-1 min-w-0">
             <div className="font-display text-2xl tracking-wide leading-none">Statistiken</div>
-            <div className="text-xs text-[var(--muted)] mt-1.5">Macher · Bitch · Jahr</div>
+            <div className="text-xs text-[var(--muted)] mt-1.5">Macher · Chicken · Jahr</div>
           </div>
           <span className="text-[var(--faint)] text-lg">›</span>
         </a>
@@ -175,7 +175,7 @@ export default function StartPage() {
                 <div className="section-label mb-2">XP &amp; Level</div>
                 <p className="text-[var(--muted)] mb-3">
                   Du sammelst XP fürs Mitmachen. Genug XP → nächstes Level → höherer Rang.
-                  Bitch-Punkte ziehen <strong className="text-[var(--text)]">nichts</strong> ab.
+                  Chicken-Punkte ziehen <strong className="text-[var(--text)]">nichts</strong> ab.
                 </p>
                 <div className="space-y-1.5">
                   {([

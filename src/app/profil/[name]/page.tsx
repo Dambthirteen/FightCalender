@@ -766,7 +766,7 @@ export default function ProfilePage() {
                   <div className="section-label mb-2.5">Titel &amp; Anwesenheit</div>
                   <div className="flex gap-2.5">
                     <Stat value={stats?.macherTitles ?? '–'} label="Macher des Monats" color="var(--gold)" />
-                    <Stat value={stats?.bitchTitles ?? '–'} label="Bitch des Monats" color="var(--bitch)" />
+                    <Stat value={stats?.bitchTitles ?? '–'} label="Chicken des Monats" color="var(--bitch)" />
                     <Stat value={stats?.daysOut ?? '–'} label="Tage weg" color="var(--teal)" />
                   </div>
                 </div>
@@ -774,7 +774,7 @@ export default function ProfilePage() {
                   <div className="section-label mb-2.5">Punkte · {year}</div>
                   <div className="flex gap-2.5">
                     <Stat value={macherYear ?? '–'} label="Macher-Punkte" color="var(--gold)" />
-                    <Stat value={bitchYear ?? '–'} label="Bitch-Punkte" color="var(--bitch)" />
+                    <Stat value={bitchYear ?? '–'} label="Chicken-Punkte" color="var(--bitch)" />
                   </div>
                 </div>
               </div>

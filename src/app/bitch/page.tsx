@@ -39,7 +39,7 @@ export default function BitchPage() {
 
   return (
     <div className="min-h-screen text-[var(--text)]">
-      <PageHeader title="🐔 Bitch des Monats" />
+      <PageHeader title="🐔 Chicken des Monats" />
 
       <main className="max-w-md mx-auto px-4 pb-24">
         {/* Monats-Navigation */}
@@ -52,7 +52,7 @@ export default function BitchPage() {
         {hardMode === false ? (
           <div className="card p-10 text-center anim-up">
             <div className="text-5xl mb-3">🕊️</div>
-            <div className="text-[var(--muted)]">Die Bitch-Liste ist in dieser Crew aus.</div>
+            <div className="text-[var(--muted)]">Die Chicken-Liste ist in dieser Crew aus.</div>
             <div className="text-[var(--faint)] text-sm mt-1">Ein Gruppen-Admin kann den „harten Modus“ aktivieren.</div>
           </div>
         ) : loading ? (
@@ -69,7 +69,7 @@ export default function BitchPage() {
             {top && (
               <div className="card p-6 text-center anim-up" style={{ borderColor: 'var(--bitch)' }}>
                 <div className="text-5xl mb-2">🐔</div>
-                <div className="section-label" style={{ color: 'var(--bitch)' }}>Bitch des Monats</div>
+                <div className="section-label" style={{ color: 'var(--bitch)' }}>Chicken des Monats</div>
                 <div className="font-display text-3xl tracking-wide mt-1">{top.user_name}</div>
                 <div className="text-[var(--muted)] text-sm mt-1">{top.skip_count}× nicht da gewesen</div>
               </div>

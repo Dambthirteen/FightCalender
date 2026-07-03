@@ -541,7 +541,7 @@ export default function Home() {
                               : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)', color: 'var(--faint)' }}>
                             {isNoShow
                               ? `🐔 Verpasst — Ausrede eintragen (${daysLeft === 0 ? 'heute letzte Chance' : `noch ${daysLeft} Tag${daysLeft === 1 ? '' : 'e'}`})`
-                              : '🐔 Ich bin eine Bitch — Ausrede vorab eintragen'}
+                              : '🐔 Ich bin ein Chicken — Ausrede vorab eintragen'}
                           </button>
                         ) : (
                           <div className="w-full text-[11px] font-medium py-2 px-3 rounded-xl border text-center"

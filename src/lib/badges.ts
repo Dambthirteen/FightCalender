@@ -57,7 +57,7 @@ export const ADMIN_BADGE: BadgeDef = { id: 'special_admin', label: 'Admin', emoj
 export const SPECIAL_BADGES: BadgeDef[] = [ADMIN_BADGE];
 
 // Geheime Abzeichen — in der Übersicht erst sichtbar, wenn freigeschaltet.
-export const DOPPELMORAL_BADGE: BadgeDef = { id: 'secret_doppelmoral', label: 'Doppelmoral', emoji: '🎭', kind: 'secret', threshold: 0, hint: '10 Bitch-Punkte – und trotzdem über 20× gerichtet', secret: true };
+export const DOPPELMORAL_BADGE: BadgeDef = { id: 'secret_doppelmoral', label: 'Doppelmoral', emoji: '🎭', kind: 'secret', threshold: 0, hint: '10 Chicken-Punkte – und trotzdem über 20× gerichtet', secret: true };
 export const SECRET_BADGES: BadgeDef[] = [DOPPELMORAL_BADGE];
 
 export const ALL_BADGES: BadgeDef[] = [...STREAK_BADGES, ...COMPETITION_BADGES, ...FIGHT_BADGES, ...JUDGE_BADGES, ...SPECIAL_BADGES, ...SECRET_BADGES];

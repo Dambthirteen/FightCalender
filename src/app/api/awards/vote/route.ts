@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
     // Bitch-Titel gibt es nur im harten Modus (Macher-Titel bleibt immer erlaubt).
     if (kind === 'bitch' && !(await isHardMode(Number(groupId)))) {
-      return NextResponse.json({ error: 'Bitch-Titel ist in dieser Gruppe deaktiviert' }, { status: 403 });
+      return NextResponse.json({ error: 'Chicken-Titel ist in dieser Gruppe deaktiviert' }, { status: 403 });
     }
     const sql = getSql();
     const st = await resolveTitle(sql, Number(groupId), month, kind);

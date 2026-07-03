@@ -42,14 +42,14 @@ function buildCards(d: WrappedData): Card[] {
   const cards: Card[] = [];
   cards.push({ emoji: '📅', label: `${d.groupName} · Rückblick`, big: monthLabel(d.month), sub: 'Dein Monat in Zahlen', color: 'var(--teal)' });
   if (d.macher) cards.push({ emoji: '🏆', label: 'Macher des Monats', big: d.macher.user, sub: `${d.macher.count}× am Start`, color: 'var(--gold)' });
-  if (d.bitch) cards.push({ emoji: '🐔', label: 'Bitch des Monats', big: d.bitch.user, sub: `${d.bitch.count}× gefehlt`, color: 'var(--bitch)' });
+  if (d.bitch) cards.push({ emoji: '🐔', label: 'Chicken des Monats', big: d.bitch.user, sub: `${d.bitch.count}× gefehlt`, color: 'var(--bitch)' });
   if (d.bestExcuse) cards.push({ emoji: '😇', label: 'Beste Ausrede', big: d.bestExcuse.user, sub: `„${d.bestExcuse.excuse}"`, color: 'var(--good)' });
   if (d.worstExcuse) cards.push({ emoji: '🙄', label: 'Härtester Reinfall', big: d.worstExcuse.user, sub: `„${d.worstExcuse.excuse}"`, color: 'var(--accent)' });
   if (d.topJudge) cards.push({ emoji: '⚖️', label: 'Fleißigster Richter', big: d.topJudge.user, sub: `${d.topJudge.count}× gerichtet`, color: 'var(--teal)' });
   if (d.lobKing) cards.push({ emoji: '👏', label: 'Meiste Würdigungen', big: d.lobKing.user, sub: `${d.lobKing.count}× gelobt`, color: 'var(--gold)' });
   if (d.topClass) cards.push({ emoji: '🥋', label: 'Meist trainiert', big: d.topClass.name, sub: `${d.topClass.count}× diesen Monat`, color: 'var(--teal)' });
   if (d.praiseComment) cards.push({ emoji: '💬', label: d.praiseComment.kind === 'gigalob' ? 'Gigalob erhalten von' : 'Lob erhalten von', big: d.praiseComment.from, sub: `„${d.praiseComment.reason}"`, color: 'var(--good)' });
-  const meLines = [`${d.me.skips}× geschwänzt`, `${d.me.bitch} Bitch-Punkte`, `${d.me.lobe} Würdigungen erhalten`];
+  const meLines = [`${d.me.skips}× geschwänzt`, `${d.me.bitch} Chicken-Punkte`, `${d.me.lobe} Würdigungen erhalten`];
   if (d.streak && d.streak.weeks >= 1) meLines.unshift(`🔥 ${d.streak.weeks} ${d.streak.weeks === 1 ? 'Woche' : 'Wochen'} Streak`);
   cards.push({ emoji: '💪', label: 'Dein Monat', big: `${d.me.trainings}× trainiert`, lines: meLines, color: 'var(--accent-2)' });
   return cards;

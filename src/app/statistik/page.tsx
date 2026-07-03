@@ -70,7 +70,7 @@ export default function StatistikPage() {
               <div className="text-[11px] uppercase tracking-[0.2em] text-[var(--faint)] mb-2">{format(now, 'MMMM yyyy', { locale: de })}</div>
               <div className="flex gap-3">
                 <Board title="💪 Macher" color="var(--gold)" rows={macherM} unit="Trainings" />
-                <Board title="🐔 Bitch" color="var(--bitch)" rows={bitchM} unit="Fehltage" />
+                <Board title="🐔 Chicken" color="var(--bitch)" rows={bitchM} unit="Fehltage" />
               </div>
             </section>
 
@@ -78,7 +78,7 @@ export default function StatistikPage() {
               <div className="text-[11px] uppercase tracking-[0.2em] text-[var(--faint)] mb-2">Jahr {year}</div>
               <div className="flex gap-3">
                 <Board title="💪 Macher" color="var(--gold)" rows={macherY} unit="Trainings" />
-                <Board title="🐔 Bitch" color="var(--bitch)" rows={bitchY} unit="Fehltage" />
+                <Board title="🐔 Chicken" color="var(--bitch)" rows={bitchY} unit="Fehltage" />
               </div>
             </section>
           </>

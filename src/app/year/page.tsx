@@ -183,7 +183,7 @@ export default function YearPage() {
         ) : (
           <>
             <Podest data={data.macher} title="Macher des Jahres" />
-            <Podest data={data.bitch} title="Bitch des Jahres" />
+            <Podest data={data.bitch} title="Chicken des Jahres" />
             <MiniBarChart data={data.macherMonthly} users={allUsers} />
           </>
         )}

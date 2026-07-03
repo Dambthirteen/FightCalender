@@ -4,7 +4,6 @@ import { ensurePushConfigured, sendPush } from '@/lib/push';
 import { berlinNow, isoDayOfWeek, weekStartOf, hmToMinutes } from '@/lib/berlin-time';
 import { isHoliday } from '@/lib/holidays';
 import { CUTOVER } from '@/lib/bitch-scoring';
-import { ymPrev, resolveTitle } from '@/lib/awards';
 import { broadcastToGroup } from '@/lib/feed';
 import { getMyGroups } from '@/lib/groups';
 
@@ -122,7 +121,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     const prevYm = `${py}-${String(pm).padStart(2, '0')}`;
     totalSent += await broadcast('court_result', `${prevYm}-01`, courtResultOut, {
       title: '⚖️ Gericht-Ergebnis',
-      body: 'Die Ausreden vom letzten Monat sind ausgewertet — schau, ob dein Bitch-Punkt steht!',
+      body: 'Die Ausreden vom letzten Monat sind ausgewertet — schau, ob dein Chicken-Punkt steht!',
       url: '/vote',
     });
   }
@@ -202,23 +201,16 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   } catch { /* user_notif_log / Spalten evtl. noch nicht vorhanden */ }
 
   // Harter Modus pro Gruppe: nur dort feuern die öffentlichen Shame-Mechaniken
-  // (Loser-Cam, öffentliche No-Shows). Neue Crews starten entschärft.
+  // (öffentliche No-Shows). Neue Crews starten entschärft.
   let hardSet = new Set<number>();
-  let hardUserSet = new Set<string>();
   try {
     const hg = (await sql`SELECT id FROM groups WHERE hard_mode = true`) as { id: number }[];
     hardSet = new Set(hg.map((g) => g.id));
-    const hm = (await sql`
-      SELECT DISTINCT user_name FROM group_members
-      WHERE status = 'active' AND group_id IN (SELECT id FROM groups WHERE hard_mode = true)
-    `) as { user_name: string }[];
-    hardUserSet = new Set(hm.map((r) => r.user_name));
   } catch { /* hard_mode-Spalte evtl. noch nicht da → alles entschärft behandeln */ }
 
-  // --- Loser-Cam A: 3 geplante Trainings am Stück geschwänzt → „Guck dir diesen Loser an!" ---
-  // „Geschwänzt" = nicht da UND keine Ausrede eingetragen (eine eingetragene Ausrede
-  // beendet die Strähne — wir verschonen, wer es zumindest versucht). Feiertage/krank
-  // sind neutral (zählen weder als Bitch noch brechen sie die Strähne). Einmal pro Strähne.
+  // --- Öffentliche No-Shows der Crew melden (Setup für die „Geschwänzt"-Broadcasts) ---
+  // „Geschwänzt" = nicht da UND keine Ausrede eingetragen. Feiertage/krank/Urlaub
+  // sind neutral. Nur in Crews im harten Modus.
   try {
     const LB = 28; // Tage zurückblicken (reicht für 3 Termine selbst bei 1×/Woche-Plänen)
     const since = addD(today, -LB);
@@ -265,44 +257,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     `) as { user_name: string; s: string; e: string }[];
     const isExempt = (u: string, d: string) => lstatus.some((st) => st.user_name === u && d >= st.s && d <= st.e);
 
-    for (const user of [...new Set(allSubs.map((s) => s.user_name))]) {
-      if (!hardUserSet.has(user)) continue; // Loser-Cam nur für Crews im harten Modus
-      const dows = dowsByUser.get(user);
-      if (!dows) continue;
-      // Vom jüngsten vergangenen Trainingstag rückwärts: glatte No-Shows zählen.
-      let streak = 0;
-      let streakStart = '';
-      for (let ds = 1; ds <= LB; ds++) {
-        const D = addD(today, -ds);
-        if (D < CUTOVER) break;
-        if (!plannedDows(user, D).has(isoDayOfWeek(D))) continue; // an dem Wochentag nichts geplant (KW-Plan)
-        if (isHoliday(D)) continue;               // Feiertag → neutral
-        if (isExempt(user, D)) continue;          // krank/Urlaub → neutral
-        if (presentSet.has(`${user}|${D}`)) break; // war da → Strähne endet
-        if (excusedSet.has(`${user}|${D}`)) break; // Ausrede eingetragen → Strähne endet
-        streak++;
-        streakStart = D;                           // frühester Tag der laufenden Strähne
-      }
-      if (streak < 3) continue;
-      const claim = await sql`
-        INSERT INTO user_notif_log (user_name, notify_date, kind)
-        VALUES (${user}, ${streakStart}, 'loser_streak')
-        ON CONFLICT (user_name, notify_date, kind) DO NOTHING
-        RETURNING id
-      `;
-      if (claim.length === 0) continue; // für diese Strähne schon gepingt
-      for (const s of allSubs) {
-        if (s.user_name !== user) continue;
-        const r = await sendPush(
-          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          { title: 'Guck dir diesen Loser an!', body: `${streak} Trainings am Stück geschwänzt. Tipp drauf. 📸`, url: '/loser' }
-        );
-        if (r.ok) totalSent++;
-        else if (r.gone) await sql`DELETE FROM push_subscriptions WHERE endpoint = ${s.endpoint}`;
-      }
-    }
-
-    // --- „Bitcht" → Gruppe informieren (jüngster verpasster Trainingstag, einmal je Tag) ---
+    // --- No-Show an die Gruppe melden (jüngster verpasster Trainingstag, einmal je Tag) ---
     const gmRows = (await sql`SELECT user_name, group_id FROM group_members WHERE status = 'active'`) as { user_name: string; group_id: number }[];
     const groupsByUser = new Map<string, number[]>();
     for (const r of gmRows) {
@@ -335,40 +290,6 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       }
     }
   } catch { /* Tabellen evtl. noch nicht vorhanden */ }
-
-  // --- Loser-Cam B: 2 Monate in Folge „Bitch des Monats" → „Guck dir diesen Loser an!" ---
-  // Am Monatsanfang (nach Gericht/Tie-Auswertung) prüfen, einmal je Person/Monat.
-  if (dayOfMonth <= 5) {
-    try {
-      const prevYm = ymPrev(ym);
-      const prevPrevYm = ymPrev(prevYm);
-      // Loser-Cam B nur für Crews im harten Modus.
-      const groups = (await sql`SELECT id FROM groups WHERE hard_mode = true`) as { id: number }[];
-      for (const g of groups) {
-        const t1 = await resolveTitle(sql, g.id, prevYm, 'bitch');
-        if (t1.status !== 'final' || !t1.winner) continue;
-        const t0 = await resolveTitle(sql, g.id, prevPrevYm, 'bitch');
-        if (t0.status !== 'final' || t0.winner !== t1.winner) continue;
-        const user = t1.winner;
-        const claim = await sql`
-          INSERT INTO user_notif_log (user_name, notify_date, kind)
-          VALUES (${user}, ${prevYm + '-01'}, 'loser_2mo')
-          ON CONFLICT (user_name, notify_date, kind) DO NOTHING
-          RETURNING id
-        `;
-        if (claim.length === 0) continue;
-        for (const s of allSubs) {
-          if (s.user_name !== user) continue;
-          const r = await sendPush(
-            { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-            { title: 'Guck dir diesen Loser an!', body: '2 Monate in Folge Bitch des Monats. Tipp drauf. 📸', url: '/loser' }
-          );
-          if (r.ok) totalSent++;
-          else if (r.gone) await sql`DELETE FROM push_subscriptions WHERE endpoint = ${s.endpoint}`;
-        }
-      }
-    } catch { /* awards/groups evtl. nicht verfügbar */ }
-  }
 
   // --- Wettkampf heute → Gruppe anfeuern ---
   try {

@@ -24,7 +24,7 @@ function previewMonth(): string {
 
 const META: Record<Kind, { emoji: string; label: string; color: string; soft: string; voteQ: string }> = {
   macher: { emoji: '🏆', label: 'Macher des Monats', color: 'var(--gold)', soft: 'rgba(255,194,75,0.13)', voteQ: 'Wer war am fleißigsten?' },
-  bitch: { emoji: '🐔', label: 'Bitch des Monats', color: 'var(--bitch)', soft: 'rgba(245,197,24,0.13)', voteQ: 'Wer hat am meisten geschwänzt?' },
+  bitch: { emoji: '🐔', label: 'Chicken des Monats', color: 'var(--bitch)', soft: 'rgba(245,197,24,0.13)', voteQ: 'Wer hat am meisten geschwänzt?' },
 };
 
 /**

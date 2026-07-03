@@ -9,11 +9,9 @@ export const runtime = 'nodejs';
 // Beispiel-Payloads für JEDEN Push-Typ der App — zum Testen aus dem Admin-Panel.
 // Hält sich an die echten Texte/URLs aus /api/notify und lib/notify.
 const SAMPLES: Record<string, { title: string; body: string; url: string }> = {
-  loser_streak: { title: 'Guck dir diesen Loser an!', body: '3 Trainings am Stück geschwänzt. Tipp drauf. 📸', url: '/loser' },
-  loser_2mo: { title: 'Guck dir diesen Loser an!', body: '2 Monate in Folge Bitch des Monats. Tipp drauf. 📸', url: '/loser' },
   class_reminder: { title: '🥊 BJJ heute um 18:00', body: 'Auch dabei: Tim und Max', url: '/' },
   court_open: { title: '🗳️ Ausreden-Gericht offen', body: 'Die Ausreden des Monats können jetzt bewertet werden — stimme ab!', url: '/vote' },
-  court_result: { title: '⚖️ Gericht-Ergebnis', body: 'Die Ausreden vom letzten Monat sind ausgewertet — schau, ob dein Bitch-Punkt steht!', url: '/vote' },
+  court_result: { title: '⚖️ Gericht-Ergebnis', body: 'Die Ausreden vom letzten Monat sind ausgewertet — schau, ob dein Chicken-Punkt steht!', url: '/vote' },
   bitch_reminder: { title: '🐔 Nicht eingetragen!', body: 'Du warst bei keinem geplanten Kurs eingetragen. Trag dich ein oder schreib eine Ausrede!', url: '/' },
   comment: { title: '💬 Neuer Kommentar', body: 'Tim hat etwas auf deine Pinnwand geschrieben.', url: '/benachrichtigungen' },
   challenge: { title: '🌳 Skilltree angefochten', body: 'Max schlägt neue Werte für deinen Skilltree vor.', url: '/benachrichtigungen' },

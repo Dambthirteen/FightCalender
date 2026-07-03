@@ -160,7 +160,7 @@ export default function VotePage() {
             )}
             {!e.is_exempt && info.isPast && (
               <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${!accepted ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
-                {accepted ? '✅ Ausrede gilt' : '❌ Bitch bleibt'}
+                {accepted ? '✅ Ausrede gilt' : '❌ Chicken bleibt'}
               </span>
             )}
           </div>
@@ -193,7 +193,7 @@ export default function VotePage() {
                 ) : !info.isPast ? (
                   <span className="text-xs text-[var(--faint)]">Wird im Voting bewertet</span>
                 ) : (
-                  <span className="text-xs text-[var(--faint)]">Keine Votes — Bitch bleibt</span>
+                  <span className="text-xs text-[var(--faint)]">Keine Votes — Chicken bleibt</span>
                 )
               )}
             </div>

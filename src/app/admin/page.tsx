@@ -191,8 +191,6 @@ export default function AdminPage() {
   }
 
   const PUSH_TYPES: { kind: string; label: string }[] = [
-    { kind: 'loser_streak', label: '🐔 Loser-Cam · 3 Tage' },
-    { kind: 'loser_2mo', label: '🐔 Loser-Cam · 2 Monate' },
     { kind: 'class_reminder', label: '🥊 Kurs-Erinnerung' },
     { kind: 'court_open', label: '🗳️ Gericht offen' },
     { kind: 'court_result', label: '⚖️ Gericht-Ergebnis' },
@@ -267,7 +265,7 @@ export default function AdminPage() {
           <h2 className="font-display text-xl tracking-wide mb-1">Push testen</h2>
           <p className="text-[var(--muted)] text-xs mb-4">
             Schickt eine Beispiel-Push an dich selbst (oder an einen Namen). Auf dem Zielgerät müssen
-            Benachrichtigungen aktiviert sein. Die „Loser-Cam“ öffnet beim Tippen die Frontkamera.
+            Benachrichtigungen aktiviert sein.
           </p>
           <div className="mb-3">
             <label className={labelCls}>Empfänger (leer = ich)</label>
