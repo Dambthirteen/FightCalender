@@ -73,8 +73,15 @@ function Stat({ value, label, color }: { value: number | string; label: string; 
   );
 }
 
-const TABS = [['fighter', 'Fighter'], ['stats', 'Stats'], ['ehrungen', 'Ehrungen'], ['pinnwand', 'Pinnwand']] as const;
+const TABS = [['fighter', 'Fighter'], ['stats', 'Stats'], ['plan', 'Plan'], ['ehrungen', 'Ehrungen'], ['pinnwand', 'Pinnwand']] as const;
 type Tab = (typeof TABS)[number][0];
+
+// Kursfarben (wie auf der Startseite) → für den Trainingsplan.
+const CLASS_COLOR: Record<string, string> = {
+  red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7',
+};
+const classHex = (c: string) => CLASS_COLOR[c] ?? CLASS_COLOR.red;
+const DAY_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
 interface FighterInfo {
   trainingSince?: string; // 'YYYY-MM'
@@ -564,47 +571,6 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
-            {/* Trainingsplan (fester Plan; bei mehreren Gruppen wählbar) */}
-            {planGroups.length > 0 && (() => {
-              const gid = planGroupSel ?? planGroups[0]?.id ?? null;
-              const cs = planClasses.filter((c) => c.group_id === gid);
-              const DOW = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-              const byDay = new Map<number, typeof cs>();
-              for (const c of cs) { if (!byDay.has(c.day_of_week)) byDay.set(c.day_of_week, []); byDay.get(c.day_of_week)!.push(c); }
-              return (
-                <div className="card p-4 mt-5 anim-in">
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="section-label">Trainingsplan</div>
-                    {planGroups.length > 1 && (
-                      <select value={gid ?? ''} onChange={(e) => setPlanGroupSel(Number(e.target.value))}
-                        className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-[var(--accent)]">
-                        {planGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                      </select>
-                    )}
-                  </div>
-                  {cs.length === 0 ? (
-                    <div className="text-xs text-[var(--faint)] py-1">Kein fester Plan hinterlegt.</div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {[1, 2, 3, 4, 5, 6, 7].filter((d) => byDay.has(d)).map((d) => (
-                        <div key={d} className="flex items-start gap-3">
-                          <span className="w-7 text-xs font-bold text-[var(--muted)] pt-1 shrink-0">{DOW[d - 1]}</span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {byDay.get(d)!.map((c) => (
-                              <span key={c.id} className="text-xs px-2 py-1 rounded-lg" style={{ background: 'var(--surface-2)' }}>
-                                <span className="font-semibold">{c.name}</span>
-                                <span className="text-[var(--faint)] tnum ml-1.5">{c.start_time?.slice(0, 5)}</span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
             {/* Tabs */}
             <div className="flex border-b border-[var(--border-soft)] mt-5 mb-4">
               {TABS.map(([key, label]) => (
@@ -838,6 +804,75 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
+
+            {/* --- Tab: Plan --- */}
+            {tab === 'plan' && (() => {
+              const gid = planGroupSel ?? planGroups[0]?.id ?? null;
+              const cs = planClasses.filter((c) => c.group_id === gid);
+              const byDay = new Map<number, typeof cs>();
+              for (const c of cs) { if (!byDay.has(c.day_of_week)) byDay.set(c.day_of_week, []); byDay.get(c.day_of_week)!.push(c); }
+              const days = [1, 2, 3, 4, 5, 6, 7].filter((d) => byDay.has(d));
+              return (
+                <div className="space-y-4 anim-in">
+                  {/* Gruppen-Auswahl (nur bei mehreren Crews) */}
+                  {planGroups.length > 1 && (
+                    <div className="flex flex-wrap gap-2">
+                      {planGroups.map((g) => {
+                        const on = g.id === gid;
+                        return (
+                          <button key={g.id} onClick={() => setPlanGroupSel(g.id)}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors"
+                            style={{ borderColor: on ? 'var(--accent)' : 'var(--border-soft)', background: on ? 'var(--accent-soft)' : 'var(--surface-2)', color: on ? 'var(--text)' : 'var(--muted)' }}>
+                            {g.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {planGroups.length === 0 || cs.length === 0 ? (
+                    <div className="card p-7 text-center">
+                      <div className="text-3xl mb-2">🗓️</div>
+                      <div className="font-display text-lg tracking-wide">Kein fester Plan</div>
+                      <p className="text-sm text-[var(--muted)] mt-1">
+                        {isSelf ? 'Trag auf der Startseite ein, an welchen Kursen du regelmäßig teilnimmst.' : 'Hier ist noch kein Trainingsplan hinterlegt.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="section-label">Wochenplan</div>
+                        <span className="text-[11px] text-[var(--faint)] tnum">{cs.length} {cs.length === 1 ? 'Einheit' : 'Einheiten'} · {days.length} {days.length === 1 ? 'Tag' : 'Tage'}</span>
+                      </div>
+                      <div className="space-y-3.5">
+                        {days.map((d) => (
+                          <div key={d}>
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]">{DAY_FULL[d - 1]}</span>
+                              <div className="h-px flex-1" style={{ background: 'var(--border-soft)' }} />
+                            </div>
+                            <div className="space-y-1.5">
+                              {byDay.get(d)!.map((c) => {
+                                const col = classHex(c.color);
+                                return (
+                                  <div key={c.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                                    style={{ background: `${col}14`, borderLeft: `3px solid ${col}` }}>
+                                    <span className="text-sm font-semibold flex-1 min-w-0 truncate">{c.name}</span>
+                                    <span className="text-xs tnum shrink-0" style={{ color: 'var(--muted)' }}>
+                                      {c.start_time?.slice(0, 5)}{c.end_time ? `–${c.end_time.slice(0, 5)}` : ''}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* --- Tab: Ehrungen --- */}
             {tab === 'ehrungen' && (
