@@ -35,7 +35,9 @@ export async function GET(req: NextRequest) {
     const macherRows = (await sql`
       SELECT a.user_name, COUNT(*)::int AS n
       FROM attendance a JOIN classes c ON c.id = a.class_id
-      WHERE c.group_id = ${gid} AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
+      WHERE c.group_id = ${gid}
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date >= ${start}::date
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date < ${end}::date
       GROUP BY a.user_name ORDER BY n DESC LIMIT 1
     `) as { user_name: string; n: number }[];
 
@@ -78,7 +80,9 @@ export async function GET(req: NextRequest) {
     // Persönliche Zahlen
     const myAtt = (await sql`
       SELECT COUNT(*)::int AS n FROM attendance a JOIN classes c ON c.id = a.class_id
-      WHERE c.group_id = ${gid} AND a.user_name = ${me} AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
+      WHERE c.group_id = ${gid} AND a.user_name = ${me}
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date >= ${start}::date
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date < ${end}::date
     `) as { n: number }[];
     // „Geschwänzt" = echte Fehltage: Urlaub/Krank (user_status) und Feiertage zählen NICHT.
     const holidays = getHolidays(Number(ym.slice(0, 4)), bl).map((h) => h.date);
@@ -114,13 +118,15 @@ export async function GET(req: NextRequest) {
       SELECT COUNT(DISTINCT (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date)::int AS n
       FROM attendance a JOIN classes c ON c.id = a.class_id
       WHERE c.group_id = ${gid} AND a.user_name = ${me}
-        AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date >= ${start}::date
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date < ${end}::date
     `) as { n: number }[];
     const topClassRow = (await sql`
       SELECT c.name, COUNT(*)::int AS n
       FROM attendance a JOIN classes c ON c.id = a.class_id
       WHERE c.group_id = ${gid} AND a.user_name = ${me}
-        AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date >= ${start}::date
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date < ${end}::date
       GROUP BY c.name ORDER BY n DESC LIMIT 1
     `) as { name: string; n: number }[];
 

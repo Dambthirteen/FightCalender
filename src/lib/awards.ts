@@ -71,7 +71,8 @@ export async function macherCandidates(sql: Sql, groupId: number, ym: string): P
         RANK() OVER (ORDER BY COUNT(*) DESC) AS r
       FROM attendance a JOIN classes c ON c.id = a.class_id
       WHERE c.group_id = ${groupId}
-        AND a.week_start >= ${ymStart(ym)}::date AND a.week_start < ${awardDate(ym)}::date
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date >= ${ymStart(ym)}::date
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date < ${awardDate(ym)}::date
       GROUP BY a.user_name
     )
     SELECT user_name, n FROM m WHERE r = 1 ORDER BY user_name

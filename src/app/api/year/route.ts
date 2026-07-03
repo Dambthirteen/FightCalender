@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const macher = await sql`
       SELECT a.user_name, COUNT(*)::int AS total
       FROM attendance a JOIN classes c ON c.id = a.class_id
-      WHERE c.group_id = ${gid} AND EXTRACT(YEAR FROM a.week_start) = ${year}
+      WHERE c.group_id = ${gid} AND EXTRACT(YEAR FROM (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')) = ${year}
       GROUP BY a.user_name
       ORDER BY total DESC
     `;
@@ -32,10 +32,10 @@ export async function GET(req: NextRequest) {
     const macherMonthly = await sql`
       SELECT
         a.user_name,
-        EXTRACT(MONTH FROM a.week_start)::int AS month,
+        EXTRACT(MONTH FROM (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day'))::int AS month,
         COUNT(*)::int AS count
       FROM attendance a JOIN classes c ON c.id = a.class_id
-      WHERE c.group_id = ${gid} AND EXTRACT(YEAR FROM a.week_start) = ${year}
+      WHERE c.group_id = ${gid} AND EXTRACT(YEAR FROM (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')) = ${year}
       GROUP BY a.user_name, month
       ORDER BY a.user_name, month
     `;

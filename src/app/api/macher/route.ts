@@ -18,12 +18,15 @@ export async function GET(req: NextRequest) {
       ? `${monthParam}-01`
       : new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
 
+    // Nach dem ECHTEN Trainingstag filtern, nicht nach week_start (Montag der Woche):
+    // sonst fallen Trainings am Monatsanfang, deren Woche noch im Vormonat startet,
+    // aus dem Monat heraus (Board wirkt Anfang des Monats leer).
     const rows = await sql`
       SELECT a.user_name, COUNT(*)::int AS attend_count
       FROM attendance a JOIN classes c ON c.id = a.class_id
       WHERE c.group_id = ${gid}
-        AND a.week_start >= ${monthStart}::date
-        AND a.week_start < (${monthStart}::date + INTERVAL '1 month')
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date >= ${monthStart}::date
+        AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date < (${monthStart}::date + INTERVAL '1 month')
       GROUP BY a.user_name
       ORDER BY attend_count DESC
     `;

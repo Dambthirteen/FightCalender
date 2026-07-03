@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials } from '@/lib/avatar';
+import InviteFriends from '@/components/InviteFriends';
 
 export default function MitgliederPage() {
   const { userName } = useUser();
@@ -25,6 +26,7 @@ export default function MitgliederPage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 pb-16">
+        <div className="anim-up mb-4"><InviteFriends /></div>
         {loading ? (
           <div className="py-24 text-center text-[var(--faint)] text-sm">Laden…</div>
         ) : (
