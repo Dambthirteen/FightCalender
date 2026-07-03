@@ -4,11 +4,10 @@
 export interface WrappedForCard {
   month: string;      // 'YYYY-MM'
   groupName: string;
-  me: { trainings: number; skips: number; lobe: number; bitch: number };
-  macher: { user: string; count: number } | null;
-  bitch: { user: string; count: number } | null;
+  trainingDays: number;
   streak?: { days: number; weeks: number } | null;
-  praiseComment?: { from: string; reason: string; kind: string } | null;
+  youMacher?: boolean;
+  topClass?: { name: string; count: number } | null;
 }
 
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
@@ -27,23 +26,16 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] {
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let line = '';
-  for (const w of words) {
-    const test = line ? `${line} ${w}` : w;
-    if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
-    else line = test;
-    if (lines.length >= maxLines) break;
-  }
-  if (line && lines.length < maxLines) lines.push(line);
-  if (lines.length === maxLines) {
-    const last = lines[maxLines - 1];
-    if (ctx.measureText(last + '…').width > maxWidth) lines[maxLines - 1] = last.replace(/\s+\S*$/, '') + '…';
-  }
-  return lines;
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
 }
+
+type Item = { h: number; draw: (top: number) => void };
 
 export async function renderWrappedCard(d: WrappedForCard): Promise<Blob | null> {
   const W = 1080, H = 1920;
@@ -53,9 +45,11 @@ export async function renderWrappedCard(d: WrappedForCard): Promise<Blob | null>
   if (!ctx) return null;
   const cx = W / 2;
   const ACCENT = '#ff3b30';
+  const MUTED = '#8a8a92';
   const font = (spec: string) => { ctx.font = `${spec} system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`; };
+  const setLS = (px: number) => { try { (ctx as unknown as { letterSpacing: string }).letterSpacing = `${px}px`; } catch { /* nicht unterstützt */ } };
 
-  // Display-Schrift (Bebas Neue, von next/font geladen) fürs Poster-Feeling wiederverwenden.
+  // Display-Schrift (Bebas Neue, von next/font geladen) fürs Poster-Feeling.
   let displayFam = 'system-ui, -apple-system, sans-serif';
   try {
     const v = getComputedStyle(document.documentElement).getPropertyValue('--font-display').trim();
@@ -77,105 +71,81 @@ export async function renderWrappedCard(d: WrappedForCard): Promise<Blob | null>
   ctx.fillRect(0, 0, W, H);
 
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
 
-  // --- Kopf ---
+  // --- Kopf: Logo + Name + Untertitel ---
+  const logo = await loadImage('/icon-192.png');
+  const lsz = 132, lx = cx - lsz / 2, ly = 118;
+  if (logo) {
+    ctx.save();
+    roundRect(ctx, lx, ly, lsz, lsz, 30); ctx.clip();
+    ctx.drawImage(logo, lx, ly, lsz, lsz);
+    ctx.restore();
+  }
   ctx.fillStyle = '#ffffff';
-  font('700 44px');
-  ctx.fillText('T A P   I N', cx, 180);
-  ctx.fillStyle = '#ececf0';
-  display(108);
-  ctx.fillText(monthLabel(d.month), cx, 320);
-  ctx.fillStyle = '#8a8a92';
-  font('400 38px');
-  ctx.fillText(`${d.groupName} · Rückblick`, cx, 372);
+  setLS(6); display(66);
+  ctx.fillText('TAP IN', cx + 3, 338);
+  setLS(0);
+  ctx.fillStyle = MUTED;
+  font('400 40px');
+  ctx.fillText(`${monthLabel(d.month)} · ${d.groupName}`, cx, 404);
 
-  // --- Hero: So oft trainiert ---
-  ctx.fillStyle = '#8a8a92';
-  font('600 42px');
-  ctx.fillText('SO OFT TRAINIERT', cx, 560);
-  ctx.fillStyle = ACCENT;
-  display(260);
-  ctx.fillText(String(d.me.trainings), cx, 806);
-  ctx.fillStyle = '#c9c9d0';
-  font('500 44px');
-  ctx.fillText(d.me.trainings === 1 ? 'Training' : 'Trainings', cx, 866);
+  // --- Trennstrich ---
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - 230, 466); ctx.lineTo(cx + 230, 466); ctx.stroke();
 
-  // --- Stack darunter, vertikal zentriert zwischen Hero und Footer ---
-  const GAP = 46;
-  type Item = { h: number; draw: (top: number) => void };
+  // --- zentrierte Statistik-Blöcke, jeder mit eigenem Raum ---
   const items: Item[] = [];
-
-  const streakTxt = d.streak && d.streak.weeks >= 1
-    ? `🔥 ${d.streak.weeks} ${d.streak.weeks === 1 ? 'Woche' : 'Wochen'} Streak`
-    : d.streak && d.streak.days >= 1
-      ? `🔥 ${d.streak.days} ${d.streak.days === 1 ? 'Tag' : 'Tage'} am Stück`
-      : '';
-  if (streakTxt) {
-    items.push({
-      h: 100,
+  const stat = (value: string, label: string, valueColor: string, valuePx: number): Item => {
+    const vBase = valuePx * 0.74;
+    return {
+      h: vBase + 62,
       draw: (top) => {
-        font('700 46px');
-        const w = ctx.measureText(streakTxt).width + 88;
-        const h = 100;
-        ctx.fillStyle = 'rgba(255,59,48,0.14)';
-        roundRect(ctx, cx - w / 2, top, w, h, h / 2); ctx.fill();
-        ctx.strokeStyle = 'rgba(255,59,48,0.5)'; ctx.lineWidth = 2;
-        roundRect(ctx, cx - w / 2, top, w, h, h / 2); ctx.stroke();
-        ctx.fillStyle = '#ff7a70';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(streakTxt, cx, top + h / 2 + 3);
-        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = valueColor; display(valuePx);
+        ctx.fillText(value, cx, top + vBase);
+        ctx.fillStyle = MUTED; setLS(5); font('600 38px');
+        ctx.fillText(label, cx + 2, top + vBase + 60); setLS(0);
+      },
+    };
+  };
+
+  items.push(stat(String(d.trainingDays), 'TRAININGSTAGE', ACCENT, 200));
+
+  if (d.streak && (d.streak.weeks >= 1 || d.streak.days >= 1)) {
+    const useWeeks = d.streak.weeks >= 1;
+    items.push(stat(String(useWeeks ? d.streak.weeks : d.streak.days), useWeeks ? '🔥 WOCHEN STREAK' : '🔥 TAGE AM STÜCK', '#ff7a70', 122));
+  }
+
+  if (d.youMacher) {
+    items.push({
+      h: 96,
+      draw: (top) => {
+        const txt = '🏆 MACHER DES MONATS';
+        font('700 44px');
+        const w = ctx.measureText(txt).width + 84;
+        const h = 88, y = top + 4;
+        ctx.fillStyle = 'rgba(255,194,75,0.14)';
+        roundRect(ctx, cx - w / 2, y, w, h, h / 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,194,75,0.55)'; ctx.lineWidth = 2;
+        roundRect(ctx, cx - w / 2, y, w, h, h / 2); ctx.stroke();
+        ctx.fillStyle = '#ffc24b';
+        ctx.textBaseline = 'middle'; ctx.fillText(txt, cx, y + h / 2 + 2); ctx.textBaseline = 'alphabetic';
       },
     });
   }
 
-  const badge = (emoji: string, label: string, name: string, color: string): Item => ({
-    h: 64,
-    draw: (top) => { ctx.fillStyle = color; font('700 50px'); ctx.fillText(`${emoji} ${label}: ${name}`, cx, top + 52); },
-  });
-  if (d.macher) items.push(badge('🏆', 'Macher des Monats', d.macher.user, '#ffc24b'));
-  if (d.bitch) items.push(badge('🐔', 'Bitch des Monats', d.bitch.user, '#ec4899'));
-
-  if (d.praiseComment && d.praiseComment.reason) {
-    const pad = 46;
-    const boxW = W - 150;
-    const boxX = (W - boxW) / 2;
-    font('500 48px');
-    const reason = d.praiseComment.reason.length > 160 ? d.praiseComment.reason.slice(0, 160) : d.praiseComment.reason;
-    const lines = wrapText(ctx, `„${reason}"`, boxW - pad * 2, 4);
-    const lineH = 62;
-    const capH = 40, gapAfterCap = 30, gapBeforeBy = 26, byH = 46;
-    const boxH = pad + capH + gapAfterCap + lines.length * lineH + gapBeforeBy + byH + pad;
-    const kind = d.praiseComment.kind, from = d.praiseComment.from;
-    items.push({
-      h: boxH,
-      draw: (top) => {
-        ctx.fillStyle = 'rgba(61,220,132,0.10)';
-        roundRect(ctx, boxX, top, boxW, boxH, 30); ctx.fill();
-        ctx.strokeStyle = 'rgba(61,220,132,0.35)'; ctx.lineWidth = 2;
-        roundRect(ctx, boxX, top, boxW, boxH, 30); ctx.stroke();
-        let ty = top + pad + 32;
-        ctx.fillStyle = '#3ddc84'; font('600 32px');
-        ctx.fillText(kind === 'gigalob' ? 'GIGALOB ERHALTEN' : 'LOB ERHALTEN', cx, ty);
-        ty += gapAfterCap + lineH;
-        ctx.fillStyle = '#eaeaee'; font('500 48px');
-        for (const ln of lines) { ctx.fillText(ln, cx, ty); ty += lineH; }
-        ty += gapBeforeBy;
-        ctx.fillStyle = '#8a8a92'; font('500 40px');
-        ctx.fillText(`— ${from}`, cx, ty);
-      },
-    });
+  if (d.topClass) {
+    let px = 122; display(px);
+    while (ctx.measureText(d.topClass.name).width > W - 170 && px > 56) { px -= 6; display(px); }
+    items.push(stat(d.topClass.name, 'MEIST TRAINIERT', '#ececf0', px));
   }
 
+  const GAP = 82;
   const stackH = items.reduce((s, it) => s + it.h, 0) + GAP * Math.max(0, items.length - 1);
-  const regionTop = 940, regionBottom = 1770;
+  const regionTop = 560, regionBottom = 1850;
   let y = regionTop + Math.max(0, (regionBottom - regionTop - stackH) / 2);
   for (const it of items) { it.draw(y); y += it.h + GAP; }
-
-  // --- Footer ---
-  ctx.fillStyle = '#6b6b74';
-  font('500 38px');
-  ctx.fillText('Wer kommt diese Woche?', cx, H - 96);
 
   return await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
 }

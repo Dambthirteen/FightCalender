@@ -21,6 +21,9 @@ interface WrappedData {
   me: { trainings: number; skips: number; lobe: number; bitch: number };
   streak?: { days: number; weeks: number } | null;
   praiseComment?: { from: string; reason: string; kind: string } | null;
+  trainingDays?: number;
+  topClass?: { name: string; count: number } | null;
+  youMacher?: boolean;
 }
 
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
@@ -44,6 +47,7 @@ function buildCards(d: WrappedData): Card[] {
   if (d.worstExcuse) cards.push({ emoji: '🙄', label: 'Härtester Reinfall', big: d.worstExcuse.user, sub: `„${d.worstExcuse.excuse}"`, color: 'var(--accent)' });
   if (d.topJudge) cards.push({ emoji: '⚖️', label: 'Fleißigster Richter', big: d.topJudge.user, sub: `${d.topJudge.count}× gerichtet`, color: 'var(--teal)' });
   if (d.lobKing) cards.push({ emoji: '👏', label: 'Meiste Würdigungen', big: d.lobKing.user, sub: `${d.lobKing.count}× gelobt`, color: 'var(--gold)' });
+  if (d.topClass) cards.push({ emoji: '🥋', label: 'Meist trainiert', big: d.topClass.name, sub: `${d.topClass.count}× diesen Monat`, color: 'var(--teal)' });
   if (d.praiseComment) cards.push({ emoji: '💬', label: d.praiseComment.kind === 'gigalob' ? 'Gigalob erhalten von' : 'Lob erhalten von', big: d.praiseComment.from, sub: `„${d.praiseComment.reason}"`, color: 'var(--good)' });
   const meLines = [`${d.me.skips}× geschwänzt`, `${d.me.bitch} Bitch-Punkte`, `${d.me.lobe} Würdigungen erhalten`];
   if (d.streak && d.streak.weeks >= 1) meLines.unshift(`🔥 ${d.streak.weeks} ${d.streak.weeks === 1 ? 'Woche' : 'Wochen'} Streak`);
@@ -64,8 +68,9 @@ function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
     setSharing(true);
     try {
       const blob = await renderWrappedCard({
-        month: data.month, groupName: data.groupName, me: data.me, macher: data.macher, bitch: data.bitch,
-        streak: data.streak, praiseComment: data.praiseComment,
+        month: data.month, groupName: data.groupName,
+        trainingDays: data.trainingDays ?? data.me.trainings,
+        streak: data.streak, youMacher: data.youMacher, topClass: data.topClass,
       });
       if (!blob) return;
       track('wrapped_shared', { month: data.month });

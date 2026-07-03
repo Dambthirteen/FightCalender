@@ -108,6 +108,20 @@ export async function GET(req: NextRequest) {
       WHERE to_user = ${me} AND created_at >= ${start}::timestamptz AND created_at < ${end}::timestamptz AND reason != ''
       ORDER BY (kind = 'gigalob') DESC, created_at DESC LIMIT 1
     `) as { from_user: string; reason: string; kind: string }[];
+    // Trainingstage (distinct Tage) + meist besuchte Kampfsportart des Monats.
+    const trainDaysRow = (await sql`
+      SELECT COUNT(DISTINCT (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date)::int AS n
+      FROM attendance a JOIN classes c ON c.id = a.class_id
+      WHERE c.group_id = ${gid} AND a.user_name = ${me}
+        AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
+    `) as { n: number }[];
+    const topClassRow = (await sql`
+      SELECT c.name, COUNT(*)::int AS n
+      FROM attendance a JOIN classes c ON c.id = a.class_id
+      WHERE c.group_id = ${gid} AND a.user_name = ${me}
+        AND a.week_start >= ${start}::date AND a.week_start < ${end}::date
+      GROUP BY c.name ORDER BY n DESC LIMIT 1
+    `) as { name: string; n: number }[];
 
     const macher = macherRows[0] ? { user: macherRows[0].user_name, count: macherRows[0].n } : null;
     const bitch = topBitch ? { user: topBitch.user_name, count: topBitch.count } : null;
@@ -125,6 +139,9 @@ export async function GET(req: NextRequest) {
       topJudge: judgeRows[0] ? { user: judgeRows[0].voter_name, count: judgeRows[0].n } : null,
       lobKing: lobRows[0] ? { user: lobRows[0].to_user, count: lobRows[0].n } : null,
       me: { trainings: myAtt[0]?.n ?? 0, skips: mySkips[0]?.n ?? 0, lobe: myLob[0]?.n ?? 0, bitch: myBitch },
+      trainingDays: trainDaysRow[0]?.n ?? 0,
+      topClass: topClassRow[0] ? { name: topClassRow[0].name, count: topClassRow[0].n } : null,
+      youMacher: !!(macher && macher.user === me),
       streak,
       praiseComment: praiseRows[0] ? { from: praiseRows[0].from_user, reason: praiseRows[0].reason, kind: praiseRows[0].kind } : null,
     });
