@@ -30,6 +30,7 @@ export default function GroupsPage() {
   const [clanTag, setClanTag] = useState('');
   const [hardMode, setHardMode] = useState(false);
   const [bundesland, setBundesland] = useState('NW');
+  const [inviteMsg, setInviteMsg] = useState('');
   const [form, setForm] = useState({ name: '', dayOfWeek: 1, startTime: '18:00', endTime: '19:30', color: 'red' });
 
   const load = useCallback(async () => {
@@ -104,6 +105,22 @@ export default function GroupsPage() {
     await fetch('/api/groups/current', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: id }) });
     window.location.href = '/';
   }
+  function inviteUrl() { return `${window.location.origin}/join?code=${inviteCode}`; }
+  async function shareInvite() {
+    if (!inviteCode) return;
+    setInviteMsg('');
+    track('invite_shared', { method: 'share' });
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ title: 'Tap In', text: 'Komm in unsere Crew!', url: inviteUrl() }); } catch { /* abgebrochen */ }
+    } else {
+      try { await navigator.clipboard.writeText(inviteUrl()); setInviteMsg('Link kopiert.'); } catch {}
+    }
+  }
+  async function copyInvite() {
+    if (!inviteCode) return;
+    track('invite_shared', { method: 'copy' });
+    try { await navigator.clipboard.writeText(inviteUrl()); setInviteMsg('Link kopiert.'); } catch {}
+  }
   async function memberAction(action: string, user_name?: string) {
     if (action === 'leave' && !confirm('Gruppe wirklich verlassen?')) return;
     if (action === 'remove' && !confirm(`„${user_name}" entfernen?`)) return;
@@ -173,6 +190,20 @@ export default function GroupsPage() {
           </div>
         </section>
 
+        {/* Freunde einladen — jedes aktive Mitglied */}
+        {current && inviteCode && (
+          <section className="card p-4 anim-up" style={{ animationDelay: '30ms' }}>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-1.5">Freunde einladen</div>
+            <p className="text-[11px] text-[var(--faint)] mb-3">Schick den Link — wer ihn öffnet, ist mit einem Tap dabei (ein Admin bestätigt).</p>
+            <div className="flex gap-2">
+              <button onClick={shareInvite} className="flex-1 text-white font-bold py-2.5 rounded-xl" style={{ background: 'var(--accent)' }}>Einladung teilen</button>
+              <button onClick={copyInvite} className="px-4 rounded-xl border border-[var(--border)] text-[var(--muted)] text-sm">Link kopieren</button>
+            </div>
+            <div className="text-center text-[11px] text-[var(--faint)] mt-3 font-mono tracking-widest">Code: {inviteCode}</div>
+            {inviteMsg && <p className="text-xs mt-2 text-center" style={{ color: 'var(--teal)' }}>{inviteMsg}</p>}
+          </section>
+        )}
+
         {/* Harter Modus (nur Admin) */}
         {current && isAdmin && (
           <section className="card p-4 anim-up" style={{ animationDelay: '50ms' }}>
@@ -224,9 +255,6 @@ export default function GroupsPage() {
           <section className="card p-4 anim-up" style={{ animationDelay: '80ms' }}>
             <div className="flex items-center justify-between mb-3">
               <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)]">{groupName} · Mitglieder</div>
-              {isAdmin && inviteCode && (
-                <span className="text-[11px] font-mono tracking-widest px-2 py-0.5 rounded" style={{ background: 'var(--surface-2)', color: 'var(--teal)' }}>Code: {inviteCode}</span>
-              )}
             </div>
 
             {isAdmin && pending.length > 0 && (

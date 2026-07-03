@@ -6,7 +6,7 @@ const getSecret = () =>
 
 // /api/notify wird vom externen Cron-Dienst ohne Login aufgerufen und ist
 // stattdessen per CRON_SECRET geschützt.
-const PUBLIC_PATHS = ['/login', '/datenschutz', '/impressum', '/verify', '/reset', '/forgot', '/api/auth', '/api/setup', '/api/notify'];
+const PUBLIC_PATHS = ['/login', '/datenschutz', '/impressum', '/verify', '/reset', '/forgot', '/join', '/api/auth', '/api/setup', '/api/notify'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

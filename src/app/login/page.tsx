@@ -30,6 +30,9 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Fehler'); return; }
       if (tab === 'register') { identify(userName); track('signup'); } else { track('login'); }
+      // Offene Crew-Einladung? Dann Beitritt fortsetzen (Code liegt als Cookie vor).
+      const invite = document.cookie.match(/(?:^|;\s*)fightcal_invite=([^;]+)/)?.[1] ?? '';
+      if (invite) { window.location.href = `/join?code=${invite}`; return; }
       // Hard redirect so the browser sends the new session cookie fresh.
       // Neue Accounts zuerst in den Onboarding-Assistenten.
       window.location.href = tab === 'register' ? '/onboarding' : '/';

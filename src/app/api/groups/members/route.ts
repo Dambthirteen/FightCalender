@@ -27,7 +27,7 @@ export async function GET() {
 
   return NextResponse.json({
     group: { id: g.id, name: g.name },
-    inviteCode: myRole === 'admin' ? g.invite_code : null,
+    inviteCode: myRole ? g.invite_code : null, // jedes aktive Mitglied darf einladen
     myRole,
     members,
   });
