@@ -25,24 +25,26 @@ export default function BottomNav() {
         WebkitBackdropFilter: 'blur(14px)',
         borderTop: '1px solid var(--border-soft)',
       }}>
-      <div className="max-w-md mx-auto flex items-stretch pt-2.5 pb-1.5">
+      <div className="max-w-md mx-auto flex items-stretch pt-3.5 pb-1.5">
         {tabs.map((t) => (
           <a key={t.label} href={t.href}
-            className="flex-1 flex flex-col items-center justify-end gap-1">
-            {/* Aktiver Tab: leicht angehoben + leicht rund + Akzent-Glow */}
+            className="flex-1 flex flex-col items-center justify-end gap-1 h-full active:opacity-80">
+            {/* Weiße Kapsel; darin die schwarze Icon-Scheibe (transparentes Logo scheint durch).
+                Aktiver Tab hebt sich stärker an + kräftigerer Schatten. */}
             <span className="grid place-items-center rounded-2xl transition-all duration-200"
               style={{
-                width: 46, height: 40,
-                transform: t.active ? 'translateY(-9px)' : 'none',
-                background: t.active ? 'var(--accent-soft)' : 'transparent',
-                border: t.active ? '1px solid rgba(255,59,48,0.35)' : '1px solid transparent',
-                boxShadow: t.active ? '0 6px 16px rgba(255,59,48,0.28)' : 'none',
+                width: 66, height: 50,
+                background: '#fff',
+                border: '1px solid #fff',
+                transform: t.active ? 'translateY(-11px)' : 'none',
+                boxShadow: t.active ? '0 9px 20px rgba(0,0,0,0.48)' : '0 2px 6px rgba(0,0,0,0.3)',
+                opacity: t.active ? 1 : 0.82,
               }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={t.icon} alt="" className="w-7 h-7 object-contain" style={{ opacity: t.active ? 1 : 0.5 }} />
+              <img src={t.icon} alt="" className="object-contain" style={{ width: 38, height: 38 }} />
             </span>
             <span className="text-[10px] font-semibold tracking-wide"
-              style={{ color: t.active ? 'var(--accent)' : 'var(--faint)', marginTop: t.active ? -6 : 0 }}>{t.label}</span>
+              style={{ color: t.active ? 'var(--accent)' : 'var(--faint)', marginTop: t.active ? -8 : 0 }}>{t.label}</span>
           </a>
         ))}
       </div>
