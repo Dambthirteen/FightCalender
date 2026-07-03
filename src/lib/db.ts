@@ -28,10 +28,21 @@ export async function getClasses(groupId?: number): Promise<GymClass[]> {
   return rows as GymClass[];
 }
 
-export async function getAttendanceForWeek(weekStart: string): Promise<AttendanceRecord[]> {
+export async function getAttendanceForWeek(weekStart: string, groupId: number): Promise<AttendanceRecord[]> {
   const sql = getSql();
-  const rows = await sql`SELECT * FROM attendance WHERE week_start = ${weekStart}`;
+  // Nur Anwesenheiten der Kurse DIESER Gruppe — sonst würde man fremde Crews sehen.
+  const rows = await sql`
+    SELECT a.* FROM attendance a JOIN classes c ON c.id = a.class_id
+    WHERE a.week_start = ${weekStart} AND c.group_id = ${groupId}
+  `;
   return rows as AttendanceRecord[];
+}
+
+/** Gehört der Kurs zur angegebenen Gruppe? (Zugriffsprüfung fürs Ein-/Austragen.) */
+export async function classInGroup(classId: number, groupId: number): Promise<boolean> {
+  const sql = getSql();
+  const rows = await sql`SELECT 1 FROM classes WHERE id = ${classId} AND group_id = ${groupId}`;
+  return rows.length > 0;
 }
 
 export async function toggleAttendance(

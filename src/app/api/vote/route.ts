@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getCurrentGroupId, isHardMode, getGroupBundesland } from '@/lib/groups';
+import { getCurrentGroupId, isHardMode, getGroupBundesland, getRole } from '@/lib/groups';
 import { getCourtExcuses } from '@/lib/court';
 
 function getSql() { return neon(process.env.DATABASE_URL!); }
@@ -29,21 +29,27 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const sql = getSql();
-    const { skipId, voterName, vote } = await req.json();
-    if (!skipId || !voterName || !['accept', 'reject'].includes(vote)) {
+    const me = await getCurrentUser();
+    if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { skipId, vote } = await req.json();
+    if (!skipId || !['accept', 'reject'].includes(vote)) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
     const skip = await sql`SELECT user_name, group_id FROM skipping WHERE id = ${skipId}`;
     if (!skip[0]) return NextResponse.json({ error: 'Skip not found' }, { status: 404 });
+    // Nur MITGLIEDER der betroffenen Gruppe dürfen richten — und immer als sie selbst.
+    if (!(await getRole(me, skip[0].group_id))) {
+      return NextResponse.json({ error: 'Kein Mitglied dieser Gruppe' }, { status: 403 });
+    }
     if (!(await isHardMode(skip[0].group_id))) {
       return NextResponse.json({ error: 'Gericht ist in dieser Gruppe deaktiviert' }, { status: 403 });
     }
-    if (skip[0]?.user_name === voterName) {
+    if (skip[0].user_name === me) {
       return NextResponse.json({ error: 'Cannot vote on own excuse' }, { status: 403 });
     }
     await sql`
       INSERT INTO excuse_votes (skip_id, voter_name, vote)
-      VALUES (${skipId}, ${voterName}, ${vote})
+      VALUES (${skipId}, ${me}, ${vote})
       ON CONFLICT (skip_id, voter_name) DO UPDATE SET vote = ${vote}
     `;
     return NextResponse.json({ ok: true });

@@ -71,6 +71,7 @@ export async function GET(req: NextRequest) {
     const lobRows = (await sql`
       SELECT to_user, COUNT(*)::int AS n FROM praises
       WHERE created_at >= ${start}::timestamptz AND created_at < ${end}::timestamptz
+        AND to_user IN (SELECT user_name FROM group_members WHERE group_id = ${gid} AND status = 'active')
       GROUP BY to_user ORDER BY n DESC LIMIT 1
     `) as { to_user: string; n: number }[];
 

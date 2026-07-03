@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
+import { canViewProfile } from '@/lib/groups';
 
 function getSql() { return neon(process.env.DATABASE_URL!); }
 
@@ -12,9 +13,12 @@ const EXCUSE_TEXT: Record<string, string> = {
 
 export async function GET(req: NextRequest) {
   try {
-    const sql = getSql();
-    const user = req.nextUrl.searchParams.get('user') ?? await getCurrentUser();
+    const me = await getCurrentUser();
+    const user = req.nextUrl.searchParams.get('user') ?? me;
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Fremden Status (inkl. Notiz, evtl. medizinisch) nur gemäß Profil-Sichtbarkeit zeigen.
+    if (user !== me && !(await canViewProfile(me, user))) return NextResponse.json([]);
+    const sql = getSql();
     const rows = await sql`
       SELECT * FROM user_status WHERE user_name = ${user} ORDER BY start_date DESC
     `;

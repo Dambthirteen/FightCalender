@@ -10,12 +10,16 @@ function getSql() {
 
 export async function GET(req: NextRequest) {
   try {
-    const sql = getSql();
     const week = req.nextUrl.searchParams.get('week');
     if (!week) return NextResponse.json({ error: 'Missing week param' }, { status: 400 });
+    const me = await getCurrentUser();
+    const gid = me ? await getCurrentGroupId(me) : null;
+    if (!gid) return NextResponse.json([]); // ohne Gruppe keine Ausreden (nicht alle Crews!)
+    const sql = getSql();
     const rows = await sql`
       SELECT * FROM skipping
       WHERE date >= ${week}::date AND date < (${week}::date + INTERVAL '7 days')
+        AND group_id = ${gid}
     `;
     return NextResponse.json(rows);
   } catch (error) {
@@ -26,11 +30,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const sql = getSql();
-    const { date, userName, excuse, useStreakPoint } = await req.json();
-    if (!date || !userName?.trim()) {
+    const me = await getCurrentUser();
+    if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { date, excuse, useStreakPoint } = await req.json();
+    if (!date) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
-    const name = userName.trim();
+    const name = me; // Ausrede immer für den eingeloggten Nutzer — nie für fremde Namen aus dem Body
     const existing = (await sql`
       SELECT id, streak_protected FROM skipping WHERE date = ${date} AND user_name = ${name}
     `) as { id: number; streak_protected: boolean }[];
@@ -51,8 +57,7 @@ export async function POST(req: NextRequest) {
       if (diff > 3) {
         return NextResponse.json({ error: 'Frist abgelaufen — Ausrede nur bis 3 Tage nach dem Tag möglich.' }, { status: 400 });
       }
-      const me = await getCurrentUser();
-      const gid = me ? await getCurrentGroupId(me) : null;
+      const gid = await getCurrentGroupId(me);
 
       // Optional: Streak mit einem Streak-Punkt schützen (nur wenn vorhanden).
       let protectStreak = false;
