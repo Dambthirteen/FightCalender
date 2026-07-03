@@ -181,7 +181,10 @@ export default function ProfilePage() {
   const c = colorFor(name, color);
 
   useEffect(() => {
-    fetch(`/api/profile-info?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
+    setReady(false);
+    // Layout-relevante Daten (bestimmen die Höhe/Struktur der Seite): erst wenn ALLE
+    // da sind, wird die Seite gezeigt — sonst „baut" sie sich sichtbar nach.
+    const pInfo = fetch(`/api/profile-info?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
       if (d && !d.error) {
         setPriv(d.private === true);
         setAvatar(d.avatar ?? null); setColor(d.color ?? null);
@@ -194,26 +197,29 @@ export default function ProfilePage() {
           setCosmetics(d.cosmetics && typeof d.cosmetics === 'object' ? d.cosmetics : {});
         }
       }
-    }).catch(() => {}).finally(() => setReady(true));
-    fetch(`/api/profile-stats?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
+    }).catch(() => {});
+    const pStats = fetch(`/api/profile-stats?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
       if (d && !d.error) setStats(d);
     }).catch(() => {});
-    fetch(`/api/year?year=${new Date().getFullYear()}`).then((r) => r.json()).then((d) => {
+    const pYear = fetch(`/api/year?year=${new Date().getFullYear()}`).then((r) => r.json()).then((d) => {
       setMacherYear((d.macher as YearRow[] | undefined)?.find((x) => x.user_name === name)?.total ?? 0);
       setBitchYear((d.bitch as YearRow[] | undefined)?.find((x) => x.user_name === name)?.total ?? 0);
     }).catch(() => {});
-    fetch(`/api/comments?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setComments(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`/api/challenges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setChallenges(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`/api/praise?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setPraises(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`/api/badges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setBadgeData(d); }).catch(() => {});
-    fetch(`/api/xp?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setXp(d); }).catch(() => {});
-    fetch(`/api/profile/plan?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
+    const pBadges = fetch(`/api/badges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setBadgeData(d); }).catch(() => {});
+    const pXp = fetch(`/api/xp?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => { if (d && !d.error && !d.private) setXp(d); }).catch(() => {});
+    const pPlan = fetch(`/api/profile/plan?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => {
       if (d && !d.error) {
         const gs = Array.isArray(d.groups) ? d.groups : [];
         setPlanGroups(gs); setPlanClasses(Array.isArray(d.classes) ? d.classes : []);
         setPlanGroupSel((prev) => prev ?? gs[0]?.id ?? null);
       }
     }).catch(() => {});
+    Promise.all([pInfo, pStats, pYear, pBadges, pXp, pPlan]).finally(() => setReady(true));
+
+    // Tab-Inhalte (Pinnwand/Ehrungen) im Hintergrund — blockieren den Ladebildschirm nicht.
+    fetch(`/api/comments?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setComments(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`/api/challenges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setChallenges(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`/api/praise?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setPraises(Array.isArray(d) ? d : [])).catch(() => {});
   }, [name]);
 
   // Lob/Gigalob-Verfügbarkeit des Betrachters (für die Buttons auf fremden Profilen)
@@ -576,10 +582,10 @@ export default function ProfilePage() {
         ) : (
           <>
             {/* Tabs */}
-            <div className="flex border-b border-[var(--border-soft)] mt-5 mb-4">
+            <div className="flex gap-6 border-b border-[var(--border-soft)] mt-5 mb-4 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
               {TABS.map(([key, label]) => (
                 <button key={key} onClick={() => setTab(key)}
-                  className="flex-1 pb-2.5 -mb-px text-sm font-semibold border-b-2 transition-colors"
+                  className="shrink-0 pb-2.5 -mb-px text-[13px] font-semibold border-b-2 whitespace-nowrap transition-colors"
                   style={{ color: tab === key ? 'var(--text)' : 'var(--faint)', borderColor: tab === key ? 'var(--accent)' : 'transparent' }}>
                   {label}
                 </button>
