@@ -24,6 +24,7 @@ export interface BeltSkin { src: string; clanColor: string }
 export const BELT_SKINS: Record<string, BeltSkin> = {
   default: { src: '/belt.png', clanColor: '#1a1a1a' },
   ice: { src: '/belt2.png', clanColor: '#16324a' },
+  fire: { src: '/belt3.png', clanColor: '#3a1e00' },
 };
 export function beltSkin(id?: string): BeltSkin {
   return BELT_SKINS[id ?? 'default'] ?? BELT_SKINS.default;
@@ -63,6 +64,7 @@ export const COSMETICS: Record<CosmeticCategory, { label: string; items: Cosmeti
     items: [
       { id: 'default', label: 'Klassisch', minLevel: 1 },
       { id: 'ice', label: 'Eis', minLevel: 1 }, // zum Testen auf Level 1
+      { id: 'fire', label: 'Fire', minLevel: 5 },
     ],
   },
   xpbar: {
