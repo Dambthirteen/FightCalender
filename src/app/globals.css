@@ -150,18 +150,18 @@ h1, h2, h3, .font-display {
 }
 .frame-pulse { animation: framePulse 1.8s ease-in-out infinite; }
 
-/* Streak-Flamme: Feuer-„Wave" (SVG-Displacement #flameWaveMid) + pulsierender oranger Glow
-   + leichtes Atmen (Scale/Rotate). drop-shadow folgt der Freisteller-Silhouette. */
-@keyframes flameFlicker {
-  0%   { transform: scale(1) rotate(0deg);        filter: url(#flameWaveMid) drop-shadow(0 0 6px rgba(255,120,20,0.5))   drop-shadow(0 1px 15px rgba(255,80,0,0.31)); }
-  20%  { transform: scale(1.018) rotate(-0.5deg); filter: url(#flameWaveMid) drop-shadow(0 0 9px rgba(255,140,30,0.6))   drop-shadow(0 1px 20px rgba(255,90,0,0.37)); }
-  45%  { transform: scale(0.99) rotate(0.4deg);   filter: url(#flameWaveMid) drop-shadow(0 0 5px rgba(255,115,20,0.44))  drop-shadow(0 1px 13px rgba(255,80,0,0.26)); }
-  70%  { transform: scale(1.022) rotate(-0.3deg); filter: url(#flameWaveMid) drop-shadow(0 0 10px rgba(255,150,45,0.66)) drop-shadow(0 1px 22px rgba(255,95,0,0.4)); }
-  100% { transform: scale(1) rotate(0deg);        filter: url(#flameWaveMid) drop-shadow(0 0 6px rgba(255,120,20,0.5))   drop-shadow(0 1px 15px rgba(255,80,0,0.31)); }
+/* Streak-Flamme: Wave & Glow bewusst GETRENNT — ein filter mit url()+drop-shadow
+   lässt sich nicht glatt interpolieren (Glow würde an/aus springen).
+   → Bild: statische Feuer-Wave. Wrapper: pulsierender Glow + Atmen (nur drop-shadow). */
+.flame-wave { filter: url(#flameWaveMid); }
+@keyframes flamePulse {
+  0%, 100% { transform: scale(1);     filter: drop-shadow(0 0 6px rgba(255,122,20,0.5))  drop-shadow(0 1px 15px rgba(255,82,0,0.31)); }
+  50%      { transform: scale(1.025); filter: drop-shadow(0 0 12px rgba(255,150,45,0.68)) drop-shadow(0 1px 22px rgba(255,95,0,0.42)); }
 }
-.flame-anim { animation: flameFlicker 2.6s ease-in-out infinite; transform-origin: 50% 82%; will-change: transform, filter; }
+.flame-glow { animation: flamePulse 2.6s ease-in-out infinite; transform-origin: 50% 82%; will-change: transform, filter; }
 @media (prefers-reduced-motion: reduce) {
-  .flame-anim { animation: none; filter: drop-shadow(0 0 7px rgba(255,120,20,0.44)) drop-shadow(0 1px 16px rgba(255,80,0,0.28)); }
+  .flame-glow { animation: none; filter: drop-shadow(0 0 7px rgba(255,120,20,0.44)) drop-shadow(0 1px 16px rgba(255,80,0,0.28)); }
+  .flame-wave { filter: none; }
 }
 
 /* ===================== Bausteine ===================== */

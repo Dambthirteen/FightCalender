@@ -34,9 +34,16 @@ export default function StreakFlame({ days, height = 120, dim }: { days: number;
           <feDisplacementMap in="SourceGraphic" in2="n" scale="11" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </svg>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={lv.src} alt="" className={off ? undefined : 'flame-anim'}
-        style={{ width, height, display: 'block', filter: off ? 'grayscale(1)' : undefined, opacity: off ? 0.5 : 1 }} />
+      {off ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={lv.src} alt="" style={{ width, height, display: 'block', filter: 'grayscale(1)', opacity: 0.5 }} />
+      ) : (
+        // Wrapper trägt den pulsierenden Glow, das Bild die statische Wave (getrennt = kein Glow-Flackern).
+        <div className="flame-glow" style={{ width, height }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lv.src} alt="" className="flame-wave" style={{ width, height, display: 'block' }} />
+        </div>
+      )}
       <span style={{
         position: 'absolute', left: `${lv.cx * 100}%`, top: `${lv.cy * 100}%`, transform: 'translate(-50%, -50%)',
         fontWeight: 800, fontSize: `${fontPx}px`, lineHeight: 1, color: '#fff',
