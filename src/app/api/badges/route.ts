@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { canViewProfile, getMyGroups, getUserBundesland } from '@/lib/groups';
 import { getStreak } from '@/lib/streak';
-import { earnedBadges, earnedFightBadges, badgeById, ADMIN_BADGE, DOPPELMORAL_BADGE, type BadgeDef } from '@/lib/badges';
+import { earnedBadges, earnedFightBadges, earnedTournamentBadges, badgeById, ADMIN_BADGE, DOPPELMORAL_BADGE, type BadgeDef } from '@/lib/badges';
 import { createNotification } from '@/lib/notify';
 import { broadcastToGroup } from '@/lib/feed';
 import { grantStreakPoint, currentWeekRef, STREAK_POINT_CAP } from '@/lib/streak-points';
@@ -31,6 +31,9 @@ async function computeEarned(sql: Sql, user: string, weeks: number): Promise<{ b
   // Kampf-Sieg-Badges aus den gewonnenen Wettkämpfen.
   const winRows = (await sql`SELECT DISTINCT method FROM competitions WHERE user_name = ${user} AND result = 'win' AND method IS NOT NULL`) as { method: string }[];
   badges.push(...earnedFightBadges(winRows.map((r) => r.method)));
+  // Turnier-Platzierungs-Badges (Gold/Silber/Bronze).
+  const placeRows = (await sql`SELECT DISTINCT placement FROM competitions WHERE user_name = ${user} AND placement IN ('gold','silver','bronze')`) as { placement: string }[];
+  badges.push(...earnedTournamentBadges(placeRows.map((r) => r.placement)));
   if (await isGroupAdmin(user)) badges.push(ADMIN_BADGE);
 
   // Geheim „Doppelmoral": ≥10 Bitch-Punkte UND ≥20× gerichtet. Bitch-Berechnung nur bei Bedarf.
@@ -84,8 +87,8 @@ export async function GET(req: NextRequest) {
           link: `/profil/${encodeURIComponent(user)}`,
           push: { title: '🏅 Neues Abzeichen', body: `${b.label} freigeschaltet!` },
         });
-        // Streak-/Wettkampf-Trophäen zusätzlich an die Gruppe (soziale Anerkennung).
-        if (b.kind === 'streak' || b.kind === 'competition') {
+        // Streak-/Wettkampf-/Turnier-Trophäen zusätzlich an die Gruppe (soziale Anerkennung).
+        if (b.kind === 'streak' || b.kind === 'competition' || b.kind === 'tournament') {
           for (const g of await getMyGroups(user)) {
             await broadcastToGroup(sql, {
               groupId: g.id, type: 'badge_feed', actor: user,

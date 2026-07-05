@@ -1,7 +1,7 @@
 // Abzeichen-Definitionen. Emojis sind Platzhalter — später durch kleine PNGs ersetzbar
 // (einfach `emoji` durch `icon`-Pfad tauschen, die IDs bleiben stabil).
 
-export type BadgeKind = 'streak' | 'competition' | 'fight' | 'judge' | 'special' | 'secret';
+export type BadgeKind = 'streak' | 'competition' | 'fight' | 'tournament' | 'judge' | 'special' | 'secret';
 
 export interface BadgeDef {
   id: string;
@@ -44,12 +44,24 @@ export function earnedFightBadges(winMethods: string[]): BadgeDef[] {
   return FIGHT_BADGES.filter((b) => ids.has(b.id));
 }
 
+// Turnier-Platzierungen (aus den Wettkämpfen mit placement gold/silver/bronze).
+export const TOURNAMENT_BADGES: BadgeDef[] = [
+  { id: 'tourn_gold', label: 'Gold geholt', emoji: '🥇', kind: 'tournament', threshold: 0, hint: '1. Platz bei einem Turnier' },
+  { id: 'tourn_silver', label: 'Silber geholt', emoji: '🥈', kind: 'tournament', threshold: 0, hint: '2. Platz bei einem Turnier' },
+  { id: 'tourn_bronze', label: 'Bronze geholt', emoji: '🥉', kind: 'tournament', threshold: 0, hint: '3. Platz bei einem Turnier' },
+];
+const TOURN_BY_PLACEMENT: Record<string, string> = { gold: 'tourn_gold', silver: 'tourn_silver', bronze: 'tourn_bronze' };
+export function earnedTournamentBadges(placements: string[]): BadgeDef[] {
+  const ids = new Set(placements.map((p) => TOURN_BY_PLACEMENT[p]).filter(Boolean));
+  return TOURNAMENT_BADGES.filter((b) => ids.has(b.id));
+}
+
 // Gericht = Anzahl bewerteter (gerichteter) Ausreden.
 export const JUDGE_BADGES: BadgeDef[] = [
-  { id: 'judge_10', label: 'Jura Student', emoji: '📚', kind: 'judge', threshold: 10, hint: '10 Ausreden gerichtet' },
-  { id: 'judge_20', label: 'Angehender Richter', emoji: '⚖️', kind: 'judge', threshold: 20, hint: '20 Ausreden gerichtet' },
-  { id: 'judge_50', label: 'Richter', emoji: '👨‍⚖️', kind: 'judge', threshold: 50, hint: '50 Ausreden gerichtet' },
-  { id: 'judge_100', label: 'Der Richtende!', emoji: '🔨', kind: 'judge', threshold: 100, hint: '100 Ausreden gerichtet' },
+  { id: 'judge_50', label: 'Jura Student', emoji: '📚', kind: 'judge', threshold: 50, hint: '50 Ausreden gerichtet' },
+  { id: 'judge_200', label: 'Angehender Richter', emoji: '⚖️', kind: 'judge', threshold: 200, hint: '200 Ausreden gerichtet' },
+  { id: 'judge_500', label: 'Richter', emoji: '👨‍⚖️', kind: 'judge', threshold: 500, hint: '500 Ausreden gerichtet' },
+  { id: 'judge_1000', label: 'Der Richtende!', emoji: '🔨', kind: 'judge', threshold: 1000, hint: '1000 Ausreden gerichtet' },
 ];
 
 // Spezial-Abzeichen (rollenbasiert, nicht über Schwellen).
@@ -60,7 +72,7 @@ export const SPECIAL_BADGES: BadgeDef[] = [ADMIN_BADGE];
 export const DOPPELMORAL_BADGE: BadgeDef = { id: 'secret_doppelmoral', label: 'Doppelmoral', emoji: '🎭', kind: 'secret', threshold: 0, hint: '10 Chicken-Punkte – und trotzdem über 20× gerichtet', secret: true };
 export const SECRET_BADGES: BadgeDef[] = [DOPPELMORAL_BADGE];
 
-export const ALL_BADGES: BadgeDef[] = [...STREAK_BADGES, ...COMPETITION_BADGES, ...FIGHT_BADGES, ...JUDGE_BADGES, ...SPECIAL_BADGES, ...SECRET_BADGES];
+export const ALL_BADGES: BadgeDef[] = [...STREAK_BADGES, ...COMPETITION_BADGES, ...FIGHT_BADGES, ...TOURNAMENT_BADGES, ...JUDGE_BADGES, ...SPECIAL_BADGES, ...SECRET_BADGES];
 
 export function earnedJudgeBadges(judged: number): BadgeDef[] {
   return JUDGE_BADGES.filter((b) => judged >= b.threshold);
