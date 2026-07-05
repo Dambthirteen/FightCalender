@@ -14,7 +14,7 @@ export async function GET() {
     const sql = getSql();
     const items = await sql`
       SELECT n.id, n.type, n.actor, n.body, n.link, n.ref_id, n.read, n.created_at,
-        n.event_id, n.reactable,
+        n.event_id, n.reactable, n.meta,
         p.displayed AS praise_displayed, p.show_comment AS praise_show_comment,
         p.kind AS praise_kind, p.reason AS praise_reason,
         (SELECT COUNT(*)::int FROM feed_reactions fr WHERE fr.event_id = n.event_id) AS reaction_count,

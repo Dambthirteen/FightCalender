@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useUser } from '@/components/UserProvider';
+import { nameplateStyle, avatarFrame, flameFilter, beltSkin, xpBarColor } from '@/lib/cosmetics';
 
 interface Notif {
   id: number;
@@ -21,12 +22,31 @@ interface Notif {
   praise_show_comment?: boolean | null;
   praise_kind?: string | null;
   praise_reason?: string | null;
+  meta?: { category?: string; itemId?: string; label?: string; minLevel?: number } | null;
 }
 
 const ICON: Record<string, string> = {
-  comment: '💬', challenge: '⚔️', challenge_result: '⚖️', praise: '🏅', badge: '🎖️',
+  comment: '💬', challenge: '⚔️', challenge_result: '⚖️', praise: '🏅', badge: '🎖️', cosmetic: '✨',
   skilltree: '🌳', praise_feed: '👏', competition: '🥊', bitch: '🐔', badge_feed: '🏅',
 };
+
+/** Mini-Vorschau eines Cosmetics (wie im Spind) für die Benachrichtigung. */
+function CosmeticThumb({ category, itemId }: { category: string; itemId: string }) {
+  if (category === 'nameplate') return <span className="font-display text-base tracking-wide" style={nameplateStyle(itemId)}>Aa</span>;
+  if (category === 'avatarFrame') {
+    const f = avatarFrame(itemId, '#ff3b30');
+    return <span className={`inline-grid place-items-center w-8 h-8 rounded-full ${f.className ?? ''}`} style={{ background: 'rgba(255,59,48,0.14)', ...f.style }}><span className="text-[10px] font-display" style={{ color: '#ff3b30' }}>Aa</span></span>;
+  }
+  if (category === 'belt') {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={beltSkin(itemId).src} alt="" className="w-full" style={{ maxHeight: 34, objectFit: 'contain' }} />;
+  }
+  if (category === 'xpbar') {
+    const col = xpBarColor(itemId);
+    return <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface)' }}><div className="h-full rounded-full" style={{ width: '70%', background: col ?? 'linear-gradient(90deg, var(--gold), var(--accent))' }} /></div>;
+  }
+  return <span className="text-2xl" style={{ filter: flameFilter(itemId), display: 'inline-block' }}>🔥</span>; // flame
+}
 
 function timeAgo(iso: string): string {
   const then = new Date(iso).getTime();
@@ -96,9 +116,24 @@ export default function NotificationsPage() {
           items.map((n) => (
             <div key={n.id} className="card px-4 py-3 anim-up" style={{ borderColor: n.read ? undefined : 'var(--accent)' }}>
               <div className="flex items-start gap-3">
-                <span className="text-xl leading-none mt-0.5">{ICON[n.type] ?? '🔔'}</span>
+                {n.type === 'cosmetic' && n.meta?.category ? (
+                  <span className="w-12 h-12 rounded-xl grid place-items-center shrink-0 overflow-hidden mt-0.5"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', padding: n.meta.category === 'belt' ? 4 : 0 }}>
+                    <CosmeticThumb category={n.meta.category} itemId={n.meta.itemId ?? ''} />
+                  </span>
+                ) : (
+                  <span className="text-xl leading-none mt-0.5">{ICON[n.type] ?? '🔔'}</span>
+                )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm">{n.body}</p>
+                  {n.type === 'cosmetic' ? (
+                    <>
+                      <p className="text-sm font-semibold">Neues Design freigeschaltet ✨</p>
+                      <p className="text-xs text-[var(--muted)] mt-0.5">{n.body}</p>
+                      <a href={n.link || '/spind'} className="text-xs font-semibold mt-1 inline-block" style={{ color: 'var(--teal)' }}>Im Spind ausrüsten ›</a>
+                    </>
+                  ) : (
+                    <p className="text-sm">{n.body}</p>
+                  )}
                   <div className="text-[11px] text-[var(--faint)] mt-0.5">{timeAgo(n.created_at)}</div>
 
                   {/* Lob/Gigalob: im Profil ausstellen */}

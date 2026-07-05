@@ -378,6 +378,9 @@ export async function POST(req: NextRequest) {
     await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS ref_id INTEGER`;
     await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_id INTEGER`;       // verknüpft Gruppen-Broadcasts
     await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS reactable BOOLEAN NOT NULL DEFAULT FALSE`;
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS meta JSONB`;               // z. B. Cosmetic-Vorschau
+    // Marker: bis zu welchem Level bereits Cosmetic-Freischaltungen gemeldet wurden.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cosmetic_notified_level INTEGER`;
     await sql`CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_name, read)`;
     // Gruppen-Feed: geteiltes Ereignis (für Reaktionen) + Daumen-hoch
     await sql`

@@ -9,7 +9,7 @@ import { ensurePushConfigured, sendPush } from './push';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Sql = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
 
-export type NotifType = 'comment' | 'challenge' | 'challenge_result' | 'praise' | 'badge';
+export type NotifType = 'comment' | 'challenge' | 'challenge_result' | 'praise' | 'badge' | 'cosmetic';
 
 export async function createNotification(
   sql: Sql,
@@ -20,14 +20,23 @@ export async function createNotification(
     body: string;
     link?: string;
     refId?: number; // z. B. praise.id für Ausstellen-Aktionen
+    meta?: Record<string, unknown>; // z. B. { category, itemId } für Cosmetic-Vorschau
     push?: { title: string; body: string };
   }
 ): Promise<void> {
-  // 1) In-App-Eintrag (immer)
-  await sql`
-    INSERT INTO notifications (user_name, type, actor, body, link, ref_id)
-    VALUES (${opts.user}, ${opts.type}, ${opts.actor}, ${opts.body}, ${opts.link ?? ''}, ${opts.refId ?? null})
-  `;
+  // 1) In-App-Eintrag (immer). meta nur benennen, wenn gesetzt — so bricht nichts,
+  // falls die Spalte auf einer Alt-DB noch fehlt (bestehende Notifs nutzen kein meta).
+  if (opts.meta) {
+    await sql`
+      INSERT INTO notifications (user_name, type, actor, body, link, ref_id, meta)
+      VALUES (${opts.user}, ${opts.type}, ${opts.actor}, ${opts.body}, ${opts.link ?? ''}, ${opts.refId ?? null}, ${JSON.stringify(opts.meta)}::jsonb)
+    `;
+  } else {
+    await sql`
+      INSERT INTO notifications (user_name, type, actor, body, link, ref_id)
+      VALUES (${opts.user}, ${opts.type}, ${opts.actor}, ${opts.body}, ${opts.link ?? ''}, ${opts.refId ?? null})
+    `;
+  }
 
   // 2) Web-Push an alle Geräte (optional)
   if (!opts.push || !ensurePushConfigured()) return;
