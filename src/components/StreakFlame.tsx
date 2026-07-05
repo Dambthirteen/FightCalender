@@ -5,8 +5,8 @@
 const LEVELS = [
   { src: '/streak-1.png', aspect: 0.609, cx: 0.50, cy: 0.845, d: 0.59 },
   { src: '/streak-2.png', aspect: 0.771, cx: 0.51, cy: 0.875, d: 0.36 },
-  { src: '/streak-3.png', aspect: 0.543, cx: 0.49, cy: 0.895, d: 0.52 },
-  { src: '/streak-4.png', aspect: 0.561, cx: 0.49, cy: 0.90, d: 0.46 },
+  { src: '/streak-3.png', aspect: 0.543, cx: 0.49, cy: 0.86, d: 0.52 },
+  { src: '/streak-4.png', aspect: 0.561, cx: 0.49, cy: 0.865, d: 0.46 },
 ];
 
 export function streakLevelIndex(days: number): number {
