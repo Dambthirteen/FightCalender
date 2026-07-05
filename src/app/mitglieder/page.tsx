@@ -25,9 +25,9 @@ function PersonRow({ u, showStreak, me, onClick, delay }: { u: Person; showStrea
       )}
       <span className="flex-1 min-w-0 truncate">
         <span className="font-semibold">{u.user_name}</span>
-        {u.group_role === 'admin' && <span style={{ color: 'var(--accent)' }}> · Admin</span>}
-        {u.group_role === 'moderator' && <span style={{ color: 'var(--accent-2)' }}> · Mod</span>}
-        {isCoach(u.role) && <span style={{ color: 'var(--teal)' }}> · Coach</span>}
+        {u.group_role === 'admin' && <span className="text-[11px] font-medium align-middle" style={{ color: 'var(--accent)' }}> · Admin</span>}
+        {u.group_role === 'moderator' && <span className="text-[11px] font-medium align-middle" style={{ color: 'var(--accent-2)' }}> · Mod</span>}
+        {isCoach(u.role) && <span className="text-[11px] font-medium align-middle" style={{ color: 'var(--teal)' }}> · Coach</span>}
       </span>
       {showStreak && (
         <span className="text-xs font-semibold tnum shrink-0" title="Aktuelle Streak"

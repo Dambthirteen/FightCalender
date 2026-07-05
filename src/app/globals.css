@@ -150,6 +150,20 @@ h1, h2, h3, .font-display {
 }
 .frame-pulse { animation: framePulse 1.8s ease-in-out infinite; }
 
+/* Streak-Flamme: subtiler oranger Glow + leichtes „Brennen"-Flackern.
+   drop-shadow folgt der Freisteller-Silhouette → glüht um die Flammenform. */
+@keyframes flameFlicker {
+  0%   { transform: scale(1) rotate(0deg);        filter: drop-shadow(0 0 5px rgba(255,120,20,0.45)) drop-shadow(0 1px 13px rgba(255,80,0,0.28)); }
+  20%  { transform: scale(1.018) rotate(-0.5deg); filter: drop-shadow(0 0 8px rgba(255,140,30,0.55)) drop-shadow(0 1px 17px rgba(255,90,0,0.34)); }
+  45%  { transform: scale(0.99) rotate(0.4deg);   filter: drop-shadow(0 0 4px rgba(255,115,20,0.4))  drop-shadow(0 1px 11px rgba(255,80,0,0.24)); }
+  70%  { transform: scale(1.022) rotate(-0.3deg); filter: drop-shadow(0 0 9px rgba(255,150,45,0.6))  drop-shadow(0 1px 19px rgba(255,95,0,0.36)); }
+  100% { transform: scale(1) rotate(0deg);        filter: drop-shadow(0 0 5px rgba(255,120,20,0.45)) drop-shadow(0 1px 13px rgba(255,80,0,0.28)); }
+}
+.flame-anim { animation: flameFlicker 2.6s ease-in-out infinite; transform-origin: 50% 82%; will-change: transform, filter; }
+@media (prefers-reduced-motion: reduce) {
+  .flame-anim { animation: none; filter: drop-shadow(0 0 6px rgba(255,120,20,0.4)) drop-shadow(0 1px 14px rgba(255,80,0,0.25)); }
+}
+
 /* ===================== Bausteine ===================== */
 .card {
   background: linear-gradient(180deg, var(--surface) 0%, var(--bg-elev) 100%);
