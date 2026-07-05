@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
-import { ARTS, SKILLS, BELT_COLORS, ROLES, isCoach, isFighter, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
+import { ARTS, SKILLS, BELT_COLORS, ROLES, isCoach, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, TOURNAMENT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
 import FullscreenLoader from '@/components/FullscreenLoader';
@@ -571,15 +571,6 @@ export default function ProfilePage() {
             )}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
-          {/* Rollen-Chips (Fighter / Coach) */}
-          <div className="flex gap-1.5 mt-2.5">
-            {isFighter(fighterInfo.role) && (
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)', color: 'var(--muted)' }}>🥊 Fighter</span>
-            )}
-            {isCoach(fighterInfo.role) && (
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.4)', color: 'var(--teal)' }}>🎓 Coach</span>
-            )}
-          </div>
 
           {(() => {
             const weeks = badgeData?.streakWeeks ?? 0;

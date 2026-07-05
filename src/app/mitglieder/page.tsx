@@ -23,11 +23,10 @@ function PersonRow({ u, showStreak, me, onClick, delay }: { u: Person; showStrea
         <span className="w-11 h-11 rounded-full grid place-items-center font-display text-xl shrink-0"
           style={{ background: `${c}22`, color: c, border: `1.5px solid ${c}` }}>{initials(u.user_name)}</span>
       )}
-      <span className="font-semibold min-w-0 truncate">{u.user_name}</span>
-      {isCoach(u.role) && (
-        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'rgba(45,212,191,0.14)', color: 'var(--teal)' }}>🎓 Coach</span>
-      )}
-      <span className="flex-1" />
+      <span className="flex-1 min-w-0 truncate">
+        <span className="font-semibold">{u.user_name}</span>
+        {isCoach(u.role) && <span style={{ color: 'var(--teal)' }}> · Coach</span>}
+      </span>
       {showStreak && (
         <span className="text-xs font-semibold tnum shrink-0" title="Aktuelle Streak"
           style={{ color: (u.streak ?? 0) > 0 ? 'var(--accent)' : 'var(--faint)' }}>🔥 {u.streak ?? 0}</span>
