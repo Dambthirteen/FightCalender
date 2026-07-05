@@ -25,6 +25,15 @@ export default function StreakFlame({ days, height = 120, dim }: { days: number;
   const off = dim ?? days === 0;
   return (
     <div style={{ position: 'relative', width, height }}>
+      {/* Feuer-„Wave"-Filter (mittlere Stärke, zwischen normal und stark) — bewegt die Freisteller-Kanten. */}
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <filter id="flameWaveMid" x="-22%" y="-22%" width="144%" height="144%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.0125 0.023" numOctaves="2" seed="4" result="n">
+            <animate attributeName="baseFrequency" dur="6.5s" values="0.0125 0.023;0.017 0.031;0.0125 0.023" repeatCount="indefinite" />
+          </feTurbulence>
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="10" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={lv.src} alt="" className={off ? undefined : 'flame-anim'}
         style={{ width, height, display: 'block', filter: off ? 'grayscale(1)' : undefined, opacity: off ? 0.5 : 1 }} />

@@ -150,18 +150,12 @@ h1, h2, h3, .font-display {
 }
 .frame-pulse { animation: framePulse 1.8s ease-in-out infinite; }
 
-/* Streak-Flamme: subtiler oranger Glow + leichtes „Brennen"-Flackern.
-   drop-shadow folgt der Freisteller-Silhouette → glüht um die Flammenform. */
-@keyframes flameFlicker {
-  0%   { transform: scale(1) rotate(0deg);        filter: drop-shadow(0 0 6px rgba(255,120,20,0.5))   drop-shadow(0 1px 15px rgba(255,80,0,0.31)); }
-  20%  { transform: scale(1.018) rotate(-0.5deg); filter: drop-shadow(0 0 9px rgba(255,140,30,0.6))   drop-shadow(0 1px 20px rgba(255,90,0,0.37)); }
-  45%  { transform: scale(0.99) rotate(0.4deg);   filter: drop-shadow(0 0 5px rgba(255,115,20,0.44))  drop-shadow(0 1px 13px rgba(255,80,0,0.26)); }
-  70%  { transform: scale(1.022) rotate(-0.3deg); filter: drop-shadow(0 0 10px rgba(255,150,45,0.66)) drop-shadow(0 1px 22px rgba(255,95,0,0.4)); }
-  100% { transform: scale(1) rotate(0deg);        filter: drop-shadow(0 0 6px rgba(255,120,20,0.5))   drop-shadow(0 1px 15px rgba(255,80,0,0.31)); }
-}
-.flame-anim { animation: flameFlicker 2.6s ease-in-out infinite; transform-origin: 50% 82%; will-change: transform, filter; }
+/* Streak-Flamme: Feuer-„Wave" (SVG-Displacement #flameWaveMid, mittlere Stärke) + oranger Glow.
+   Die Wellenbewegung kommt aus dem SVG-Filter (in StreakFlame), der drop-shadow-Glow
+   folgt der Freisteller-Silhouette. */
+.flame-anim { filter: url(#flameWaveMid) drop-shadow(0 0 7px rgba(255,128,22,0.53)) drop-shadow(0 1px 17px rgba(255,85,0,0.33)); will-change: filter; }
 @media (prefers-reduced-motion: reduce) {
-  .flame-anim { animation: none; filter: drop-shadow(0 0 7px rgba(255,120,20,0.44)) drop-shadow(0 1px 16px rgba(255,80,0,0.28)); }
+  .flame-anim { filter: drop-shadow(0 0 7px rgba(255,120,20,0.44)) drop-shadow(0 1px 16px rgba(255,80,0,0.28)); }
 }
 
 /* ===================== Bausteine ===================== */
