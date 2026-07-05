@@ -2,9 +2,17 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { canViewProfile } from '@/lib/groups';
+import { berlinNow, weekStartOf } from '@/lib/berlin-time';
+import { CUTOVER } from '@/lib/bitch-scoring';
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
+}
+
+function addDaysStr(dateStr: string, n: number): string {
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 export async function GET(req: NextRequest) {
@@ -52,6 +60,35 @@ export async function POST(req: NextRequest) {
         }
       }
     } catch { /* Spalte fehlt → ohne Sperre weiter */ }
+
+    // Vergangenheit einfrieren: den ALTEN Plan als KW-Override für alle ABGESCHLOSSENEN
+    // Wochen festschreiben (wo noch kein Override existiert), damit eine Plan-Änderung
+    // die Streak-/Wertungs-Historie nicht rückwirkend umschreibt. Neuer Plan gilt ab
+    // der laufenden Woche. Nur wenn es einen alten (nicht leeren) Plan gibt.
+    if (curIds.size > 0) {
+      try {
+        const today = berlinNow().date;
+        const curWeek = weekStartOf(today);
+        const cRows = (await sql`SELECT created_at::date::text AS d FROM users WHERE user_name = ${me}`) as { d: string | null }[];
+        let startWeek = weekStartOf(cRows[0]?.d ?? CUTOVER);
+        const minWeek = weekStartOf(addDaysStr(today, -60 * 7)); // so weit blickt die Streak zurück
+        if (startWeek < minWeek) startWeek = minWeek;
+        const existing = new Set(
+          ((await sql`SELECT DISTINCT week_start::text AS w FROM weekly_schedule WHERE user_name = ${me}`) as { w: string }[]).map((r) => r.w),
+        );
+        const weeks: string[] = [];
+        for (let w = startWeek; w < curWeek; w = addDaysStr(w, 7)) if (!existing.has(w)) weeks.push(w);
+        if (weeks.length > 0) {
+          const oldIds = [...curIds];
+          await sql`
+            INSERT INTO weekly_schedule (user_name, week_start, class_id)
+            SELECT ${me}, w::date, c
+            FROM unnest(${weeks}::text[]) AS w, unnest(${oldIds}::int[]) AS c
+            ON CONFLICT DO NOTHING
+          `;
+        }
+      } catch { /* weekly_schedule evtl. noch nicht da → Snapshot überspringen */ }
+    }
 
     // Immer nur den EIGENEN Stundenplan ändern — nie fremde Namen aus dem Body.
     await sql`DELETE FROM user_schedule WHERE user_name = ${me}`;
