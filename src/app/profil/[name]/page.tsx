@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
-import { ARTS, SKILLS, BELT_COLORS, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
+import { ARTS, SKILLS, BELT_COLORS, ROLES, isCoach, isFighter, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, TOURNAMENT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
 import FullscreenLoader from '@/components/FullscreenLoader';
@@ -115,7 +115,11 @@ const PLACEMENT_MED: Record<string, string> = { gold: '🥇 1. Platz', silver: '
 type CompRow = { id: number; name: string; competition_date: string; weight_class: string | null; result: string | null; method: string | null; placement: string | null };
 
 interface FighterInfo {
+  role?: string; // 'fighter' | 'coach' | 'both'
   trainingSince?: string; // 'YYYY-MM'
+  coachingSince?: string; // 'YYYY-MM' (Trainer seit)
+  coachingArts?: string[]; // Kampfsportarten, die der Coach trainiert
+  licenses?: string; // Trainerlizenzen/Zertifikate
   weightKg?: number; heightCm?: number; stance?: string;
   nickname?: string; gym?: string; instagram?: string; goal?: string;
 }
@@ -341,6 +345,11 @@ export default function ProfilePage() {
     else (next as Record<string, string | number>)[key] = value;
     saveFighter(next);
   }
+  function toggleCoachingArt(artKey: string) {
+    const cur = fighterInfo.coachingArts ?? [];
+    const next = { ...fighterInfo, coachingArts: cur.includes(artKey) ? cur.filter((a) => a !== artKey) : [...cur, artKey] };
+    saveFighter(next);
+  }
 
   // --- Kommentare ---
   async function postComment() {
@@ -562,6 +571,15 @@ export default function ProfilePage() {
             )}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
+          {/* Rollen-Chips (Fighter / Coach) */}
+          <div className="flex gap-1.5 mt-2.5">
+            {isFighter(fighterInfo.role) && (
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)', color: 'var(--muted)' }}>🥊 Fighter</span>
+            )}
+            {isCoach(fighterInfo.role) && (
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.4)', color: 'var(--teal)' }}>🎓 Coach</span>
+            )}
+          </div>
 
           {(() => {
             const weeks = badgeData?.streakWeeks ?? 0;
@@ -628,10 +646,54 @@ export default function ProfilePage() {
                   {editing ? (
                     <div className="space-y-3">
                       <div>
+                        <label className="text-[11px] text-[var(--muted)] mb-1 block">Rolle</label>
+                        <div className="flex gap-2">
+                          {ROLES.map((r) => {
+                            const on = (fighterInfo.role ?? 'fighter') === r.key;
+                            return (
+                              <button key={r.key} onClick={() => setFighterField('role', r.key)}
+                                className="flex-1 py-2 rounded-lg border text-xs font-semibold"
+                                style={on ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                                {r.key === 'both' ? '🥊🎓 Beides' : `${r.emoji} ${r.label}`}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
                         <label className="text-[11px] text-[var(--muted)] mb-1 block">Trainiert seit</label>
                         <input type="month" value={fighterInfo.trainingSince ?? ''} max={new Date().toISOString().slice(0, 7)}
                           onChange={(e) => setFighterField('trainingSince', e.target.value)} className="field" />
                       </div>
+                      {isCoach(fighterInfo.role) && (
+                        <>
+                          <div>
+                            <label className="text-[11px] text-[var(--muted)] mb-1 block">Trainer seit</label>
+                            <input type="month" value={fighterInfo.coachingSince ?? ''} max={new Date().toISOString().slice(0, 7)}
+                              onChange={(e) => setFighterField('coachingSince', e.target.value)} className="field" />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-[var(--muted)] mb-1 block">Trainer-Fächer</label>
+                            <div className="flex flex-wrap gap-2">
+                              {ARTS.map((a) => {
+                                const on = (fighterInfo.coachingArts ?? []).includes(a.key);
+                                return (
+                                  <button key={a.key} onClick={() => toggleCoachingArt(a.key)}
+                                    className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-all active:scale-95"
+                                    style={on ? { background: 'rgba(45,212,191,0.14)', borderColor: 'var(--teal)', color: 'var(--teal)' } : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)', color: 'var(--muted)' }}>
+                                    {a.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-[var(--muted)] mb-1 block">Lizenzen / Zertifikate</label>
+                            <input type="text" placeholder="z.B. DBV C-Lizenz · BJJ Braungurt" value={fighterInfo.licenses ?? ''}
+                              onChange={(e) => setFighterField('licenses', e.target.value)} className="field" />
+                          </div>
+                        </>
+                      )}
                       <div className="flex gap-3">
                         <div className="flex-1">
                           <label className="text-[11px] text-[var(--muted)] mb-1 block">Gewicht (kg)</label>
@@ -650,9 +712,12 @@ export default function ProfilePage() {
                           onChange={(e) => setFighterField('instagram', e.target.value.replace(/^@/, ''))} className="field" />
                       </div>
                     </div>
-                  ) : (fighterInfo.trainingSince || fighterInfo.weightKg || fighterInfo.heightCm || fighterInfo.instagram) ? (
+                  ) : (fighterInfo.trainingSince || fighterInfo.weightKg || fighterInfo.heightCm || fighterInfo.instagram || (isCoach(fighterInfo.role) && (fighterInfo.coachingSince || fighterInfo.coachingArts?.length || fighterInfo.licenses))) ? (
                     <div className="space-y-2 text-sm">
                       {fighterInfo.trainingSince && <InfoRow label="Trainiert" value={trainingLabel(fighterInfo.trainingSince)} />}
+                      {isCoach(fighterInfo.role) && fighterInfo.coachingSince && <InfoRow label="Trainer seit" value={trainingLabel(fighterInfo.coachingSince)} />}
+                      {isCoach(fighterInfo.role) && !!fighterInfo.coachingArts?.length && <InfoRow label="Trainer für" value={fighterInfo.coachingArts.map(artLabel).join(' · ')} />}
+                      {isCoach(fighterInfo.role) && fighterInfo.licenses && <InfoRow label="Lizenzen" value={fighterInfo.licenses} />}
                       {fighterInfo.weightKg && <InfoRow label="Gewicht" value={`${fighterInfo.weightKg} kg · ${weightClass(fighterInfo.weightKg)}`} />}
                       {fighterInfo.heightCm && <InfoRow label="Größe" value={`${fighterInfo.heightCm} cm`} />}
                       {fighterInfo.instagram && (

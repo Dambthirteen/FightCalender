@@ -37,6 +37,10 @@ export default function OnboardingPage() {
   // Profil
   const [avatar, setAvatar] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
+  const [role, setRole] = useState<'fighter' | 'coach' | 'both'>('fighter');
+  const [trainingSince, setTrainingSince] = useState('');
+  const [coachingSince, setCoachingSince] = useState('');
+  const [coachingArts, setCoachingArts] = useState<string[]>([]);
   const [arts, setArts] = useState<Record<string, string | null>>({}); // artKey -> Gürtel|null
   const [skills, setSkills] = useState<Record<string, number>>({});
   const [uploading, setUploading] = useState(false);
@@ -79,13 +83,24 @@ export default function OnboardingPage() {
     });
   }
 
+  const isCoachRole = role === 'coach' || role === 'both';
+  function toggleCoachingArt(key: string) {
+    setCoachingArts(prev => prev.includes(key) ? prev.filter(a => a !== key) : [...prev, key]);
+  }
+
   async function saveProfileAndNext() {
     setSavingProfile(true);
     try {
       const martial_arts = Object.entries(arts).map(([art, belt]) => ({ art, belt }));
+      const fighter_info = {
+        role,
+        ...(trainingSince ? { trainingSince } : {}),
+        ...(isCoachRole && coachingSince ? { coachingSince } : {}),
+        ...(isCoachRole && coachingArts.length ? { coachingArts } : {}),
+      };
       await fetch('/api/profile-info', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar, color, martial_arts, skills }),
+        body: JSON.stringify({ avatar, color, martial_arts, skills, fighter_info }),
       });
     } catch { /* nicht blockieren — Profil kann man später ergänzen */ }
     finally { setSavingProfile(false); setStep('group'); }
@@ -200,6 +215,52 @@ export default function OnboardingPage() {
                   ))}
                 </div>
               </div>
+            </section>
+
+            {/* Rolle & Erfahrung */}
+            <section className="card p-5 space-y-4">
+              <div>
+                <div className="section-label mb-2">Ich bin…</div>
+                <div className="flex gap-2">
+                  {([['fighter', '🥊 Fighter'], ['coach', '🎓 Coach'], ['both', 'Beides']] as const).map(([key, label]) => {
+                    const on = role === key;
+                    return (
+                      <button key={key} onClick={() => setRole(key)}
+                        className="flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors"
+                        style={on ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--accent-soft)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div className="section-label mb-2">Trainiert seit (optional)</div>
+                <input type="month" value={trainingSince} max={new Date().toISOString().slice(0, 7)} onChange={e => setTrainingSince(e.target.value)} className={inputCls} />
+              </div>
+              {isCoachRole && (
+                <>
+                  <div>
+                    <div className="section-label mb-2">Trainer seit (optional)</div>
+                    <input type="month" value={coachingSince} max={new Date().toISOString().slice(0, 7)} onChange={e => setCoachingSince(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <div className="section-label mb-2">Trainer-Fächer</div>
+                    <div className="flex flex-wrap gap-2">
+                      {ARTS.map(a => {
+                        const on = coachingArts.includes(a.key);
+                        return (
+                          <button key={a.key} onClick={() => toggleCoachingArt(a.key)}
+                            className="text-sm px-3 py-1.5 rounded-full border transition-colors"
+                            style={on ? { borderColor: 'var(--teal)', background: 'rgba(45,212,191,0.14)', color: 'var(--teal)' } : { borderColor: 'var(--border)', background: 'transparent', color: 'var(--muted)' }}>
+                            {a.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
             </section>
 
             {/* Kampfsportarten */}

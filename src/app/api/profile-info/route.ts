@@ -5,6 +5,7 @@ import { canViewProfile, getMyGroups } from '@/lib/groups';
 import { hasSupporter } from '@/lib/entitlements';
 import { broadcastToGroup } from '@/lib/feed';
 import { berlinNow } from '@/lib/berlin-time';
+import { isCoach } from '@/lib/fighter';
 
 export const runtime = 'nodejs'; // Skilltree-Broadcast verschickt Push
 
@@ -24,7 +25,11 @@ function sanitizeFighterInfo(input: Record<string, unknown>): Record<string, unk
   };
   const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
 
+  set('role', typeof input.role === 'string' && ['fighter', 'coach', 'both'].includes(input.role) ? input.role : undefined);
   set('trainingSince', str(input.trainingSince, 7));            // 'YYYY-MM'
+  set('coachingSince', str(input.coachingSince, 7));            // 'YYYY-MM' (Trainer seit)
+  set('coachingArts', Array.isArray(input.coachingArts) ? input.coachingArts.filter((a) => typeof a === 'string').slice(0, 12) : undefined);
+  set('licenses', str(input.licenses, 200));                   // Trainerlizenzen/Zertifikate
   set('weightKg', numIn(input.weightKg, 20, 300));
   set('heightCm', numIn(input.heightCm, 100, 250));
   set('stance', typeof input.stance === 'string' && STANCES.includes(input.stance) ? input.stance : undefined);
@@ -109,7 +114,24 @@ export async function POST(req: NextRequest) {
       }
     }
     if (fighter_info !== undefined && fighter_info && typeof fighter_info === 'object') {
-      await sql`UPDATE users SET fighter_info = ${JSON.stringify(sanitizeFighterInfo(fighter_info))}::jsonb WHERE user_name = ${me}`;
+      // Wird jemand NEU zum Coach? → einmaliger Feed-Eintrag in seinen Gruppen.
+      const prev = (await sql`SELECT fighter_info->>'role' AS role FROM users WHERE user_name = ${me}`) as { role: string | null }[];
+      const wasCoach = isCoach(prev[0]?.role);
+      const clean = sanitizeFighterInfo(fighter_info);
+      await sql`UPDATE users SET fighter_info = ${JSON.stringify(clean)}::jsonb WHERE user_name = ${me}`;
+      if (!wasCoach && isCoach(clean.role as string | undefined)) {
+        const today = berlinNow().date;
+        for (const g of await getMyGroups(me)) {
+          await broadcastToGroup(sql, {
+            groupId: g.id, type: 'coach', actor: me,
+            body: `${me} ist jetzt Coach in der Crew 🎓`,
+            link: `/profil/${encodeURIComponent(me)}`,
+            reactable: true,
+            dedupKey: `coach|${g.id}|${me}|${today}`,
+            push: { title: '🎓 Neuer Coach', body: `${me} ist jetzt Coach` },
+          });
+        }
+      }
     }
     if (profile_visibility !== undefined) {
       const v = ['private', 'group', 'public'].includes(profile_visibility) ? profile_visibility : 'public';

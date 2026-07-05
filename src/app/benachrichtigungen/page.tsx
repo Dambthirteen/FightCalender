@@ -27,7 +27,7 @@ interface Notif {
 
 const ICON: Record<string, string> = {
   comment: '💬', challenge: '⚔️', challenge_result: '⚖️', praise: '🏅', badge: '🎖️', cosmetic: '✨',
-  skilltree: '🌳', praise_feed: '👏', competition: '🥊', bitch: '🐔', badge_feed: '🏅',
+  skilltree: '🌳', praise_feed: '👏', competition: '🥊', bitch: '🐔', badge_feed: '🏅', coach: '🎓',
 };
 
 /** Mini-Vorschau eines Cosmetics (wie im Spind) für die Benachrichtigung. */

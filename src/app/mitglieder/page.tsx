@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials } from '@/lib/avatar';
+import { isCoach } from '@/lib/fighter';
 import InviteFriends from '@/components/InviteFriends';
 
-type Person = { user_name: string; color?: string | null; avatar?: string | null; streak?: number };
+type Person = { user_name: string; color?: string | null; avatar?: string | null; streak?: number; role?: string | null };
 const RECENT_KEY = 'fightcal_recent_profiles';
 
 /** Eine Personen-Zeile (Avatar + Name), optional mit Streak. */
@@ -22,7 +23,11 @@ function PersonRow({ u, showStreak, me, onClick, delay }: { u: Person; showStrea
         <span className="w-11 h-11 rounded-full grid place-items-center font-display text-xl shrink-0"
           style={{ background: `${c}22`, color: c, border: `1.5px solid ${c}` }}>{initials(u.user_name)}</span>
       )}
-      <span className="font-semibold flex-1 min-w-0 truncate">{u.user_name}</span>
+      <span className="font-semibold min-w-0 truncate">{u.user_name}</span>
+      {isCoach(u.role) && (
+        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'rgba(45,212,191,0.14)', color: 'var(--teal)' }}>🎓 Coach</span>
+      )}
+      <span className="flex-1" />
       {showStreak && (
         <span className="text-xs font-semibold tnum shrink-0" title="Aktuelle Streak"
           style={{ color: (u.streak ?? 0) > 0 ? 'var(--accent)' : 'var(--faint)' }}>🔥 {u.streak ?? 0}</span>
@@ -40,6 +45,7 @@ export default function MitgliederPage() {
   // Gruppe
   const [users, setUsers] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
+  const [roleFilter, setRoleFilter] = useState<'all' | 'fighter' | 'coach'>('all');
 
   // Öffentlich (Suche)
   const [q, setQ] = useState('');
@@ -106,16 +112,34 @@ export default function MitgliederPage() {
         {tab === 'group' ? (
           <>
             <div className="anim-up mb-4"><InviteFriends /></div>
+            {/* Rollen-Filter */}
+            <div className="flex gap-2 mb-3">
+              {([['all', 'Alle'], ['fighter', 'Fighter'], ['coach', 'Coaches']] as const).map(([key, label]) => {
+                const on = roleFilter === key;
+                return (
+                  <button key={key} onClick={() => setRoleFilter(key)}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors"
+                    style={on
+                      ? { background: 'var(--accent-soft)', color: 'var(--accent)', borderColor: 'rgba(255,59,48,0.35)' }
+                      : { background: 'var(--surface-2)', color: 'var(--muted)', borderColor: 'var(--border-soft)' }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             {loading ? (
               <div className="py-24 text-center text-[var(--faint)] text-sm">Laden…</div>
-            ) : (
-              <div className="space-y-2">
-                {users.map((u, i) => (
-                  <PersonRow key={u.user_name} u={u} showStreak me={u.user_name === userName} delay={i * 40} />
-                ))}
-                {users.length === 0 && <div className="py-16 text-center text-[var(--faint)] text-sm">Noch keine Mitglieder.</div>}
-              </div>
-            )}
+            ) : (() => {
+              const shown = users.filter((u) => roleFilter === 'all' || (roleFilter === 'coach' ? isCoach(u.role) : !isCoach(u.role)));
+              return (
+                <div className="space-y-2">
+                  {shown.map((u, i) => (
+                    <PersonRow key={u.user_name} u={u} showStreak me={u.user_name === userName} delay={i * 40} />
+                  ))}
+                  {shown.length === 0 && <div className="py-16 text-center text-[var(--faint)] text-sm">{roleFilter === 'coach' ? 'Keine Coaches in dieser Crew.' : 'Niemand hier.'}</div>}
+                </div>
+              );
+            })()}
           </>
         ) : (
           <>

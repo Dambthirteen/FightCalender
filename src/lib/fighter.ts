@@ -22,6 +22,20 @@ export const ARTS: MartialArt[] = [
   { key: 'kravmaga', label: 'Krav Maga', belts: null },
 ];
 
+// Rolle im Profil/der Crew: reiner Fighter, reiner Coach, oder beides.
+export type Role = 'fighter' | 'coach' | 'both';
+export const ROLES: { key: Role; label: string; emoji: string }[] = [
+  { key: 'fighter', label: 'Fighter', emoji: '🥊' },
+  { key: 'coach', label: 'Coach', emoji: '🎓' },
+  { key: 'both', label: 'Fighter & Coach', emoji: '🥊' },
+];
+export function isCoach(role: string | undefined | null): boolean {
+  return role === 'coach' || role === 'both';
+}
+export function isFighter(role: string | undefined | null): boolean {
+  return role === 'fighter' || role === 'both' || !role; // Standard = Fighter
+}
+
 export function artLabel(key: string): string {
   return ARTS.find((a) => a.key === key)?.label ?? key;
 }
