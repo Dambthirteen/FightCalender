@@ -31,7 +31,7 @@ export default function StreakFlame({ days, height = 120, dim }: { days: number;
           <feTurbulence type="fractalNoise" baseFrequency="0.0125 0.023" numOctaves="2" seed="4" result="n">
             <animate attributeName="baseFrequency" dur="6.5s" values="0.0125 0.023;0.017 0.031;0.0125 0.023" repeatCount="indefinite" />
           </feTurbulence>
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="10" xChannelSelector="R" yChannelSelector="G" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="11" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </svg>
       {/* eslint-disable-next-line @next/next/no-img-element */}
