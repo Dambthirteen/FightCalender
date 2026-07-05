@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { cleanResult, cleanMethod } from '../route';
+import { cleanResult, cleanMethod, cleanPlacement } from '../route';
 
 export async function DELETE(
   _req: NextRequest,
@@ -29,7 +29,7 @@ export async function PUT(
     const userName = await getCurrentUser();
     if (!userName) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { id } = await params;
-    const { name, competitionDate, location, weightClass, notes, result, method } = await req.json();
+    const { name, competitionDate, location, weightClass, notes, result, method, placement } = await req.json();
     if (!name?.trim() || !competitionDate) {
       return NextResponse.json({ error: 'Name und Datum erforderlich' }, { status: 400 });
     }
@@ -37,7 +37,8 @@ export async function PUT(
       UPDATE competitions
       SET name = ${name.trim().slice(0, 200)}, competition_date = ${competitionDate},
           location = ${String(location ?? '').slice(0, 200)}, weight_class = ${String(weightClass ?? '').slice(0, 100)},
-          notes = ${String(notes ?? '').slice(0, 500)}, result = ${cleanResult(result)}, method = ${cleanMethod(method)}
+          notes = ${String(notes ?? '').slice(0, 500)}, result = ${cleanResult(result)}, method = ${cleanMethod(method)},
+          placement = ${cleanPlacement(placement)}
       WHERE id = ${parseInt(id)} AND user_name = ${userName}
       RETURNING *
     `;

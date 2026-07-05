@@ -111,6 +111,8 @@ const CLASS_COLOR: Record<string, string> = {
 };
 const classHex = (c: string) => CLASS_COLOR[c] ?? CLASS_COLOR.red;
 const DAY_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const PLACEMENT_MED: Record<string, string> = { gold: '🥇 1. Platz', silver: '🥈 2. Platz', bronze: '🥉 3. Platz', part: 'Teilnahme' };
+type CompRow = { id: number; name: string; competition_date: string; weight_class: string | null; result: string | null; method: string | null; placement: string | null };
 
 interface FighterInfo {
   trainingSince?: string; // 'YYYY-MM'
@@ -170,6 +172,7 @@ export default function ProfilePage() {
   const [statMode, setStatMode] = useState<'xp' | 'streak'>('xp'); // Tap auf die Leiste wechselt XP ↔ Streak
   const [arts, setArts] = useState<MartialArtEntry[]>([]);
   const [skills, setSkills] = useState<Skills>({});
+  const [comps, setComps] = useState<CompRow[]>([]);
   const [fighterInfo, setFighterInfo] = useState<FighterInfo>({});
   const [xp, setXp] = useState<XpData | null>(null);
   const [cosmetics, setCosmetics] = useState<Record<string, string>>({});
@@ -251,6 +254,7 @@ export default function ProfilePage() {
     fetch(`/api/comments?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setComments(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`/api/challenges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setChallenges(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`/api/praise?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setPraises(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`/api/profile/competitions?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setComps(Array.isArray(d) ? d : [])).catch(() => {});
   }, [name]);
 
   // Lob/Gigalob-Verfügbarkeit des Betrachters (für die Buttons auf fremden Profilen)
@@ -834,6 +838,35 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 )}
+
+                {/* Wettkämpfe */}
+                <div className="card px-4 py-4">
+                  <div className="section-label mb-2.5">Wettkämpfe</div>
+                  {comps.length === 0 ? (
+                    <div className="text-sm text-[var(--faint)]">Noch keine Wettkämpfe.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {comps.map((cp) => (
+                        <div key={cp.id} className="flex items-center gap-3 rounded-xl border border-[var(--border-soft)] px-3 py-2.5" style={{ background: 'var(--surface-2)' }}>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold truncate">{cp.name}</div>
+                            <div className="text-[11px] text-[var(--faint)] tnum">
+                              {new Date(cp.competition_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                              {cp.weight_class ? ` · ${cp.weight_class}` : ''}
+                            </div>
+                          </div>
+                          {cp.placement ? (
+                            <span className="text-xs font-bold shrink-0" style={{ color: 'var(--gold)' }}>{PLACEMENT_MED[cp.placement] ?? cp.placement}</span>
+                          ) : cp.result ? (
+                            <span className="text-xs font-bold shrink-0" style={{ color: cp.result === 'win' ? 'var(--good)' : 'var(--accent)' }}>
+                              {cp.result === 'win' ? 'Sieg' : 'Niederlage'}
+                            </span>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

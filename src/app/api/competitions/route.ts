@@ -7,8 +7,10 @@ function getSql() { return neon(process.env.DATABASE_URL!); }
 
 const RESULTS = ['win', 'loss'];
 const METHODS = ['points', 'tko', 'ko'];
+const PLACEMENTS = ['gold', 'silver', 'bronze', 'part']; // Turnier-Platzierung (Teilnahme = 'part')
 export function cleanResult(v: unknown): string | null { return typeof v === 'string' && RESULTS.includes(v) ? v : null; }
 export function cleanMethod(v: unknown): string | null { return typeof v === 'string' && METHODS.includes(v) ? v : null; }
+export function cleanPlacement(v: unknown): string | null { return typeof v === 'string' && PLACEMENTS.includes(v) ? v : null; }
 
 export async function GET() {
   try {
@@ -27,6 +29,7 @@ export async function GET() {
         comp.notes,
         comp.result,
         comp.method,
+        comp.placement,
         comp.created_at,
         COALESCE(
           json_agg(
@@ -54,15 +57,15 @@ export async function POST(req: NextRequest) {
     const userName = await getCurrentUser();
     if (!userName) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const gid = await getCurrentGroupId(userName); // Wettkampf gehört zur aktuellen Gruppe
-    const { name, competitionDate, location, weightClass, notes, result, method } = await req.json();
+    const { name, competitionDate, location, weightClass, notes, result, method, placement } = await req.json();
     if (!name?.trim() || !competitionDate) {
       return NextResponse.json({ error: 'Name und Datum erforderlich' }, { status: 400 });
     }
     const rows = await sql`
-      INSERT INTO competitions (user_name, name, competition_date, location, weight_class, notes, result, method, group_id)
+      INSERT INTO competitions (user_name, name, competition_date, location, weight_class, notes, result, method, placement, group_id)
       VALUES (${userName}, ${name.trim().slice(0, 200)}, ${competitionDate},
               ${String(location ?? '').slice(0, 200)}, ${String(weightClass ?? '').slice(0, 100)}, ${String(notes ?? '').slice(0, 500)},
-              ${cleanResult(result)}, ${cleanMethod(method)}, ${gid})
+              ${cleanResult(result)}, ${cleanMethod(method)}, ${cleanPlacement(placement)}, ${gid})
       RETURNING *
     `;
     return NextResponse.json(rows[0], { status: 201 });

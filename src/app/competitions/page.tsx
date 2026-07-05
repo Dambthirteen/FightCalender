@@ -17,11 +17,13 @@ interface Competition {
   notes: string;
   result: string | null;
   method: string | null;
+  placement: string | null;
   user_classes: ClassInfo[];
 }
 
 const DAY_SHORT = ['', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const METHOD_LABEL: Record<string, string> = { points: 'Punkte', tko: 'TKO', ko: 'K.o.' };
+const PLACEMENT_LABEL: Record<string, string> = { gold: '🥇 1. Platz', silver: '🥈 2. Platz', bronze: '🥉 3. Platz', part: 'Teilnahme' };
 
 function countClassSessions(dayOfWeek: number, today: Date, compDate: Date): number {
   // Count how many times this day-of-week occurs from tomorrow up to (not including) comp date
@@ -81,8 +83,9 @@ export default function CompetitionsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    name: '', competitionDate: '', location: '', weightClass: '', notes: '', result: '', method: '',
+    name: '', competitionDate: '', location: '', weightClass: '', notes: '', result: '', method: '', placement: '',
   });
+  const [compType, setCompType] = useState<'fight' | 'tournament'>('fight');
 
   useEffect(() => {
     fetch('/api/competitions')
@@ -92,30 +95,36 @@ export default function CompetitionsPage() {
   }, []);
 
   function resetForm() {
-    setForm({ name: '', competitionDate: '', location: '', weightClass: '', notes: '', result: '', method: '' });
-    setEditingId(null); setError('');
+    setForm({ name: '', competitionDate: '', location: '', weightClass: '', notes: '', result: '', method: '', placement: '' });
+    setCompType('fight'); setEditingId(null); setError('');
   }
 
   function startEdit(c: Competition) {
     setForm({
       name: c.name, competitionDate: c.competition_date.slice(0, 10),
       location: c.location ?? '', weightClass: c.weight_class ?? '', notes: c.notes ?? '',
-      result: c.result ?? '', method: c.method ?? '',
+      result: c.result ?? '', method: c.method ?? '', placement: c.placement ?? '',
     });
+    setCompType(c.placement ? 'tournament' : 'fight');
     setEditingId(c.id); setError(''); setShowForm(true);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function save() {
     if (!form.name.trim() || !form.competitionDate) { setError('Name und Datum erforderlich'); return; }
-    // Nur beim NEU-Eintragen muss das Datum in der Zukunft liegen; Bearbeiten geht jederzeit.
-    if (!editingId && form.competitionDate <= today()) { setError('Datum muss in der Zukunft liegen'); return; }
+    // Felder je Typ sauber trennen (Turnier = Platzierung, Einzelkampf = Ergebnis/Methode).
+    const payload = compType === 'tournament'
+      ? { ...form, result: '', method: '' }
+      : { ...form, placement: '' };
+    // Zukunfts-Datum nur nötig für GEPLANTE Wettkämpfe ohne Ergebnis/Platzierung.
+    const hasOutcome = compType === 'tournament' ? !!form.placement : !!form.result;
+    if (!editingId && !hasOutcome && form.competitionDate <= today()) { setError('Datum muss in der Zukunft liegen (oder Ergebnis/Platzierung angeben, um einen vergangenen Wettkampf nachzutragen)'); return; }
     setSaving(true); setError('');
     try {
       const res = await fetch(editingId ? `/api/competitions/${editingId}` : '/api/competitions', {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) { const d = await res.json(); setError(d.error); return; }
       // Re-fetch to get user_classes populated
@@ -171,6 +180,11 @@ export default function CompetitionsPage() {
                   ? { color: 'var(--good)', borderColor: 'var(--good)' }
                   : { color: 'var(--accent)', borderColor: 'var(--accent)' }}>
                   {c.result === 'win' ? 'Sieg' : 'Niederlage'}{c.method ? ` · ${METHOD_LABEL[c.method] ?? c.method}` : ''}
+                </span>
+              )}
+              {c.placement && (
+                <span className="chip" style={{ color: 'var(--gold)', borderColor: 'var(--gold)' }}>
+                  {PLACEMENT_LABEL[c.placement] ?? c.placement}
                 </span>
               )}
             </div>
@@ -307,35 +321,69 @@ export default function CompetitionsPage() {
                 <input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                   className="field" placeholder="z.B. Erster Wettkampf, Punkte-Turnier…" />
               </div>
-              {/* Ergebnis (nach dem Kampf) */}
+              {/* Art: Einzelkampf oder Turnier */}
               <div>
-                <label className="section-label mb-1.5 block">Ergebnis (nach dem Kampf)</label>
-                <div className="flex gap-2">
-                  {([['', '—'], ['win', 'Sieg'], ['loss', 'Niederlage']] as const).map(([v, l]) => {
-                    const on = form.result === v;
-                    const col = v === 'win' ? 'var(--good)' : v === 'loss' ? 'var(--accent)' : 'var(--muted)';
+                <label className="section-label mb-1.5 block">Art</label>
+                <div className="flex gap-2 mb-3">
+                  {([['fight', 'Einzelkampf'], ['tournament', 'Turnier']] as const).map(([v, l]) => {
+                    const on = compType === v;
                     return (
-                      <button key={v} onClick={() => setForm(f => ({ ...f, result: v, method: v ? f.method : '' }))}
+                      <button key={v} onClick={() => setCompType(v)}
                         className="flex-1 py-2 rounded-lg border text-sm font-semibold"
-                        style={on ? { borderColor: col, color: col, background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                        style={on ? { borderColor: 'var(--accent-2)', color: 'var(--accent-2)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
                         {l}
                       </button>
                     );
                   })}
                 </div>
-                {form.result && (
-                  <div className="flex gap-2 mt-2">
-                    {(['points', 'tko', 'ko'] as const).map((v) => {
-                      const on = form.method === v;
-                      return (
-                        <button key={v} onClick={() => setForm(f => ({ ...f, method: v }))}
-                          className="flex-1 py-2 rounded-lg border text-sm font-semibold"
-                          style={on ? { borderColor: 'var(--accent-2)', color: 'var(--accent-2)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
-                          {v === 'points' ? 'Punkte' : v === 'tko' ? 'TKO' : 'K.o.'}
-                        </button>
-                      );
-                    })}
-                  </div>
+
+                {compType === 'fight' ? (
+                  <>
+                    <label className="section-label mb-1.5 block">Ergebnis (nach dem Kampf)</label>
+                    <div className="flex gap-2">
+                      {([['', '—'], ['win', 'Sieg'], ['loss', 'Niederlage']] as const).map(([v, l]) => {
+                        const on = form.result === v;
+                        const col = v === 'win' ? 'var(--good)' : v === 'loss' ? 'var(--accent)' : 'var(--muted)';
+                        return (
+                          <button key={v} onClick={() => setForm(f => ({ ...f, result: v, method: v ? f.method : '' }))}
+                            className="flex-1 py-2 rounded-lg border text-sm font-semibold"
+                            style={on ? { borderColor: col, color: col, background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                            {l}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {form.result && (
+                      <div className="flex gap-2 mt-2">
+                        {(['points', 'tko', 'ko'] as const).map((v) => {
+                          const on = form.method === v;
+                          return (
+                            <button key={v} onClick={() => setForm(f => ({ ...f, method: v }))}
+                              className="flex-1 py-2 rounded-lg border text-sm font-semibold"
+                              style={on ? { borderColor: 'var(--accent-2)', color: 'var(--accent-2)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                              {v === 'points' ? 'Punkte' : v === 'tko' ? 'TKO' : 'K.o.'}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <label className="section-label mb-1.5 block">Platzierung</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([['gold', '🥇 1. Platz'], ['silver', '🥈 2. Platz'], ['bronze', '🥉 3. Platz'], ['part', 'Teilnahme']] as const).map(([v, l]) => {
+                        const on = form.placement === v;
+                        return (
+                          <button key={v} onClick={() => setForm(f => ({ ...f, placement: v }))}
+                            className="py-2 rounded-lg border text-sm font-semibold"
+                            style={on ? { borderColor: 'var(--gold)', color: 'var(--gold)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                            {l}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
