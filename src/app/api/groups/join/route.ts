@@ -2,6 +2,9 @@ import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { countMyGroupMemberships, MAX_GROUPS } from '@/lib/groups';
+import { createNotification } from '@/lib/notify';
+
+export const runtime = 'nodejs'; // Beitrittsanfrage verschickt Push
 
 function getSql() {
   return neon(process.env.DATABASE_URL!);
@@ -31,5 +34,23 @@ export async function POST(req: NextRequest) {
     INSERT INTO group_members (group_id, user_name, role, status)
     VALUES (${gid}, ${me}, 'member', 'pending') ON CONFLICT (group_id, user_name) DO NOTHING
   `;
+
+  // Beitrittsanfrage an alle Admins + Moderatoren der Gruppe (mit Annehmen/Ablehnen in der Glocke).
+  try {
+    const staff = (await sql`
+      SELECT user_name FROM group_members
+      WHERE group_id = ${gid} AND status = 'active' AND role IN ('admin', 'moderator')
+    `) as { user_name: string }[];
+    for (const s of staff) {
+      await createNotification(sql, {
+        user: s.user_name, type: 'join_request', actor: me,
+        body: `${me} möchte „${g[0].name}" beitreten`,
+        link: '/gruppen',
+        meta: { groupId: gid, requester: me, groupName: g[0].name },
+        push: { title: '👋 Beitrittsanfrage', body: `${me} möchte deiner Crew beitreten` },
+      });
+    }
+  } catch { /* Benachrichtigung optional */ }
+
   return NextResponse.json({ ok: true, status: 'pending', group: g[0].name });
 }

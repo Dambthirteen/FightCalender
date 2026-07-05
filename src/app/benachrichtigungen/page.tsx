@@ -22,12 +22,12 @@ interface Notif {
   praise_show_comment?: boolean | null;
   praise_kind?: string | null;
   praise_reason?: string | null;
-  meta?: { category?: string; itemId?: string; label?: string; minLevel?: number } | null;
+  meta?: { category?: string; itemId?: string; label?: string; minLevel?: number; groupId?: number; requester?: string; groupName?: string } | null;
 }
 
 const ICON: Record<string, string> = {
   comment: '💬', challenge: '⚔️', challenge_result: '⚖️', praise: '🏅', badge: '🎖️', cosmetic: '✨',
-  skilltree: '🌳', praise_feed: '👏', competition: '🥊', bitch: '🐔', badge_feed: '🏅', coach: '🎓',
+  skilltree: '🌳', praise_feed: '👏', competition: '🥊', bitch: '🐔', badge_feed: '🏅', coach: '🎓', join_request: '👋',
 };
 
 /** Mini-Vorschau eines Cosmetics (wie im Spind) für die Benachrichtigung. */
@@ -64,6 +64,19 @@ export default function NotificationsPage() {
   const { userName, loading } = useUser();
   const [items, setItems] = useState<Notif[]>([]);
   const [busy, setBusy] = useState<number | null>(null);
+  const [handled, setHandled] = useState<Record<number, 'approved' | 'rejected'>>({});
+
+  async function handleJoin(n: Notif, action: 'approve' | 'reject') {
+    if (!n.meta?.groupId || !n.meta?.requester || busy === n.id) return;
+    setBusy(n.id);
+    try {
+      const res = await fetch('/api/groups/members', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, user_name: n.meta.requester, groupId: n.meta.groupId }),
+      });
+      if (res.ok) setHandled((h) => ({ ...h, [n.id]: action === 'approve' ? 'approved' : 'rejected' }));
+    } finally { setBusy(null); }
+  }
 
   useEffect(() => {
     if (loading || !userName) return;
@@ -135,6 +148,26 @@ export default function NotificationsPage() {
                     <p className="text-sm">{n.body}</p>
                   )}
                   <div className="text-[11px] text-[var(--faint)] mt-0.5">{timeAgo(n.created_at)}</div>
+
+                  {/* Beitrittsanfrage: direkt annehmen/ablehnen */}
+                  {n.type === 'join_request' && n.meta?.requester && (
+                    handled[n.id] ? (
+                      <div className="text-xs mt-2 font-semibold" style={{ color: handled[n.id] === 'approved' ? 'var(--good)' : 'var(--faint)' }}>
+                        {handled[n.id] === 'approved' ? '✓ Angenommen' : 'Abgelehnt'}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 mt-2">
+                        <button onClick={() => handleJoin(n, 'approve')} disabled={busy === n.id}
+                          className="text-xs font-bold px-3 py-1.5 rounded-lg text-black disabled:opacity-40" style={{ background: 'var(--good)' }}>
+                          Annehmen
+                        </button>
+                        <button onClick={() => handleJoin(n, 'reject')} disabled={busy === n.id}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] disabled:opacity-40">
+                          Ablehnen
+                        </button>
+                      </div>
+                    )
+                  )}
 
                   {/* Lob/Gigalob: im Profil ausstellen */}
                   {n.type === 'praise' && n.ref_id && (

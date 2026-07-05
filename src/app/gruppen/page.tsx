@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import PageHeader from '@/components/PageHeader';
+import { useUser } from '@/components/UserProvider';
 import { colorFor, initials } from '@/lib/avatar';
 import { BUNDESLAENDER } from '@/lib/holidays';
 import { track } from '@/lib/analytics';
@@ -15,6 +16,7 @@ interface Member { user_name: string; role: string; status: string }
 interface Cls { id: number; name: string; day_of_week: number; start_time: string; end_time: string; color: string }
 
 export default function GroupsPage() {
+  const { userName } = useUser();
   const [groups, setGroups] = useState<MyGroup[]>([]);
   const [current, setCurrent] = useState<number | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -157,6 +159,7 @@ export default function GroupsPage() {
   const pending = members.filter((m) => m.status === 'pending');
   const active = members.filter((m) => m.status === 'active');
   const isAdmin = myRole === 'admin';
+  const canModerate = isAdmin || myRole === 'moderator'; // rein-/rauslassen
 
   return (
     <div className="min-h-screen text-[var(--text)]">
@@ -173,6 +176,7 @@ export default function GroupsPage() {
                 <span className="font-semibold text-sm">{g.clan_tag ? `[${g.clan_tag}] ` : ''}{g.name}</span>
                 <span className="flex items-center gap-2">
                   {g.role === 'admin' && <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--muted)' }}>Admin</span>}
+                  {g.role === 'moderator' && <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'rgba(45,212,191,0.14)', color: 'var(--teal)' }}>Mod</span>}
                   {g.id === current ? <span className="text-[10px] font-bold" style={{ color: 'var(--accent)' }}>AKTIV</span> : <span className="text-[var(--faint)] text-xs">wechseln ›</span>}
                 </span>
               </button>
@@ -278,7 +282,7 @@ export default function GroupsPage() {
               <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)]">{groupName} · Mitglieder</div>
             </div>
 
-            {isAdmin && pending.length > 0 && (
+            {canModerate && pending.length > 0 && (
               <div className="mb-3">
                 <div className="text-[10px] text-[var(--bitch)] uppercase tracking-wider mb-1.5">Offene Anfragen</div>
                 {pending.map((m) => (
@@ -299,14 +303,27 @@ export default function GroupsPage() {
                     <span className="w-8 h-8 rounded-full grid place-items-center font-display text-sm shrink-0" style={{ background: `${col}22`, color: col, border: `1.5px solid ${col}` }}>{initials(m.user_name)}</span>
                     <span className="text-sm flex-1 truncate">{m.user_name}</span>
                     {m.role === 'admin' && <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>Admin</span>}
-                    {isAdmin && (
+                    {m.role === 'moderator' && <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(45,212,191,0.14)', color: 'var(--teal)' }}>Mod</span>}
+                    {isAdmin ? (
                       <span className="flex items-center gap-1.5 shrink-0">
-                        {m.role === 'admin'
-                          ? <button onClick={() => memberAction('demote', m.user_name)} className="text-[10px] text-[var(--faint)]">↓ Member</button>
-                          : <button onClick={() => memberAction('promote', m.user_name)} className="text-[10px]" style={{ color: 'var(--teal)' }}>↑ Admin</button>}
+                        {m.role === 'admin' ? (
+                          <button onClick={() => memberAction('demote', m.user_name)} className="text-[10px] text-[var(--faint)]">↓ Member</button>
+                        ) : m.role === 'moderator' ? (
+                          <>
+                            <button onClick={() => memberAction('unmod', m.user_name)} className="text-[10px] text-[var(--faint)]">↓ Member</button>
+                            <button onClick={() => memberAction('promote', m.user_name)} className="text-[10px]" style={{ color: 'var(--teal)' }}>↑ Admin</button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => memberAction('make_mod', m.user_name)} className="text-[10px]" style={{ color: 'var(--teal)' }}>↑ Mod</button>
+                            <button onClick={() => memberAction('promote', m.user_name)} className="text-[10px]" style={{ color: 'var(--teal)' }}>↑ Admin</button>
+                          </>
+                        )}
                         <button onClick={() => memberAction('remove', m.user_name)} className="text-[var(--faint)] hover:text-[var(--accent)] text-sm">✕</button>
                       </span>
-                    )}
+                    ) : canModerate && m.role !== 'admin' && m.user_name !== userName ? (
+                      <button onClick={() => memberAction('remove', m.user_name)} className="text-[var(--faint)] hover:text-[var(--accent)] text-sm shrink-0">✕</button>
+                    ) : null}
                   </div>
                 );
               })}

@@ -23,7 +23,7 @@ export async function GET() {
     SELECT user_name, role, status FROM group_members WHERE group_id = ${gid}
     ORDER BY (status = 'pending') DESC, (role = 'admin') DESC, LOWER(user_name)
   `) as MemberRow[];
-  const members = myRole === 'admin' ? all : all.filter((m) => m.status === 'active');
+  const members = (myRole === 'admin' || myRole === 'moderator') ? all : all.filter((m) => m.status === 'active');
 
   return NextResponse.json({
     group: { id: g.id, name: g.name },
@@ -33,45 +33,62 @@ export async function GET() {
   });
 }
 
-/** Aktionen: approve | reject | promote | demote | remove | leave. */
+/**
+ * Aktionen:
+ *  - leave (self)
+ *  - approve | reject | remove  → Admin ODER Moderator (Moderator darf keine Admins entfernen)
+ *  - promote (→Admin) | demote (Admin→Member) | make_mod (→Moderator) | unmod (Moderator→Member) → nur Admin
+ * `groupId` optional (z. B. Aktion aus einer Benachrichtigung); sonst aktuelle Gruppe.
+ */
 export async function POST(req: NextRequest) {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const gid = await getCurrentGroupId(me);
+  const { action, user_name, groupId } = await req.json();
+  const gid = Number(groupId) || (await getCurrentGroupId(me));
   if (!gid) return NextResponse.json({ error: 'Keine Gruppe' }, { status: 400 });
 
-  const { action, user_name } = await req.json();
   const sql = getSql();
   const myRole = await getRole(me, gid);
+  const countAdmins = async () => ((await sql`SELECT COUNT(*)::int AS n FROM group_members WHERE group_id = ${gid} AND role = 'admin' AND status = 'active'`) as { n: number }[])[0].n;
 
-  // Selbst verlassen (kein Admin nötig) — letzter Admin darf nicht raus.
+  // Selbst verlassen — letzter Admin darf nicht raus.
   if (action === 'leave') {
-    if (myRole === 'admin') {
-      const admins = await sql`SELECT COUNT(*)::int AS n FROM group_members WHERE group_id = ${gid} AND role = 'admin' AND status = 'active'`;
-      if (admins[0].n <= 1) return NextResponse.json({ error: 'Du bist der letzte Admin — ernenne erst jemanden.' }, { status: 400 });
+    if (myRole === 'admin' && (await countAdmins()) <= 1) {
+      return NextResponse.json({ error: 'Du bist der letzte Admin — ernenne erst jemanden.' }, { status: 400 });
     }
     await sql`DELETE FROM group_members WHERE group_id = ${gid} AND user_name = ${me}`;
     return NextResponse.json({ ok: true });
   }
 
-  if (myRole !== 'admin') return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
+  if (!myRole) return NextResponse.json({ error: 'Kein Mitglied' }, { status: 403 });
   if (!user_name) return NextResponse.json({ error: 'user_name fehlt' }, { status: 400 });
 
+  const isAdmin = myRole === 'admin';
+  const canModerate = isAdmin || myRole === 'moderator'; // rein-/rauslassen
+
   if (action === 'approve') {
+    if (!canModerate) return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
     await sql`UPDATE group_members SET status = 'active' WHERE group_id = ${gid} AND user_name = ${user_name} AND status = 'pending'`;
   } else if (action === 'reject' || action === 'remove') {
-    // letzten Admin nicht entfernen
-    const tgt = await sql`SELECT role FROM group_members WHERE group_id = ${gid} AND user_name = ${user_name}`;
+    if (!canModerate) return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+    const tgt = (await sql`SELECT role FROM group_members WHERE group_id = ${gid} AND user_name = ${user_name}`) as { role: string }[];
     if (tgt[0]?.role === 'admin') {
-      const admins = await sql`SELECT COUNT(*)::int AS n FROM group_members WHERE group_id = ${gid} AND role = 'admin' AND status = 'active'`;
-      if (admins[0].n <= 1) return NextResponse.json({ error: 'Letzter Admin kann nicht entfernt werden.' }, { status: 400 });
+      if (!isAdmin) return NextResponse.json({ error: 'Moderatoren können keine Admins entfernen.' }, { status: 403 });
+      if ((await countAdmins()) <= 1) return NextResponse.json({ error: 'Letzter Admin kann nicht entfernt werden.' }, { status: 400 });
     }
     await sql`DELETE FROM group_members WHERE group_id = ${gid} AND user_name = ${user_name}`;
   } else if (action === 'promote') {
+    if (!isAdmin) return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
     await sql`UPDATE group_members SET role = 'admin' WHERE group_id = ${gid} AND user_name = ${user_name} AND status = 'active'`;
+  } else if (action === 'make_mod') {
+    if (!isAdmin) return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
+    await sql`UPDATE group_members SET role = 'moderator' WHERE group_id = ${gid} AND user_name = ${user_name} AND status = 'active' AND role = 'member'`;
+  } else if (action === 'unmod') {
+    if (!isAdmin) return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
+    await sql`UPDATE group_members SET role = 'member' WHERE group_id = ${gid} AND user_name = ${user_name} AND role = 'moderator'`;
   } else if (action === 'demote') {
-    const admins = await sql`SELECT COUNT(*)::int AS n FROM group_members WHERE group_id = ${gid} AND role = 'admin' AND status = 'active'`;
-    if (admins[0].n <= 1) return NextResponse.json({ error: 'Es muss mindestens ein Admin bleiben.' }, { status: 400 });
+    if (!isAdmin) return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
+    if ((await countAdmins()) <= 1) return NextResponse.json({ error: 'Es muss mindestens ein Admin bleiben.' }, { status: 400 });
     await sql`UPDATE group_members SET role = 'member' WHERE group_id = ${gid} AND user_name = ${user_name}`;
   } else {
     return NextResponse.json({ error: 'Unbekannte Aktion' }, { status: 400 });
