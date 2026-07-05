@@ -526,7 +526,13 @@ export default function ProfilePage() {
     <div className="min-h-screen text-[var(--text)]">
       <header className="max-w-md mx-auto px-4 pt-5 pb-2 grid grid-cols-3 items-center anim-in">
         <a href="/start" aria-label="Zurück" className="justify-self-start w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
-        <h1 className="font-display text-xl tracking-wide text-center whitespace-nowrap">{isSelf ? 'Mein Profil' : 'Profil'}</h1>
+        <h1 className="font-display text-xl tracking-wide text-center flex items-center justify-center gap-1.5 min-w-0">
+          <span className="truncate" style={nameplateStyle(cosmetics.nameplate)}>{name}</span>
+          {supporter && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/supporter-star.png" alt="Supporter" title="Supporter" width={14} height={14} className="shrink-0" />
+          )}
+        </h1>
         <div className="justify-self-end">
           {isSelf && (
             <button onClick={() => setEditMode((v) => !v)}
@@ -556,12 +562,6 @@ export default function ProfilePage() {
             )}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
-          <div className="flex items-center justify-center gap-1.5">
-            <div className="font-display text-3xl tracking-wide leading-none" style={nameplateStyle(cosmetics.nameplate)}>{name}</div>
-            {supporter && (
-              <img src="/supporter-star.png" alt="Supporter" title="Supporter" width={15} height={15} className="shrink-0 self-center" />
-            )}
-          </div>
 
           {(() => {
             const weeks = badgeData?.streakWeeks ?? 0;

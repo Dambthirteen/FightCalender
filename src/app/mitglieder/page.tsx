@@ -78,7 +78,11 @@ export default function MitgliederPage() {
     <div className="min-h-screen text-[var(--text)]">
       <header className="max-w-md mx-auto px-4 pt-5 pb-3 flex items-center justify-between anim-in">
         <a href="/start" className="w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
-        <h1 className="font-display text-2xl tracking-wide">Mitglieder</h1>
+        <h1 className="font-display text-2xl tracking-wide flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/more-members.png" alt="" className="w-7 h-7 object-contain" />
+          Mitglieder
+        </h1>
         <span className="w-11" />
       </header>
 

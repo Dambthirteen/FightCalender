@@ -225,7 +225,7 @@ export default function VotePage() {
 
   return (
     <div className="min-h-screen text-[var(--text)]">
-      <PageHeader title="🗳️ Ausreden-Gericht" />
+      <PageHeader title="Ausreden-Gericht" icon="/more-court.png" />
 
       <main className="max-w-md mx-auto px-4 pb-24 pt-1">
         {/* Monats-Navigation */}

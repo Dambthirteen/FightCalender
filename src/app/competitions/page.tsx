@@ -266,7 +266,7 @@ export default function CompetitionsPage() {
 
   return (
     <div className="min-h-screen text-[var(--text)]">
-      <PageHeader title="🏆 Wettkämpfe" action={
+      <PageHeader title="Wettkämpfe" icon="/tile-competition.png" action={
         <button onClick={() => { setShowForm((f) => !f); resetForm(); }}
           className="w-11 h-11 grid place-items-center text-white rounded-xl transition-all font-bold text-xl active:scale-95"
           style={{ background: 'var(--accent)' }}>

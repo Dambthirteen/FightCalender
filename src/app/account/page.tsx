@@ -72,7 +72,7 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen text-[var(--text)]">
-      <PageHeader title="🏥 Mein Status" />
+      <PageHeader title="Mein Status" icon="/more-status.png" />
 
       <main className="max-w-md mx-auto px-4 pb-24 space-y-6">
 
