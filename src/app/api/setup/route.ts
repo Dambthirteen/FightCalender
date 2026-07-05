@@ -162,6 +162,8 @@ export async function POST(req: NextRequest) {
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false`;
     // Geburtsdatum: nicht öffentlich, nur zur Zuordnung/Altersprüfung der Profile.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS birthdate DATE`;
+    // Fester Stundenplan nur alle 7 Tage änderbar → Zeitpunkt der letzten Änderung.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS schedule_changed_at TIMESTAMP WITH TIME ZONE`;
     // --- Monetarisierung „Tap In Plus" (schläft ohne MONETIZATION_ACTIVE / PROMO_REFERRAL_ACTIVE) ---
     // Werber (user_name), einmalig beim Signup gesetzt; Gutschrift-Flag für die Referral-Werbephase.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT`;

@@ -33,6 +33,8 @@ export default function Home() {
   const [allClasses, setAllClasses] = useState<GymClass[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [scheduleLockUntil, setScheduleLockUntil] = useState<string | null>(null);
+  const [scheduleMsg, setScheduleMsg] = useState('');
 
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [classes, setClasses] = useState<GymClass[]>([]);
@@ -117,6 +119,12 @@ export default function Home() {
     if (step === 'done' && userName) fetchCalendarData(weekStart);
   }, [weekStart, step, userName, fetchCalendarData]);
 
+  // Lock-Status des festen Plans laden (nur alle 7 Tage änderbar).
+  useEffect(() => {
+    if (step !== 'schedule') return;
+    fetch('/api/schedule-lock').then((r) => r.json()).then((d) => setScheduleLockUntil(d.lockedUntil ?? null)).catch(() => {});
+  }, [step]);
+
   // Wochenplan dieser KW laden (Abweichung oder fester Plan).
   useEffect(() => {
     if (step !== 'done' || !userName) return;
@@ -146,14 +154,17 @@ export default function Home() {
   }
 
   async function saveSchedule() {
-    setSavingSchedule(true);
+    setSavingSchedule(true); setScheduleMsg('');
     try {
-      await fetch('/api/profile', {
+      const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userName, classIds: Array.from(selectedIds) }),
       });
-      setStep('done');
+      if (res.ok) { setStep('done'); return; }
+      const d = await res.json().catch(() => ({}));
+      if (res.status === 403 && d.lockedUntil) setScheduleLockUntil(d.lockedUntil);
+      else setScheduleMsg(d.error ?? 'Konnte nicht speichern.');
     } finally {
       setSavingSchedule(false);
     }
@@ -295,6 +306,20 @@ export default function Home() {
             <h2 className="font-display text-3xl tracking-wide mb-1">Dein Stundenplan</h2>
             <p className="text-[var(--muted)] text-sm">Welche Kurse besuchst du normalerweise? Nur diese zählen für die Wertung.</p>
           </div>
+          {(() => {
+            const locked = scheduleLockUntil && new Date(scheduleLockUntil).getTime() > Date.now();
+            if (!locked) return null;
+            const until = new Date(scheduleLockUntil!).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+            return (
+              <div className="rounded-xl px-4 py-3 mb-5 text-xs anim-up" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)' }}>
+                <div className="font-semibold text-[var(--text)] mb-0.5">🔒 Fester Plan gesperrt</div>
+                <p className="text-[var(--muted)]">
+                  Der feste Plan lässt sich nur alle 7 Tage ändern (damit die Wertung fair bleibt) — wieder frei ab <strong className="text-[var(--text)]">{until}</strong>.
+                  Für einzelne Wochen nutz den <strong className="text-[var(--text)]">Wochenplan</strong> im Kalender.
+                </p>
+              </div>
+            );
+          })()}
           {allClasses.length === 0 ? (
             <div className="text-[var(--faint)] text-sm py-8 text-center">Noch keine Kurse — tritt einer Crew bei oder leg selbst eine an. <a href="/gruppen" className="text-[var(--accent)] hover:underline">Zu den Gruppen →</a></div>
           ) : (
@@ -331,15 +356,21 @@ export default function Home() {
               })}
             </div>
           )}
+          {scheduleMsg && <p className="text-[var(--accent)] text-xs mb-2">{scheduleMsg}</p>}
           <div className="flex gap-3 anim-up" style={{ animationDelay: '120ms' }}>
-            <button onClick={saveSchedule} disabled={savingSchedule}
-              className="flex-1 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40"
-              style={{ background: 'var(--accent)' }}>
-              {savingSchedule ? 'Speichern…' : `${selectedIds.size} Kurse speichern`}
-            </button>
-            <button onClick={() => { fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName, classIds: [] }) }); setStep('done'); }}
+            {(() => {
+              const locked = !!scheduleLockUntil && new Date(scheduleLockUntil).getTime() > Date.now();
+              return (
+                <button onClick={saveSchedule} disabled={savingSchedule || locked}
+                  className="flex-1 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40"
+                  style={{ background: 'var(--accent)' }}>
+                  {locked ? '🔒 Gesperrt' : savingSchedule ? 'Speichern…' : `${selectedIds.size} Kurse speichern`}
+                </button>
+              );
+            })()}
+            <button onClick={() => setStep('done')}
               className="px-4 py-3.5 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-white text-sm transition-colors">
-              Überspringen
+              {scheduleLockUntil && new Date(scheduleLockUntil).getTime() > Date.now() ? 'Schließen' : 'Überspringen'}
             </button>
           </div>
         </div>
