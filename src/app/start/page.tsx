@@ -45,10 +45,10 @@ export default function StartPage() {
   const iconBtn = 'relative w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all text-lg';
   const moreRows: { icon: string; label: string; href: string; badge?: number }[] = [
     // Ausreden-Gericht nur im harten Modus zeigen.
-    ...(hardMode ? [{ icon: '🗳️', label: 'Ausreden-Gericht', href: '/vote', badge: pendingVotes }] : []),
-    { icon: '👥', label: 'Mitglieder', href: '/mitglieder' },
-    { icon: '🏥', label: 'Mein Status', href: '/account' },
-    { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },
+    ...(hardMode ? [{ icon: '/more-court.png', label: 'Ausreden-Gericht', href: '/vote', badge: pendingVotes }] : []),
+    { icon: '/more-members.png', label: 'Mitglieder', href: '/mitglieder' },
+    { icon: '/more-status.png', label: 'Mein Status', href: '/account' },
+    { icon: '/more-timetable.png', label: 'Stundenplan ändern', href: '/?plan=1' },
   ];
 
   if (userLoading || !ready) return <FullscreenLoader />;
@@ -115,7 +115,8 @@ export default function StartPage() {
           {moreRows.map((row, i) => (
             <a key={row.label} href={row.href}
               className={`flex items-center gap-3 px-4 py-3.5 active:bg-[var(--surface-2)] transition-colors ${i < moreRows.length - 1 ? 'border-b border-[var(--border-soft)]' : ''}`}>
-              <span className="text-xl w-6 text-center">{row.icon}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={row.icon} alt="" className="w-6 h-6 object-contain shrink-0" style={{ opacity: 0.9 }} />
               <span className="flex-1 text-sm font-semibold">{row.label}</span>
               {!!row.badge && row.badge > 0 && (
                 <span className="text-[11px] font-semibold" style={{ color: 'var(--bitch)' }}>● {row.badge} offen</span>
