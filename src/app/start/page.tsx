@@ -88,10 +88,8 @@ export default function StartPage() {
         {/* Feature: Statistiken */}
         <a href="/statistik"
           className="card px-5 py-4 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up">
-          <span className="w-14 h-14 rounded-full grid place-items-center shrink-0" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/tile-statistics.png" alt="" className="w-9 h-9 object-contain" />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/tile-statistics.png" alt="" className="w-11 h-11 object-contain shrink-0" />
           <div className="flex-1 min-w-0 font-display text-2xl tracking-wide leading-none">Statistiken</div>
           <span className="text-[var(--faint)] text-lg">›</span>
         </a>
@@ -99,10 +97,8 @@ export default function StartPage() {
         {/* Feature: Wettkämpfe */}
         <a href="/competitions"
           className="card px-5 py-4 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up" style={{ animationDelay: '40ms' }}>
-          <span className="w-14 h-14 rounded-full grid place-items-center shrink-0" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/tile-competition.png" alt="" className="w-9 h-9 object-contain" />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/tile-competition.png" alt="" className="w-11 h-11 object-contain shrink-0" />
           <div className="flex-1 min-w-0 font-display text-2xl tracking-wide leading-none">Wettkämpfe</div>
           <span className="text-[var(--faint)] text-lg">›</span>
         </a>
