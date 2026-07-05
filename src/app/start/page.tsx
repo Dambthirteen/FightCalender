@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { resetAnalytics } from '@/lib/analytics';
-import { nextStreakBadge, flameTier, STREAK_BADGES } from '@/lib/badges';
+import { nextStreakBadge, STREAK_BADGES } from '@/lib/badges';
+import StreakFlame from '@/components/StreakFlame';
 import FullscreenLoader from '@/components/FullscreenLoader';
 import { XP } from '@/lib/xp';
 
@@ -34,7 +35,6 @@ export default function StartPage() {
   }, [userLoading, userName]);
 
   const nextBadge = nextStreakBadge(streak.weeks);
-  const flames = '🔥'.repeat(Math.max(1, flameTier(streak.weeks)));
 
   async function logout() {
     resetAnalytics();
@@ -79,9 +79,8 @@ export default function StartPage() {
       <main className="max-w-md mx-auto px-4 pb-28 space-y-3">
         {/* Streak — zentriert; Klick öffnet Details */}
         <button onClick={() => setStreakOpen(true)}
-          className="w-full flex flex-col items-center pt-3 pb-4 active:scale-[0.99] transition-transform anim-up">
-          <span className="leading-none" style={{ fontSize: '64px', ...(streak.days === 0 ? { filter: 'grayscale(1)', opacity: 0.55 } : {}) }}>{flames}</span>
-          <div className="font-display text-5xl tracking-wide tnum mt-2 leading-none">{streak.days}</div>
+          className="w-full flex flex-col items-center pt-2 pb-3 active:scale-[0.99] transition-transform anim-up">
+          <StreakFlame days={streak.days} height={128} />
           <div className="text-[11px] uppercase tracking-[0.22em] text-[var(--muted)] mt-1">{streak.days === 1 ? 'Tag' : 'Tage'} Streak</div>
         </button>
 
@@ -153,9 +152,8 @@ export default function StartPage() {
 
             {/* Aktuelle Werte */}
             <div className="flex flex-col items-center pb-4">
-              <span className="leading-none" style={{ fontSize: '52px', ...(streak.days === 0 ? { filter: 'grayscale(1)', opacity: 0.55 } : {}) }}>{flames}</span>
-              <div className="font-display text-4xl tracking-wide tnum mt-1.5 leading-none">{streak.days} <span className="text-lg">{streak.days === 1 ? 'Tag' : 'Tage'}</span></div>
-              <div className="text-xs text-[var(--muted)] mt-1.5 text-center px-2">
+              <StreakFlame days={streak.days} height={110} />
+              <div className="text-xs text-[var(--muted)] mt-2 text-center px-2">
                 {streak.weeks} {streak.weeks === 1 ? 'Woche' : 'Wochen'} ohne Skip
                 {nextBadge ? ` · noch ${nextBadge.threshold - streak.weeks} bis „${nextBadge.label}"` : ' · Maximalstufe erreicht'}
               </div>
