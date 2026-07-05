@@ -35,6 +35,8 @@ export default function Home() {
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [scheduleLockUntil, setScheduleLockUntil] = useState<string | null>(null);
   const [scheduleMsg, setScheduleMsg] = useState('');
+  const [confirmSchedule, setConfirmSchedule] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [classes, setClasses] = useState<GymClass[]>([]);
@@ -125,6 +127,14 @@ export default function Home() {
     fetch('/api/schedule-lock').then((r) => r.json()).then((d) => setScheduleLockUntil(d.lockedUntil ?? null)).catch(() => {});
   }, [step]);
 
+  // 3-Sekunden-Cooldown für den „Ich bin mir sicher"-Button.
+  useEffect(() => {
+    if (!confirmSchedule) { setCooldown(0); return; }
+    setCooldown(3);
+    const id = setInterval(() => setCooldown((c) => { if (c <= 1) { clearInterval(id); return 0; } return c - 1; }), 1000);
+    return () => clearInterval(id);
+  }, [confirmSchedule]);
+
   // Wochenplan dieser KW laden (Abweichung oder fester Plan).
   useEffect(() => {
     if (step !== 'done' || !userName) return;
@@ -154,6 +164,7 @@ export default function Home() {
   }
 
   async function saveSchedule() {
+    setConfirmSchedule(false);
     setSavingSchedule(true); setScheduleMsg('');
     try {
       const res = await fetch('/api/profile', {
@@ -361,7 +372,7 @@ export default function Home() {
             {(() => {
               const locked = !!scheduleLockUntil && new Date(scheduleLockUntil).getTime() > Date.now();
               return (
-                <button onClick={saveSchedule} disabled={savingSchedule || locked}
+                <button onClick={() => setConfirmSchedule(true)} disabled={savingSchedule || locked}
                   className="flex-1 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.99] disabled:opacity-40"
                   style={{ background: 'var(--accent)' }}>
                   {locked ? '🔒 Gesperrt' : savingSchedule ? 'Speichern…' : `${selectedIds.size} Kurse speichern`}
@@ -374,6 +385,29 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        {/* Bestätigung: fester Plan nur alle 7 Tage änderbar */}
+        {confirmSchedule && (
+          <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm anim-in"
+            onClick={(e) => { if (e.target === e.currentTarget) setConfirmSchedule(false); }}>
+            <div className="card w-full max-w-sm p-5 anim-up rounded-b-none sm:rounded-2xl">
+              <h2 className="font-display text-xl tracking-wide mb-1">Plan wirklich ändern?</h2>
+              <p className="text-sm text-[var(--muted)] mb-4">
+                Der feste Plan lässt sich danach <strong className="text-[var(--text)]">nur alle 7 Tage</strong> wieder anpassen. Bist du dir sicher?
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmSchedule(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-white text-sm font-semibold transition-colors">
+                  Bearbeiten
+                </button>
+                <button onClick={saveSchedule} disabled={cooldown > 0 || savingSchedule}
+                  className="flex-1 text-white font-bold py-2.5 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>
+                  {cooldown > 0 ? `Ich bin mir sicher (${cooldown}s)` : savingSchedule ? 'Speichern…' : 'Ich bin mir sicher'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
