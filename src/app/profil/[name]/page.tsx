@@ -530,7 +530,7 @@ export default function ProfilePage() {
           <span className="truncate" style={nameplateStyle(cosmetics.nameplate)}>{name}</span>
           {supporter && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/supporter-star.png" alt="Supporter" title="Supporter" width={14} height={14} className="shrink-0" />
+            <img src="/supporter-star.png" alt="Supporter" title="Supporter" width={14} height={14} className="shrink-0" style={{ transform: 'translateY(-2px)' }} />
           )}
         </h1>
         <div className="justify-self-end">
