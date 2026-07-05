@@ -21,10 +21,10 @@ export async function GET(req: NextRequest) {
     if (withAvatars) {
       // Mitgliederliste: Avatare + aktuelle Streak je Mitglied (getStreak wie im Profil).
       const rows = (await sql`
-          SELECT u.user_name, u.color, u.avatar, u.fighter_info->>'role' AS role
+          SELECT u.user_name, u.color, u.avatar, u.fighter_info->>'role' AS role, gm.role AS group_role
           FROM group_members gm JOIN users u ON u.user_name = gm.user_name
           WHERE gm.group_id = ${gid} AND gm.status = 'active'
-          ORDER BY LOWER(u.user_name)`) as { user_name: string; color: string | null; avatar: string | null; role: string | null }[];
+          ORDER BY LOWER(u.user_name)`) as { user_name: string; color: string | null; avatar: string | null; role: string | null; group_role: string | null }[];
       const bl = await getGroupBundesland(gid);
       const withStreak = await Promise.all(rows.map(async (u) => {
         let streak = 0;
