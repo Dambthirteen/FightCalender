@@ -11,7 +11,29 @@ const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'S
 const COLORS = ['red', 'blue', 'green', 'orange', 'purple'];
 const COLOR_HEX: Record<string, string> = { red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7' };
 
-interface MyGroup { id: number; name: string; invite_code: string; role: string; clan_tag: string | null; hard_mode: boolean; bundesland: string }
+// Gruppenbild auf 256px quadratisch verkleinern → Data-URL (wie beim Profilbild).
+function resizeImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('no ctx')); return; }
+      const scale = Math.max(size / img.width, size / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+interface MyGroup { id: number; name: string; invite_code: string; role: string; clan_tag: string | null; hard_mode: boolean; bundesland: string; avatar?: string | null; description?: string }
 interface Member { user_name: string; role: string; status: string }
 interface Cls { id: number; name: string; day_of_week: number; start_time: string; end_time: string; color: string }
 
@@ -32,6 +54,8 @@ export default function GroupsPage() {
   const [clanTag, setClanTag] = useState('');
   const [hardMode, setHardMode] = useState(false);
   const [bundesland, setBundesland] = useState('NW');
+  const [groupAvatar, setGroupAvatar] = useState<string | null>(null);
+  const [groupDesc, setGroupDesc] = useState('');
   const [inviteMsg, setInviteMsg] = useState('');
   const [qrUrl, setQrUrl] = useState('');
   const [showQr, setShowQr] = useState(false);
@@ -46,9 +70,12 @@ export default function GroupsPage() {
     const gs: MyGroup[] = Array.isArray(g.groups) ? g.groups : [];
     setGroups(gs);
     setCurrent(g.current ?? null);
-    setClanTag(gs.find((x) => x.id === g.current)?.clan_tag ?? '');
-    setHardMode(gs.find((x) => x.id === g.current)?.hard_mode ?? false);
-    setBundesland(gs.find((x) => x.id === g.current)?.bundesland ?? 'NW');
+    const cur = gs.find((x) => x.id === g.current);
+    setClanTag(cur?.clan_tag ?? '');
+    setHardMode(cur?.hard_mode ?? false);
+    setBundesland(cur?.bundesland ?? 'NW');
+    setGroupAvatar(cur?.avatar ?? null);
+    setGroupDesc(cur?.description ?? '');
     setMembers(Array.isArray(m.members) ? m.members : []);
     setMyRole(m.myRole ?? null);
     setInviteCode(m.inviteCode ?? null);
@@ -83,6 +110,35 @@ export default function GroupsPage() {
     try {
       await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, clanTag }) });
       setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, clan_tag: clanTag || null } : g)));
+    } finally { setBusy(false); }
+  }
+  async function pickGroupAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !current) return;
+    setBusy(true);
+    try {
+      const dataUrl = await resizeImage(file);
+      await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, avatar: dataUrl }) });
+      setGroupAvatar(dataUrl);
+      setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, avatar: dataUrl } : g)));
+    } catch { /* egal */ } finally { setBusy(false); }
+  }
+  async function removeGroupAvatar() {
+    if (!current) return;
+    setBusy(true);
+    try {
+      await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, avatar: null }) });
+      setGroupAvatar(null);
+      setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, avatar: null } : g)));
+    } finally { setBusy(false); }
+  }
+  async function saveGroupDesc() {
+    if (!current) return;
+    setBusy(true);
+    try {
+      await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, description: groupDesc }) });
+      setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, description: groupDesc } : g)));
     } finally { setBusy(false); }
   }
   async function toggleHardMode() {
@@ -184,6 +240,54 @@ export default function GroupsPage() {
             {groups.length === 0 && <div className="text-[var(--faint)] text-sm py-2">Noch in keiner Gruppe.</div>}
           </div>
         </section>
+
+        {/* Gruppen-Profil: Bild + Beschreibung (Admins bearbeiten, alle sehen) */}
+        {current && (() => {
+          const gc = colorFor(groupName || 'Crew');
+          return (
+            <section className="card p-4 anim-up" style={{ animationDelay: '20ms' }}>
+              <div className="flex items-center gap-3.5">
+                {isAdmin ? (
+                  <label className="relative cursor-pointer shrink-0" title="Gruppenbild ändern">
+                    {groupAvatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={groupAvatar} alt="" className="w-16 h-16 rounded-2xl object-cover" style={{ border: `1.5px solid ${gc}` }} />
+                    ) : (
+                      <span className="w-16 h-16 rounded-2xl grid place-items-center font-display text-2xl" style={{ background: `${gc}22`, color: gc, border: `1.5px solid ${gc}` }}>{initials(groupName || 'C')}</span>
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={pickGroupAvatar} disabled={busy} />
+                    <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full grid place-items-center text-[11px] shadow" style={{ background: 'var(--accent)', color: '#fff' }}>✎</span>
+                  </label>
+                ) : groupAvatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={groupAvatar} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0" style={{ border: `1.5px solid ${gc}` }} />
+                ) : (
+                  <span className="w-16 h-16 rounded-2xl grid place-items-center font-display text-2xl shrink-0" style={{ background: `${gc}22`, color: gc, border: `1.5px solid ${gc}` }}>{initials(groupName || 'C')}</span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-xl tracking-wide truncate">{clanTag ? `[${clanTag}] ` : ''}{groupName}</div>
+                  {isAdmin && groupAvatar && (
+                    <button onClick={removeGroupAvatar} disabled={busy} className="text-[11px] text-[var(--faint)] hover:text-[var(--accent)] transition-colors mt-0.5">Bild entfernen</button>
+                  )}
+                </div>
+              </div>
+
+              {isAdmin ? (
+                <div className="mt-3">
+                  <textarea value={groupDesc} onChange={(e) => setGroupDesc(e.target.value.slice(0, 500))} rows={3}
+                    placeholder="Beschreibung eurer Crew — worum geht's, wer seid ihr?"
+                    className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)] resize-none" />
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[11px] text-[var(--faint)] tnum">{groupDesc.length}/500</span>
+                    <button onClick={saveGroupDesc} disabled={busy} className="text-white font-bold px-4 py-2 rounded-xl text-sm disabled:opacity-40" style={{ background: 'var(--accent)' }}>Speichern</button>
+                  </div>
+                </div>
+              ) : groupDesc ? (
+                <p className="mt-3 text-sm text-[var(--muted)] whitespace-pre-line">{groupDesc}</p>
+              ) : null}
+            </section>
+          );
+        })()}
 
         {/* Erstellen / Beitreten */}
         <section className="card p-4 anim-up space-y-4" style={{ animationDelay: '40ms' }}>

@@ -17,6 +17,8 @@ export interface MyGroup {
   clan_tag: string | null;
   hard_mode: boolean;
   bundesland: string;
+  avatar: string | null;
+  description: string;
 }
 
 /** Alle aktiven Gruppen des Nutzers. */
@@ -24,13 +26,13 @@ export async function getMyGroups(userName: string): Promise<MyGroup[]> {
   const sql = getSql();
   try {
     return (await sql`
-      SELECT g.id, g.name, g.invite_code, g.clan_tag, g.hard_mode, g.bundesland, gm.role
+      SELECT g.id, g.name, g.invite_code, g.clan_tag, g.hard_mode, g.bundesland, g.avatar, g.description, gm.role
       FROM group_members gm JOIN groups g ON g.id = gm.group_id
       WHERE gm.user_name = ${userName} AND gm.status = 'active'
       ORDER BY LOWER(g.name)
     `) as MyGroup[];
   } catch {
-    // clan_tag/hard_mode/bundesland-Spalte evtl. noch nicht angelegt → ohne sie laden.
+    // Neuere Spalten evtl. noch nicht angelegt → ohne sie laden.
     try {
       const rows = await sql`
         SELECT g.id, g.name, g.invite_code, gm.role
@@ -38,7 +40,7 @@ export async function getMyGroups(userName: string): Promise<MyGroup[]> {
         WHERE gm.user_name = ${userName} AND gm.status = 'active'
         ORDER BY LOWER(g.name)
       `;
-      return rows.map((r) => ({ ...r, clan_tag: null, hard_mode: false, bundesland: 'NW' })) as MyGroup[];
+      return rows.map((r) => ({ ...r, clan_tag: null, hard_mode: false, bundesland: 'NW', avatar: null, description: '' })) as MyGroup[];
     } catch {
       return []; // Tabellen evtl. noch nicht angelegt → App läuft ungescoped weiter
     }

@@ -179,7 +179,6 @@ export default function MitgliederPage() {
 
         {tab === 'group' ? (
           <>
-            <div className="anim-up mb-4"><InviteFriends /></div>
             {/* Rollen-Filter */}
             <div className="flex gap-2 mb-3">
               {([['all', 'Alle'], ['fighter', 'Fighter'], ['coach', 'Coaches']] as const).map(([key, label]) => {
@@ -209,6 +208,7 @@ export default function MitgliederPage() {
                 </div>
               );
             })()}
+            <div className="anim-up mt-6"><InviteFriends /></div>
           </>
         ) : tab === 'public' ? (
           <>

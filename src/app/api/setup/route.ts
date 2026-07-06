@@ -295,6 +295,9 @@ export async function POST(req: NextRequest) {
       )
     `;
     await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS clan_tag VARCHAR(4)`;
+    // Gruppenprofil: Bild (Data-URL) + Beschreibung.
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS avatar TEXT`;
+    await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT ''`;
     // „Harter Modus" (opt-in): schaltet die öffentlichen Shame-Mechaniken frei
     // (öffentliche No-Shows, Chicken-des-Monats, Ausreden-Gericht).
     // Trick für eine saubere Migration: Spalte zuerst mit DEFAULT true anlegen —

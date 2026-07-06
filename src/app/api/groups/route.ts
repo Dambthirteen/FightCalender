@@ -69,12 +69,26 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { groupId, clanTag, hardMode, bundesland } = await req.json();
+  const { groupId, clanTag, hardMode, bundesland, avatar, description } = await req.json();
   const gid = Number(groupId);
   if (!gid) return NextResponse.json({ error: 'Gruppe fehlt' }, { status: 400 });
   if ((await getRole(me, gid)) !== 'admin') return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
 
   const sql = getSql();
+
+  // Gruppen-Profilbild (Data-URL, clientseitig verkleinert) — null = entfernen.
+  if (avatar !== undefined) {
+    const val = typeof avatar === 'string' && avatar.startsWith('data:') ? avatar.slice(0, 400_000) : null;
+    await sql`UPDATE groups SET avatar = ${val} WHERE id = ${gid}`;
+    return NextResponse.json({ ok: true, avatar: val });
+  }
+
+  // Gruppen-Beschreibung.
+  if (typeof description === 'string') {
+    const desc = description.trim().slice(0, 500);
+    await sql`UPDATE groups SET description = ${desc} WHERE id = ${gid}`;
+    return NextResponse.json({ ok: true, description: desc });
+  }
 
   // Harter Modus: schaltet die öffentlichen Shame-Mechaniken für die ganze Crew frei.
   if (typeof hardMode === 'boolean') {
