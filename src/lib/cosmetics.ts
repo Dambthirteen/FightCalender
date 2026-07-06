@@ -92,9 +92,9 @@ export const COSMETICS: Record<CosmeticCategory, { label: string; items: Cosmeti
     label: 'Gürtel-Effekt',
     items: [
       { id: 'default', label: 'Kein Effekt', minLevel: 1 },
-      { id: 'glow', label: 'Glow · Gold', minLevel: 999, sku: 'supporter' },
-      { id: 'fire', label: 'Glow · Feuer', minLevel: 999, sku: 'supporter' },
-      { id: 'ice', label: 'Glow · Eis', minLevel: 999, sku: 'supporter' },
+      { id: 'glow', label: 'Glow · Gold', minLevel: 1 },
+      { id: 'ice', label: 'Glow · Eis', minLevel: 2 },
+      { id: 'fire', label: 'Glow · Feuer', minLevel: 7 },
       { id: 'pulse', label: 'Puls', minLevel: 999, sku: 'supporter' },
     ],
   },
