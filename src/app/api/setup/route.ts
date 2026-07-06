@@ -172,6 +172,17 @@ export async function POST(req: NextRequest) {
       )
     `;
     await sql`ALTER TABLE notification_prefs ADD COLUMN IF NOT EXISTS chat_pushes BOOLEAN NOT NULL DEFAULT TRUE`;
+    // Feedback / Bug-Meldungen (von der Startseite → Admin-Unterseite /admin/feedback).
+    await sql`
+      CREATE TABLE IF NOT EXISTS feedback (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100),
+        kind VARCHAR(12) NOT NULL DEFAULT 'feedback',
+        text TEXT NOT NULL,
+        resolved BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `;
     await sql`
       CREATE TABLE IF NOT EXISTS excuse_votes (
         id SERIAL PRIMARY KEY,

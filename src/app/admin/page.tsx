@@ -312,6 +312,12 @@ export default function AdminPage() {
           </button>
         </div>
 
+        {/* Feedback & Bugs (eigene Unterseite, damit das Panel übersichtlich bleibt) */}
+        <a href="/admin/feedback" className="card px-4 py-3.5 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform anim-up">
+          <span className="font-semibold text-sm">💬 Feedback &amp; Bugs</span>
+          <span className="text-[var(--faint)]">›</span>
+        </a>
+
         {/* Custom-Push an ALLE Nutzer */}
         <section className="card p-5 anim-up" style={{ animationDelay: '15ms' }}>
           <h2 className="font-display text-xl tracking-wide mb-1">Nachricht an alle</h2>

@@ -20,6 +20,11 @@ export default function StartPage() {
   const [streak, setStreak] = useState({ days: 0, weeks: 0 });
   const [helpOpen, setHelpOpen] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
+  const [fbOpen, setFbOpen] = useState(false);
+  const [fbKind, setFbKind] = useState<'bug' | 'feedback'>('feedback');
+  const [fbText, setFbText] = useState('');
+  const [fbBusy, setFbBusy] = useState(false);
+  const [fbMsg, setFbMsg] = useState('');
   const [isHobby, setIsHobby] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   const [flameTint, setFlameTint] = useState<string | undefined>(undefined);
@@ -54,6 +59,17 @@ export default function StartPage() {
     resetAnalytics();
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
+  }
+
+  async function sendFeedback() {
+    if (!fbText.trim() || fbBusy) return;
+    setFbBusy(true); setFbMsg('');
+    try {
+      const res = await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: fbKind, text: fbText.trim() }) });
+      if (res.ok) { setFbText(''); setFbMsg('Danke! Deine Nachricht ist angekommen.'); setTimeout(() => setFbOpen(false), 1200); }
+      else { const d = await res.json().catch(() => ({})); setFbMsg(d.error ?? 'Konnte nicht senden.'); }
+    } catch { setFbMsg('Netzwerkfehler'); }
+    finally { setFbBusy(false); }
   }
 
   const iconBtn = 'relative w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all text-lg';
@@ -186,6 +202,10 @@ export default function StartPage() {
           className="w-full text-center text-xs py-2 text-[var(--faint)] hover:text-[var(--muted)] transition-colors">
           ⓘ Wie bekomme ich XP & Level?
         </button>
+        <button onClick={() => { setFbMsg(''); setFbOpen(true); }}
+          className="w-full text-center text-[11px] py-1 text-[var(--faint)] hover:text-[var(--muted)] transition-colors">
+          Bug gefunden oder Feedback? Sag&apos;s uns
+        </button>
       </main>
 
       {/* Streak-Details */}
@@ -228,6 +248,39 @@ export default function StartPage() {
             </div>
 
             <button onClick={() => setStreakOpen(false)} className="btn btn-primary w-full mt-5">Schließen</button>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback / Bug melden */}
+      {fbOpen && (
+        <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm anim-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setFbOpen(false); }}>
+          <div className="card w-full max-w-md p-5 anim-up rounded-b-none sm:rounded-2xl">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-display text-2xl tracking-wide">Melde Bugs oder Feedback</h2>
+              <button onClick={() => setFbOpen(false)} className="text-[var(--faint)] hover:text-white text-lg px-1">✕</button>
+            </div>
+            <p className="text-sm text-[var(--muted)] mb-4">Was ist kaputt oder was wünschst du dir? Geht direkt ans Team.</p>
+            <div className="flex gap-2 mb-3">
+              {([['feedback', '💡 Feedback'], ['bug', '🐞 Bug']] as const).map(([k, label]) => (
+                <button key={k} onClick={() => setFbKind(k)}
+                  className="flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors"
+                  style={fbKind === k ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--accent-soft)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <textarea value={fbText} onChange={(e) => setFbText(e.target.value.slice(0, 2000))} rows={4} autoFocus
+              placeholder={fbKind === 'bug' ? 'Was ist passiert? Wo? Was hast du erwartet?' : 'Deine Idee oder dein Feedback…'}
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)] resize-none" />
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-xs" style={{ color: fbMsg.startsWith('Danke') ? 'var(--good)' : 'var(--accent)' }}>{fbMsg}</span>
+              <button onClick={sendFeedback} disabled={fbBusy || !fbText.trim()}
+                className="text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>
+                {fbBusy ? 'Senden…' : 'Senden'}
+              </button>
+            </div>
           </div>
         </div>
       )}
