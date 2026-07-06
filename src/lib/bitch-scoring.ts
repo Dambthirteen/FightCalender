@@ -50,6 +50,13 @@ export async function getBitchCounts(
   const counts = new Map<string, number>();
   const add = (u: string, n: number) => counts.set(u, (counts.get(u) ?? 0) + n);
 
+  // Test-/Dev-Accounts tauchen in keiner Wertung auf (Chicken/Macher/Awards/Wrapped).
+  let testers = new Set<string>();
+  try {
+    const t = (await sql`SELECT user_name FROM users WHERE is_test = true`) as { user_name: string }[];
+    testers = new Set(t.map((r) => r.user_name));
+  } catch { /* is_test-Spalte evtl. noch nicht angelegt */ }
+
   // ---------- TEIL A: vor dem Stichtag — ALTE Logik (Historie unverändert) ----------
   const aEnd = endExclusive < CUTOVER ? endExclusive : CUTOVER; // min(endExclusive, CUTOVER)
   if (start < aEnd) {
@@ -178,6 +185,7 @@ export async function getBitchCounts(
   }
 
   return [...counts.entries()]
+    .filter(([user_name]) => !testers.has(user_name)) // Test-Accounts raus
     .map(([user_name, count]) => ({ user_name, count }))
     .sort((a, b) => b.count - a.count);
 }

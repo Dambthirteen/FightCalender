@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
       WHERE c.group_id = ${gid}
         AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date >= ${start}::date
         AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date < ${end}::date
+        AND a.user_name NOT IN (SELECT user_name FROM users WHERE is_test = true)
       GROUP BY a.user_name ORDER BY n DESC LIMIT 1
     `) as { user_name: string; n: number }[];
 
