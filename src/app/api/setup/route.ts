@@ -94,6 +94,16 @@ export async function POST(req: NextRequest) {
       )
     `;
     await sql`CREATE INDEX IF NOT EXISTS weekly_schedule_uw_idx ON weekly_schedule (user_name, week_start)`;
+    // Wochenplan-Lock: max. 2 Anpassungen pro Nutzer & KW (Zurücksetzen zählt nicht mit).
+    await sql`
+      CREATE TABLE IF NOT EXISTS weekly_schedule_edits (
+        user_name VARCHAR(100) NOT NULL,
+        week_start DATE NOT NULL,
+        edit_count INTEGER NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        UNIQUE(user_name, week_start)
+      )
+    `;
     await sql`
       CREATE TABLE IF NOT EXISTS excuse_votes (
         id SERIAL PRIMARY KEY,

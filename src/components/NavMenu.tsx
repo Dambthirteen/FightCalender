@@ -50,6 +50,7 @@ export default function NavMenu() {
       cat: 'Profil', items: [
         { icon: '👤', label: 'Mein Profil', href: `/profil/${me}` },
         { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },
+        { icon: '🗓️', label: 'Wochenplan (diese Woche)', href: '/?plan=1&tab=week' },
         { icon: '🏥', label: 'Mein Status', href: '/account' },
         { icon: '🏆', label: 'Wettkämpfe', href: '/competitions' },
       ],
