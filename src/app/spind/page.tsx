@@ -7,6 +7,12 @@ import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import StreakFlame from '@/components/StreakFlame';
 import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, beltSkin, beltFxClass, xpBarColor, type CosmeticCategory } from '@/lib/cosmetics';
 
+// Kompakte Kategorie-Gruppen: durchklicken statt alles auf einer langen Seite.
+const GROUPS: { key: string; label: string; hint: string; cats: CosmeticCategory[]; color?: boolean }[] = [
+  { key: 'profile', label: 'Profil', hint: 'Name, Avatar-Rahmen, Flamme, XP-Leiste & Farbe', cats: ['nameplate', 'avatarFrame', 'flame', 'xpbar'], color: true },
+  { key: 'belt', label: 'Gürtel', hint: 'Championship- & BJJ-Gürtel plus Effekte', cats: ['belt', 'beltFx'] },
+];
+
 export default function SpindPage() {
   const { userName } = useUser();
   const [level, setLevel] = useState(1);
@@ -15,6 +21,7 @@ export default function SpindPage() {
   const [color, setColor] = useState<string | null>(null);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/cosmetics').then((r) => r.json()).then((d) => {
@@ -82,6 +89,55 @@ export default function SpindPage() {
     return <StreakFlame days={7} height={38} tint={flameFilter(id)} />;
   }
 
+  // Kachel-Grid für eine (Unter-)Auswahl an Items.
+  function renderItems(catKey: CosmeticCategory, items: (typeof COSMETICS)[CosmeticCategory]['items']) {
+    const equipped = cos[catKey] ?? 'default';
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        {items.map((item) => {
+          const premium = !!item.sku;
+          const locked = premium ? !owned.includes(item.sku!) : level < item.minLevel;
+          const on = equipped === item.id;
+          return (
+            <button key={item.id} onClick={() => equip(catKey, item.id, locked)} disabled={locked || busy === catKey + item.id}
+              className="rounded-xl border p-3 text-left transition-all active:scale-95 disabled:opacity-50"
+              style={on
+                ? { borderColor: 'var(--accent-2)', background: 'var(--accent-soft)' }
+                : { borderColor: 'var(--border-soft)', background: 'var(--surface-2)' }}>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-sm font-semibold truncate">{item.label}</span>
+                {locked
+                  ? <span className="text-[10px] text-[var(--faint)] shrink-0">{premium ? '⭐ Supporter' : `🔒 Lvl ${item.minLevel}`}</span>
+                  : on ? <span className="text-xs shrink-0" style={{ color: 'var(--good)' }}>✓ aktiv</span> : null}
+              </div>
+              <div className="h-10 flex items-center" style={locked ? { filter: 'grayscale(1)', opacity: 0.5 } : undefined}>
+                {sample(catKey, item.id)}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Eine Kategorie rendern; Gürtel-Skins in Championship + BJJ unterteilt.
+  function renderCategory(catKey: CosmeticCategory) {
+    const cat = COSMETICS[catKey];
+    if (catKey === 'belt') {
+      const champ = cat.items.filter((i) => !i.id.startsWith('bjj-'));
+      const bjj = cat.items.filter((i) => i.id.startsWith('bjj-'));
+      return (
+        <div key={catKey} className="space-y-4">
+          <div><div className="section-label mb-2.5">Championship</div>{renderItems('belt', champ)}</div>
+          <div><div className="section-label mb-2.5">BJJ-Gürtel</div>{renderItems('belt', bjj)}</div>
+        </div>
+      );
+    }
+    return <div key={catKey}><div className="section-label mb-2.5">{cat.label}</div>{renderItems(catKey, cat.items)}</div>;
+  }
+
+  const group = GROUPS.find((g) => g.key === openGroup) ?? null;
+
   return (
     <div className="min-h-screen text-[var(--text)]">
       <PageHeader title="Spind" />
@@ -107,58 +163,43 @@ export default function SpindPage() {
 
         {msg && <p className="text-xs text-[var(--accent)] text-center">{msg}</p>}
 
-        {/* Profilfarbe (Avatar & Kalender) */}
-        <section className="anim-up">
-          <div className="section-label mb-2.5">Profilfarbe</div>
-          <div className="flex flex-wrap gap-2.5">
-            {PALETTE.map((col) => (
-              <button key={col} onClick={() => pickColor(col)}
-                className="w-9 h-9 rounded-full transition-transform active:scale-90"
-                style={{ background: col, outline: color === col ? '2px solid #fff' : 'none', outlineOffset: '2px' }} />
+        {!group ? (
+          // Kategorie-Menü
+          <div className="space-y-2 anim-up">
+            {GROUPS.map((g) => (
+              <button key={g.key} onClick={() => setOpenGroup(g.key)}
+                className="w-full card px-4 py-4 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform text-left">
+                <div className="min-w-0">
+                  <div className="font-display text-xl tracking-wide">{g.label}</div>
+                  <div className="text-[11px] text-[var(--faint)] mt-0.5">{g.hint}</div>
+                </div>
+                <span className="text-[var(--faint)] text-lg">›</span>
+              </button>
             ))}
-            <button onClick={() => pickColor(null)} title="Automatisch"
-              className="w-9 h-9 rounded-full grid place-items-center text-[10px] border border-[var(--border)] text-[var(--muted)]"
-              style={{ outline: !color ? '2px solid #fff' : 'none', outlineOffset: '2px' }}>auto</button>
+            <p className="text-[11px] text-[var(--faint)] text-center pt-2">Mehr wird mit steigendem Level freigeschaltet.</p>
           </div>
-        </section>
-
-        {(Object.keys(COSMETICS) as CosmeticCategory[]).map((catKey) => {
-          const cat = COSMETICS[catKey];
-          const equipped = cos[catKey] ?? 'default';
-          return (
-            <section key={catKey} className="anim-up">
-              <div className="section-label mb-2.5">{cat.label}</div>
-              <div className="grid grid-cols-2 gap-2">
-                {cat.items.map((item) => {
-                  // Premium-Item (sku): freigeschaltet nur mit Entitlement (Supporter).
-                  // Sonst per Level. Bei Premium zeigt der Lock „⭐ Supporter" statt eines Levels.
-                  const premium = !!item.sku;
-                  const locked = premium ? !owned.includes(item.sku!) : level < item.minLevel;
-                  const on = equipped === item.id;
-                  return (
-                    <button key={item.id} onClick={() => equip(catKey, item.id, locked)} disabled={locked || busy === catKey + item.id}
-                      className="rounded-xl border p-3 text-left transition-all active:scale-95 disabled:opacity-50"
-                      style={on
-                        ? { borderColor: 'var(--accent-2)', background: 'var(--accent-soft)' }
-                        : { borderColor: 'var(--border-soft)', background: 'var(--surface-2)' }}>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-sm font-semibold truncate">{item.label}</span>
-                        {locked
-                          ? <span className="text-[10px] text-[var(--faint)] shrink-0">{premium ? '⭐ Supporter' : `🔒 Lvl ${item.minLevel}`}</span>
-                          : on ? <span className="text-xs shrink-0" style={{ color: 'var(--good)' }}>✓ aktiv</span> : null}
-                      </div>
-                      <div className="h-10 flex items-center" style={locked ? { filter: 'grayscale(1)', opacity: 0.5 } : undefined}>
-                        {sample(catKey, item.id)}
-                      </div>
-                    </button>
-                  );
-                })}
+        ) : (
+          // Kategorie-Detail
+          <div className="space-y-6 anim-in">
+            <button onClick={() => setOpenGroup(null)} className="text-sm text-[var(--muted)] hover:text-white transition-colors">← Kategorien</button>
+            {group.color && (
+              <div>
+                <div className="section-label mb-2.5">Profilfarbe</div>
+                <div className="flex flex-wrap gap-2.5">
+                  {PALETTE.map((col) => (
+                    <button key={col} onClick={() => pickColor(col)}
+                      className="w-9 h-9 rounded-full transition-transform active:scale-90"
+                      style={{ background: col, outline: color === col ? '2px solid #fff' : 'none', outlineOffset: '2px' }} />
+                  ))}
+                  <button onClick={() => pickColor(null)} title="Automatisch"
+                    className="w-9 h-9 rounded-full grid place-items-center text-[10px] border border-[var(--border)] text-[var(--muted)]"
+                    style={{ outline: !color ? '2px solid #fff' : 'none', outlineOffset: '2px' }}>auto</button>
+                </div>
               </div>
-            </section>
-          );
-        })}
-
-        <p className="text-[11px] text-[var(--faint)] text-center">Mehr wird mit steigendem Level freigeschaltet.</p>
+            )}
+            {group.cats.map((catKey) => renderCategory(catKey))}
+          </div>
+        )}
       </main>
     </div>
   );

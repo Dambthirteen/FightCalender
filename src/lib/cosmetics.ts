@@ -27,13 +27,23 @@ export function xpBarColor(id?: string): string | null {
   return XPBAR_GRADIENTS[id] ?? null;
 }
 
-/** Gürtel-Skins. Gleiches Template (8779×2000) → identische Plattengeometrie,
- *  nur Bild + Clantag-Farbe unterscheiden sich. */
-export interface BeltSkin { src: string; clanColor: string }
+/** Gürtel-Skins. Championship-Template (1400×319) hat eine mittige Platte + Seitenplatten;
+ *  BJJ-Gürtel (`bjj:true`) sind ein Strap → Clantag mittig, Trophäen auf dem Strap. */
+export interface BeltSkin { src: string; clanColor: string; bjj?: boolean }
 export const BELT_SKINS: Record<string, BeltSkin> = {
   default: { src: '/belt.png', clanColor: '#1a1a1a' },
   ice: { src: '/belt2.png', clanColor: '#16324a' },
   fire: { src: '/belt3.png', clanColor: '#3a1e00' },
+  'bjj-white-0': { src: '/bjj-white-0.png', clanColor: '#1a1a1a', bjj: true },
+  'bjj-white-1': { src: '/bjj-white-1.png', clanColor: '#1a1a1a', bjj: true },
+  'bjj-white-2': { src: '/bjj-white-2.png', clanColor: '#1a1a1a', bjj: true },
+  'bjj-white-3': { src: '/bjj-white-3.png', clanColor: '#1a1a1a', bjj: true },
+  'bjj-white-4': { src: '/bjj-white-4.png', clanColor: '#1a1a1a', bjj: true },
+  'bjj-blue-0': { src: '/bjj-blue-0.png', clanColor: '#ffffff', bjj: true },
+  'bjj-blue-1': { src: '/bjj-blue-1.png', clanColor: '#ffffff', bjj: true },
+  'bjj-blue-2': { src: '/bjj-blue-2.png', clanColor: '#ffffff', bjj: true },
+  'bjj-blue-3': { src: '/bjj-blue-3.png', clanColor: '#ffffff', bjj: true },
+  'bjj-blue-4': { src: '/bjj-blue-4.png', clanColor: '#ffffff', bjj: true },
 };
 export function beltSkin(id?: string): BeltSkin {
   return BELT_SKINS[id ?? 'default'] ?? BELT_SKINS.default;
@@ -85,6 +95,17 @@ export const COSMETICS: Record<CosmeticCategory, { label: string; items: Cosmeti
       { id: 'default', label: 'Klassisch', minLevel: 1 },
       { id: 'ice', label: 'Eis', minLevel: 1 }, // zum Testen auf Level 1
       { id: 'fire', label: 'Fire', minLevel: 5 },
+      // BJJ-Gürtel (Weiß & Blau, 0–4 Streifen). Clantag mittig + Trophäen auf dem Strap.
+      { id: 'bjj-white-0', label: 'Weiß', minLevel: 1 },
+      { id: 'bjj-white-1', label: 'Weiß · 1', minLevel: 1 },
+      { id: 'bjj-white-2', label: 'Weiß · 2', minLevel: 1 },
+      { id: 'bjj-white-3', label: 'Weiß · 3', minLevel: 1 },
+      { id: 'bjj-white-4', label: 'Weiß · 4', minLevel: 1 },
+      { id: 'bjj-blue-0', label: 'Blau', minLevel: 1 },
+      { id: 'bjj-blue-1', label: 'Blau · 1', minLevel: 1 },
+      { id: 'bjj-blue-2', label: 'Blau · 2', minLevel: 1 },
+      { id: 'bjj-blue-3', label: 'Blau · 3', minLevel: 1 },
+      { id: 'bjj-blue-4', label: 'Blau · 4', minLevel: 1 },
     ],
   },
   // Gürtel-Effekt: reine CSS-Glows, Supporter-exklusiv (minLevel unerreichbar → nur per Entitlement).

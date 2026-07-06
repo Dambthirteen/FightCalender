@@ -19,22 +19,30 @@ interface BadgeData { streakDays: number; streakWeeks: number; longest: number; 
 // damit 1 Badge neben dem Clantag sitzt und 2 symmetrisch sind:
 // inner-links · inner-rechts · outer-links · outer-rechts.
 const BELT_SLOTS = [32, 67.9, 21.4, 78.6];
+// Slot-Geometrie je Gürteltyp: Championship = mittige Platte + Seitenplatten;
+// BJJ = Strap, Clantag mittig + Trophäen in einer Reihe darauf.
+const BJJ_SLOTS = [13, 21, 29, 37];
 function Belt({ clanTag, badges, onBadge, skin, fx }: { clanTag: string | null; badges: BadgeInfo[]; onBadge?: (b: BadgeInfo) => void; skin?: string; fx?: string }) {
   const s = beltSkin(skin);
+  const slots = s.bjj ? BJJ_SLOTS : BELT_SLOTS;
+  const clanLeft = s.bjj ? '47%' : '49.8%';
+  const clanTop = s.bjj ? '50%' : '53%';
+  const badgeTop = s.bjj ? '50%' : '48%';
+  const badgeSize = s.bjj ? '5cqw' : '5.5cqw';
   return (
     <div className="relative w-full select-none" style={{ aspectRatio: '1400 / 319', containerType: 'inline-size' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={s.src} alt="Championship Belt" className={`w-full h-full object-contain pointer-events-none ${beltFxClass(fx)}`} />
+      <img src={s.src} alt="Gürtel" className={`w-full h-full object-contain pointer-events-none ${beltFxClass(fx)}`} />
       {clanTag && (
-        <div className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: '49.8%', top: '53%' }}>
+        <div className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: clanLeft, top: clanTop }}>
           <span className="font-display tracking-wide" style={{ color: s.clanColor, fontSize: '6.5cqw', lineHeight: 1 }}>{clanTag}</span>
         </div>
       )}
-      {BELT_SLOTS.map((x, i) => badges[i] ? (
+      {slots.map((x, i) => badges[i] ? (
         <button key={i} type="button" onClick={() => onBadge?.(badges[i])} aria-label={badges[i].label}
           className="absolute -translate-x-1/2 -translate-y-1/2 active:scale-90 transition-transform"
-          style={{ left: `${x}%`, top: '48%' }}>
-          <span style={{ fontSize: '5.5cqw', lineHeight: 1, display: 'block' }}>{badges[i].emoji}</span>
+          style={{ left: `${x}%`, top: badgeTop }}>
+          <span style={{ fontSize: badgeSize, lineHeight: 1, display: 'block' }}>{badges[i].emoji}</span>
         </button>
       ) : null)}
     </div>
@@ -640,7 +648,7 @@ export default function ProfilePage() {
                               <button key={r.key} onClick={() => setFighterField('role', r.key)}
                                 className="flex-1 py-2 rounded-lg border text-xs font-semibold"
                                 style={on ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
-                                {r.key === 'both' ? '🥊🎓 Beides' : `${r.emoji} ${r.label}`}
+                                {r.key === 'both' ? 'Beides' : r.label}
                               </button>
                             );
                           })}
@@ -670,7 +678,7 @@ export default function ProfilePage() {
                               <button key={g.key} onClick={() => setFighterField('gender', g.key)}
                                 className="flex-1 py-2 rounded-lg border text-xs font-semibold"
                                 style={on ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
-                                {g.short} {g.label}
+                                {g.label}
                               </button>
                             );
                           })}
