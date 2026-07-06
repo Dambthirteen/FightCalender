@@ -19,7 +19,14 @@
       "Bash(openssl rand *)",
       "Bash(python3 -c \"import secrets; print\\(secrets.token_hex\\(32\\)\\)\")",
       "PowerShell(git push *)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d\\)} Kurse, z.B.: {d[0][\\\\\"name\\\\\"]} {d[0][\\\\\"start_time\\\\\"]} Mo={d[0][\\\\\"day_of_week\\\\\"]}'\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d\\)} Kurse, z.B.: {d[0][\\\\\"name\\\\\"]} {d[0][\\\\\"start_time\\\\\"]} Mo={d[0][\\\\\"day_of_week\\\\\"]}'\\)\")",
+      "Bash(xcodebuild -version)",
+      "Bash(pod --version)",
+      "Bash(npm -v)",
+      "Bash(brew --version)",
+      "Bash(xcode-select -p)",
+      "Bash(env)",
+      "Bash(awk '{print $2}')"
     ]
   }
 }

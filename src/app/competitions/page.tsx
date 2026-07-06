@@ -152,6 +152,7 @@ export default function CompetitionsPage() {
   const myComps = competitions.filter(c => c.user_name === userName);
   const wins = myComps.filter(c => c.result === 'win').length;
   const losses = myComps.filter(c => c.result === 'loss').length;
+  const draws = myComps.filter(c => c.result === 'draw').length;
 
   function CompCard({ c }: { c: Competition }) {
     const compDate = new Date(c.competition_date.slice(0, 10) + 'T12:00');
@@ -178,8 +179,10 @@ export default function CompetitionsPage() {
               {c.result && (
                 <span className="chip" style={c.result === 'win'
                   ? { color: 'var(--good)', borderColor: 'var(--good)' }
-                  : { color: 'var(--accent)', borderColor: 'var(--accent)' }}>
-                  {c.result === 'win' ? 'Sieg' : 'Niederlage'}{c.method ? ` · ${METHOD_LABEL[c.method] ?? c.method}` : ''}
+                  : c.result === 'draw'
+                    ? { color: 'var(--muted)', borderColor: 'var(--border)' }
+                    : { color: 'var(--accent)', borderColor: 'var(--accent)' }}>
+                  {c.result === 'win' ? 'Sieg' : c.result === 'draw' ? 'Unentschieden' : 'Niederlage'}{c.method ? ` · ${METHOD_LABEL[c.method] ?? c.method}` : ''}
                 </span>
               )}
               {c.placement && (
@@ -276,7 +279,7 @@ export default function CompetitionsPage() {
 
       <main className="max-w-md mx-auto px-4 pb-24 space-y-6">
         {/* Persönliche Bilanz */}
-        {wins + losses > 0 && (
+        {wins + losses + draws > 0 && (
           <div className="card px-4 py-3 flex items-center justify-center gap-8 anim-up">
             <div className="text-center">
               <div className="font-display text-2xl tnum" style={{ color: 'var(--good)' }}>{wins}</div>
@@ -285,6 +288,10 @@ export default function CompetitionsPage() {
             <div className="text-center">
               <div className="font-display text-2xl tnum" style={{ color: 'var(--accent)' }}>{losses}</div>
               <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">Niederlagen</div>
+            </div>
+            <div className="text-center">
+              <div className="font-display text-2xl tnum" style={{ color: 'var(--muted)' }}>{draws}</div>
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">Unent.</div>
             </div>
           </div>
         )}
@@ -341,7 +348,7 @@ export default function CompetitionsPage() {
                   <>
                     <label className="section-label mb-1.5 block">Ergebnis (nach dem Kampf)</label>
                     <div className="flex gap-2">
-                      {([['', '—'], ['win', 'Sieg'], ['loss', 'Niederlage']] as const).map(([v, l]) => {
+                      {([['', '—'], ['win', 'Sieg'], ['loss', 'Niederlage'], ['draw', 'Unent.']] as const).map(([v, l]) => {
                         const on = form.result === v;
                         const col = v === 'win' ? 'var(--good)' : v === 'loss' ? 'var(--accent)' : 'var(--muted)';
                         return (
@@ -353,7 +360,7 @@ export default function CompetitionsPage() {
                         );
                       })}
                     </div>
-                    {form.result && (
+                    {(form.result === 'win' || form.result === 'loss') && (
                       <div className="flex gap-2 mt-2">
                         {(['points', 'tko', 'ko'] as const).map((v) => {
                           const on = form.method === v;

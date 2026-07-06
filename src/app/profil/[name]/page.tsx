@@ -890,6 +890,22 @@ export default function ProfilePage() {
                 {/* Wettkämpfe */}
                 <div className="card px-4 py-4">
                   <div className="section-label mb-2.5">Wettkämpfe</div>
+                  {(() => {
+                    const wins = comps.filter(c => c.result === 'win').length;
+                    const losses = comps.filter(c => c.result === 'loss').length;
+                    const draws = comps.filter(c => c.result === 'draw').length;
+                    if (wins + losses + draws === 0) return null;
+                    return (
+                      <div className="flex items-center justify-center gap-1.5 mb-3">
+                        <span className="font-display text-3xl tnum" style={{ color: 'var(--good)' }}>{wins}</span>
+                        <span className="font-display text-2xl text-[var(--faint)]">/</span>
+                        <span className="font-display text-3xl tnum" style={{ color: 'var(--accent)' }}>{losses}</span>
+                        <span className="font-display text-2xl text-[var(--faint)]">/</span>
+                        <span className="font-display text-3xl tnum" style={{ color: 'var(--muted)' }}>{draws}</span>
+                        <span className="text-[11px] text-[var(--faint)] ml-1.5 leading-tight">Siege /<br />Niederl. /<br />Unent.</span>
+                      </div>
+                    );
+                  })()}
                   {comps.length === 0 ? (
                     <div className="text-sm text-[var(--faint)]">Noch keine Wettkämpfe.</div>
                   ) : (
@@ -906,8 +922,8 @@ export default function ProfilePage() {
                           {cp.placement ? (
                             <span className="text-xs font-bold shrink-0" style={{ color: 'var(--gold)' }}>{PLACEMENT_MED[cp.placement] ?? cp.placement}</span>
                           ) : cp.result ? (
-                            <span className="text-xs font-bold shrink-0" style={{ color: cp.result === 'win' ? 'var(--good)' : 'var(--accent)' }}>
-                              {cp.result === 'win' ? 'Sieg' : 'Niederlage'}
+                            <span className="text-xs font-bold shrink-0" style={{ color: cp.result === 'win' ? 'var(--good)' : cp.result === 'draw' ? 'var(--muted)' : 'var(--accent)' }}>
+                              {cp.result === 'win' ? 'Sieg' : cp.result === 'draw' ? 'Unent.' : 'Niederlage'}
                             </span>
                           ) : null}
                         </div>
@@ -1121,7 +1137,7 @@ export default function ProfilePage() {
             {editing && (
               <div className="mt-7 space-y-3">
                 <a href="/spind" className="card px-4 py-3 flex items-center justify-between text-sm font-semibold">
-                  <span>Spind — Anpassung (inkl. Profilfarbe)</span>
+                  <span>Spind — Anpassung</span>
                   <span className="text-[var(--faint)]">›</span>
                 </a>
                 {isAdmin && (

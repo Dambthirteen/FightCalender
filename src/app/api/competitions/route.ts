@@ -5,7 +5,7 @@ import { getCurrentGroupId } from '@/lib/groups';
 
 function getSql() { return neon(process.env.DATABASE_URL!); }
 
-const RESULTS = ['win', 'loss'];
+const RESULTS = ['win', 'loss', 'draw'];
 const METHODS = ['points', 'tko', 'ko'];
 const PLACEMENTS = ['gold', 'silver', 'bronze', 'part']; // Turnier-Platzierung (Teilnahme = 'part')
 export function cleanResult(v: unknown): string | null { return typeof v === 'string' && RESULTS.includes(v) ? v : null; }
