@@ -68,15 +68,22 @@ export default function StartPage() {
     { icon: '/more-status.png', label: 'Mein Status', href: '/account' },
     // Fighter: Stundenplan (Anwesenheit). Coach: Trainingsplan (welche Kurse man gibt).
     ...(isFighter(role) ? [{ icon: '/more-timetable.png', label: 'Stundenplan ändern', href: '/?plan=1' }] : []),
-    ...(isCoach(role) ? [{ icon: '/more-timetable.png', label: 'Trainingsplan ändern', href: '/?plan=1&tab=coach' }] : []),
+    ...(isCoach(role) ? [
+      { icon: '/more-timetable.png', label: 'Trainingsplan ändern', href: '/?plan=1&tab=coach' },
+      { icon: '📣', label: 'Crew-Nachricht', href: '/crew-nachricht' },
+    ] : []),
   ];
   const listCard = (rows: Row[], delay: number) => (
     <div className="card overflow-hidden anim-up" style={{ animationDelay: `${delay}ms` }}>
       {rows.map((row, i) => (
         <a key={row.label} href={row.href}
           className={`flex items-center gap-3 px-4 py-3.5 active:bg-[var(--surface-2)] transition-colors ${i < rows.length - 1 ? 'border-b border-[var(--border-soft)]' : ''}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={row.icon} alt="" className="w-6 h-6 object-contain shrink-0" style={{ opacity: 0.9 }} />
+          {row.icon.startsWith('/') ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={row.icon} alt="" className="w-6 h-6 object-contain shrink-0" style={{ opacity: 0.9 }} />
+          ) : (
+            <span className="w-6 h-6 grid place-items-center text-lg shrink-0">{row.icon}</span>
+          )}
           <span className="flex-1 text-sm font-semibold">{row.label}</span>
           {!!row.badge && row.badge > 0 && (
             <span className="text-[11px] font-semibold" style={{ color: 'var(--bitch)' }}>● {row.badge} offen</span>

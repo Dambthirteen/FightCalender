@@ -33,6 +33,13 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
+  // Globaler Custom-Push
+  const [bcTitle, setBcTitle] = useState('');
+  const [bcBody, setBcBody] = useState('');
+  const [bcBusy, setBcBusy] = useState(false);
+  const [bcMsg, setBcMsg] = useState('');
+  const [bcOk, setBcOk] = useState(false);
+
   // Push-Test
   const [pushTarget, setPushTarget] = useState('');
   const [pushBusy, setPushBusy] = useState<string | null>(null);
@@ -194,6 +201,22 @@ export default function AdminPage() {
     }
   }
 
+  async function sendBroadcast() {
+    if (!bcBody.trim() || bcBusy) return;
+    if (!confirm('Custom-Push an ALLE Nutzer der App senden?')) return;
+    setBcBusy(true); setBcMsg('');
+    try {
+      const res = await fetch('/api/admin/broadcast', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-password': password },
+        body: JSON.stringify({ title: bcTitle.trim(), body: bcBody.trim() }),
+      });
+      const d = await res.json();
+      if (res.ok) { setBcOk(true); setBcMsg(`✓ Gesendet an ${d.recipients} Nutzer.`); setBcTitle(''); setBcBody(''); }
+      else { setBcOk(false); setBcMsg(d.error ?? 'Fehler'); }
+    } catch { setBcOk(false); setBcMsg('Netzwerkfehler'); }
+    finally { setBcBusy(false); }
+  }
+
   async function testPush(kind: string) {
     setPushBusy(kind);
     setPushStatus('');
@@ -288,6 +311,24 @@ export default function AdminPage() {
             DB Init
           </button>
         </div>
+
+        {/* Custom-Push an ALLE Nutzer */}
+        <section className="card p-5 anim-up" style={{ animationDelay: '15ms' }}>
+          <h2 className="font-display text-xl tracking-wide mb-1">Nachricht an alle</h2>
+          <p className="text-[var(--muted)] text-xs mb-4">Custom-Push + Benachrichtigung an <strong className="text-[var(--text)]">jeden Nutzer der App</strong>.</p>
+          <div className="space-y-2.5">
+            <input value={bcTitle} onChange={e => setBcTitle(e.target.value.slice(0, 80))} placeholder="Titel (optional)" className={inputCls} />
+            <textarea value={bcBody} onChange={e => setBcBody(e.target.value.slice(0, 300))} rows={3} placeholder="Nachricht…" className={`${inputCls} resize-none`} />
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-[var(--faint)] tnum">{bcBody.length}/300</span>
+              <button onClick={sendBroadcast} disabled={bcBusy || !bcBody.trim()}
+                className="text-white font-bold px-4 py-2 rounded-xl text-sm disabled:opacity-40" style={{ background: 'var(--accent)' }}>
+                {bcBusy ? 'Senden…' : 'An alle senden'}
+              </button>
+            </div>
+            {bcMsg && <p className="text-xs" style={{ color: bcOk ? 'var(--good)' : 'var(--accent)' }}>{bcMsg}</p>}
+          </div>
+        </section>
 
         {/* Push-Benachrichtigungen testen */}
         <section className="card p-5 anim-up" style={{ animationDelay: '20ms' }}>

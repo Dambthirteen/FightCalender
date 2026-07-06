@@ -6,6 +6,7 @@ import { useUser } from '@/components/UserProvider';
 import { colorFor, initials } from '@/lib/avatar';
 import { BUNDESLAENDER } from '@/lib/holidays';
 import { track } from '@/lib/analytics';
+import GroupBroadcast from '@/components/GroupBroadcast';
 
 const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 const COLORS = ['red', 'blue', 'green', 'orange', 'purple'];
@@ -376,6 +377,13 @@ export default function GroupsPage() {
               {BUNDESLAENDER.map((b) => <option key={b.code} value={b.code}>{b.label}</option>)}
             </select>
             <p className="text-[11px] text-[var(--faint)] mt-2">Bestimmt, welche Feiertage in der Wertung als frei gelten (Standard: NRW).</p>
+          </section>
+        )}
+
+        {/* Push an die Crew (nur Admin) */}
+        {current && isAdmin && (
+          <section className="card p-4 anim-up" style={{ animationDelay: '75ms' }}>
+            <GroupBroadcast heading="Nachricht an die Crew" hint="Geht als Push & Benachrichtigung an alle aktiven Mitglieder dieser Gruppe." />
           </section>
         )}
 
