@@ -32,17 +32,29 @@ export async function getMyGroups(userName: string): Promise<MyGroup[]> {
       ORDER BY LOWER(g.name)
     `) as MyGroup[];
   } catch {
-    // Neuere Spalten evtl. noch nicht angelegt → ohne sie laden.
+    // Nur avatar/description fehlen (DB Init nach dem Gruppen-Profil-Update noch nicht gelaufen)?
+    // → clan_tag/hard_mode/bundesland trotzdem laden, damit z. B. der Clantag nicht verschwindet.
     try {
       const rows = await sql`
-        SELECT g.id, g.name, g.invite_code, gm.role
+        SELECT g.id, g.name, g.invite_code, g.clan_tag, g.hard_mode, g.bundesland, gm.role
         FROM group_members gm JOIN groups g ON g.id = gm.group_id
         WHERE gm.user_name = ${userName} AND gm.status = 'active'
         ORDER BY LOWER(g.name)
       `;
-      return rows.map((r) => ({ ...r, clan_tag: null, hard_mode: false, bundesland: 'NW', avatar: null, description: '' })) as MyGroup[];
+      return rows.map((r) => ({ ...r, avatar: null, description: '' })) as MyGroup[];
     } catch {
-      return []; // Tabellen evtl. noch nicht angelegt → App läuft ungescoped weiter
+      // Auch die älteren Spalten fehlen → nur das Nötigste laden.
+      try {
+        const rows = await sql`
+          SELECT g.id, g.name, g.invite_code, gm.role
+          FROM group_members gm JOIN groups g ON g.id = gm.group_id
+          WHERE gm.user_name = ${userName} AND gm.status = 'active'
+          ORDER BY LOWER(g.name)
+        `;
+        return rows.map((r) => ({ ...r, clan_tag: null, hard_mode: false, bundesland: 'NW', avatar: null, description: '' })) as MyGroup[];
+      } catch {
+        return []; // Tabellen evtl. noch nicht angelegt → App läuft ungescoped weiter
+      }
     }
   }
 }
