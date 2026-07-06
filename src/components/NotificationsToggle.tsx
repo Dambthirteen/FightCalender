@@ -23,7 +23,7 @@ export default function NotificationsToggle() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
-  const [prefs, setPrefs] = useState({ class_reminders: true, court_open: true, court_result: true, bitch_reminders: true });
+  const [prefs, setPrefs] = useState({ class_reminders: true, court_open: true, court_result: true, bitch_reminders: true, coach_reminders: true });
 
   useEffect(() => {
     const supp = 'serviceWorker' in navigator && 'PushManager' in window;
@@ -104,7 +104,7 @@ export default function NotificationsToggle() {
     }
   }
 
-  async function togglePref(key: 'class_reminders' | 'court_open' | 'court_result' | 'bitch_reminders') {
+  async function togglePref(key: 'class_reminders' | 'court_open' | 'court_result' | 'bitch_reminders' | 'coach_reminders') {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
     await fetch('/api/push/prefs', {
@@ -156,7 +156,7 @@ export default function NotificationsToggle() {
           ) : (
             <>
               <div className="space-y-1.5">
-                {([['class_reminders', 'Kurs-Erinnerungen (2 Std vorher)'], ['bitch_reminders', 'Verpasst- & Ausrede-Erinnerungen'], ['court_open', 'Ausreden-Gericht geöffnet'], ['court_result', 'Gericht-Ergebnis']] as const).map(([key, label]) => (
+                {([['class_reminders', 'Kurs-Erinnerungen (2 Std vorher)'], ['coach_reminders', 'Coach: dein Kurs startet bald'], ['bitch_reminders', 'Verpasst- & Ausrede-Erinnerungen'], ['court_open', 'Ausreden-Gericht geöffnet'], ['court_result', 'Gericht-Ergebnis']] as const).map(([key, label]) => (
                   <button key={key} onClick={() => togglePref(key)}
                     className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm" style={{ background: 'var(--surface-2)' }}>
                     <span>{label}</span>

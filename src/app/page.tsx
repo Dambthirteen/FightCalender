@@ -10,6 +10,8 @@ import { CUTOVER } from '@/lib/bitch-scoring';
 import { colorFor } from '@/lib/avatar';
 import LoadingScreen from '@/components/LoadingScreen';
 import WeekPlanEditor from '@/components/WeekPlanEditor';
+import CoachPlanEditor from '@/components/CoachPlanEditor';
+import { isCoach, isFighter } from '@/lib/fighter';
 import type { GymClass, AttendanceRecord } from '@/lib/db';
 
 // Kursfarbe → Hex (für Dots, Badges, Ränder)
@@ -31,7 +33,8 @@ export default function Home() {
   const { userName, loading: userLoading } = useUser();
 
   const [step, setStep] = useState<Step>('loading');
-  const [scheduleTab, setScheduleTab] = useState<'fixed' | 'week'>('fixed');
+  const [scheduleTab, setScheduleTab] = useState<'fixed' | 'week' | 'coach'>('fixed');
+  const [role, setRole] = useState<string | null>(null);
   const [allClasses, setAllClasses] = useState<GymClass[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [savingSchedule, setSavingSchedule] = useState(false);
@@ -55,6 +58,7 @@ export default function Home() {
   const [weekPlan, setWeekPlan] = useState<Set<number>>(new Set());
   const [weekPlanOverride, setWeekPlanOverride] = useState(false);
   const [weekPlanLoaded, setWeekPlanLoaded] = useState(false);
+  const [coachByClass, setCoachByClass] = useState<Record<number, string[]>>({});
   const [useStreakPt, setUseStreakPt] = useState(false);
   const [userColors, setUserColors] = useState<Record<string, string | null>>({});
   const [bitchAnim, setBitchAnim] = useState(false);
@@ -89,12 +93,13 @@ export default function Home() {
     async function init() {
       try {
         // Jeder Aufruf für sich abgesichert — ein Fehler darf das Laden nie blockieren.
-        const [classData, profileData, usersData, streakData, groupsData] = await Promise.all([
+        const [classData, profileData, usersData, streakData, groupsData, profileInfo] = await Promise.all([
           fetch('/api/classes').then(r => r.json()).catch(() => []),
           fetch(`/api/profile?user=${encodeURIComponent(userName)}`).then(r => r.json()).catch(() => []),
           fetch('/api/users').then(r => r.json()).catch(() => []),
           fetch('/api/streak').then(r => r.json()).catch(() => ({ points: 0 })),
           fetch('/api/groups').then(r => r.json()).catch(() => ({})),
+          fetch(`/api/profile-info?user=${encodeURIComponent(userName)}`).then(r => r.json()).catch(() => ({})),
         ]);
         setAllClasses(Array.isArray(classData) ? classData : []);
         setStreakPoints(streakData?.points ?? 0);
@@ -105,9 +110,15 @@ export default function Home() {
           for (const u of usersData) map[u.user_name] = u.color ?? null;
           setUserColors(map);
         }
+        const myRole: string | null = profileInfo?.fighter_info?.role ?? null;
+        setRole(myRole);
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
         const planEdit = params?.get('plan') === '1';
-        if (params?.get('tab') === 'week') setScheduleTab('week');
+        const tabParam = params?.get('tab');
+        // Standard-Tab je nach Rolle: Nur-Coach startet direkt im Trainingsplan.
+        if (tabParam === 'week') setScheduleTab('week');
+        else if (tabParam === 'coach') setScheduleTab('coach');
+        else if (isCoach(myRole) && !isFighter(myRole)) setScheduleTab('coach');
         if (Array.isArray(profileData) && profileData.length > 0) {
           setSelectedIds(new Set(profileData));
           setStep(planEdit ? 'schedule' : 'done');
@@ -150,6 +161,14 @@ export default function Home() {
       setWeekPlanOverride(!!d.isOverride);
       setWeekPlanLoaded(true);
     }).catch(() => setWeekPlanLoaded(true));
+  }, [weekStart, step, userName]);
+
+  // Welche Coaches geben diese KW welchen Kurs → Name vorne im Kalender.
+  useEffect(() => {
+    if (step !== 'done' || !userName) return;
+    fetch(`/api/coach-schedule?week=${weekStart}&all=1`).then(r => r.json()).then(d => {
+      setCoachByClass(d?.coaches && typeof d.coaches === 'object' ? d.coaches : {});
+    }).catch(() => {});
   }, [weekStart, step, userName]);
 
   async function saveSchedule() {
@@ -298,24 +317,34 @@ export default function Home() {
   if (step === 'schedule') {
     const byDay: Record<number, GymClass[]> = {};
     for (let d = 1; d <= 7; d++) byDay[d] = allClasses.filter(c => c.day_of_week === d);
+    // Tabs je nach Rolle: Fighter → Normaler Plan + Wochenplan, Coach → Trainingsplan, Beides → alle.
+    const tabs: [typeof scheduleTab, string][] = [];
+    if (isFighter(role)) tabs.push(['fixed', 'Normaler Plan'], ['week', 'Wochenplan']);
+    if (isCoach(role)) tabs.push(['coach', 'Trainingsplan']);
+    if (tabs.length === 0) tabs.push(['fixed', 'Normaler Plan']);
+    const activeTab = tabs.some(t => t[0] === scheduleTab) ? scheduleTab : tabs[0][0];
     return (
       <div className="min-h-screen text-[var(--text)]">
         <div className="max-w-md mx-auto px-4 py-8">
           <div className="flex items-center mb-4">
             <button onClick={() => setStep('done')} className="text-sm text-[var(--muted)] hover:text-white transition-colors">← Kalender</button>
           </div>
-          {/* Doppelseite: fester Plan vs. Wochenplan (nur diese KW) */}
-          <div className="flex gap-1 p-1 rounded-2xl mb-6 anim-up" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)' }}>
-            {([['fixed', 'Normaler Plan'], ['week', 'Wochenplan']] as const).map(([key, label]) => (
-              <button key={key} onClick={() => setScheduleTab(key)}
-                className="flex-1 text-sm font-semibold py-2 rounded-xl transition-colors"
-                style={scheduleTab === key ? { background: 'var(--accent)', color: '#fff' } : { color: 'var(--muted)' }}>
-                {label}
-              </button>
-            ))}
-          </div>
+          {/* Rollenabhängige Tabs: Stundenplan (fest/Woche) und/oder Coach-Trainingsplan */}
+          {tabs.length > 1 && (
+            <div className="flex gap-1 p-1 rounded-2xl mb-6 anim-up" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)' }}>
+              {tabs.map(([key, label]) => (
+                <button key={key} onClick={() => setScheduleTab(key)}
+                  className="flex-1 text-sm font-semibold py-2 rounded-xl transition-colors"
+                  style={activeTab === key ? { background: 'var(--accent)', color: '#fff' } : { color: 'var(--muted)' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {scheduleTab === 'week' ? (
+          {activeTab === 'coach' ? (
+            <CoachPlanEditor classes={allClasses} />
+          ) : activeTab === 'week' ? (
             <WeekPlanEditor classes={allClasses} />
           ) : (
           <>
@@ -580,20 +609,33 @@ export default function Home() {
                             </div>
                             <span className="text-[11px] text-[var(--muted)] tnum shrink-0">{cls.start_time}–{cls.end_time}</span>
                           </div>
-                          {classAttendance.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {classAttendance.map(a => {
-                                const uc = colorFor(a.user_name, userColors[a.user_name]);
-                                const mine = a.user_name === userName;
-                                return (
-                                  <span key={a.user_name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                                    style={{ background: uc, color: '#fff', boxShadow: mine ? '0 0 0 1.5px rgba(255,255,255,0.6)' : 'none' }}>
-                                    {a.user_name}
+                          {(() => {
+                            // Coach(es) dieser KW zuerst und hervorgehoben, dann die restlichen Angemeldeten.
+                            const coaches = coachByClass[cls.id] ?? [];
+                            const coachSet = new Set(coaches);
+                            const others = classAttendance.filter(a => !coachSet.has(a.user_name));
+                            if (coaches.length === 0 && others.length === 0) return null;
+                            return (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {coaches.map(name => (
+                                  <span key={`coach-${name}`} className="text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
+                                    style={{ background: 'var(--gold)', color: '#3a2a00', boxShadow: '0 0 0 1.5px rgba(255,194,75,0.55)' }}>
+                                    🎓 {name}
                                   </span>
-                                );
-                              })}
-                            </div>
-                          )}
+                                ))}
+                                {others.map(a => {
+                                  const uc = colorFor(a.user_name, userColors[a.user_name]);
+                                  const mine = a.user_name === userName;
+                                  return (
+                                    <span key={a.user_name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                                      style={{ background: uc, color: '#fff', boxShadow: mine ? '0 0 0 1.5px rgba(255,255,255,0.6)' : 'none' }}>
+                                      {a.user_name}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
                         </button>
                       );
                     })}

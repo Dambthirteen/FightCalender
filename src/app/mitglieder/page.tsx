@@ -7,10 +7,34 @@ import { isCoach } from '@/lib/fighter';
 import InviteFriends from '@/components/InviteFriends';
 
 type Person = { user_name: string; color?: string | null; avatar?: string | null; streak?: number; role?: string | null; group_role?: string | null };
+type FriendState = 'none' | 'outgoing' | 'incoming' | 'friends' | 'self';
+type FriendAction = 'request' | 'accept' | 'reject' | 'remove';
 const RECENT_KEY = 'fightcal_recent_profiles';
 
-/** Eine Personen-Zeile (Avatar + Name), optional mit Streak. */
-function PersonRow({ u, showStreak, me, onClick, delay }: { u: Person; showStreak?: boolean; me?: boolean; onClick?: () => void; delay?: number }) {
+/** Freund-Aktion in einer Personen-Zeile (verschluckt den Klick, damit der Profil-Link nicht auslöst). */
+function FriendButton({ state, onAction }: { state: FriendState; onAction?: (a: FriendAction) => void }) {
+  const stop = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
+  if (state === 'self') return null;
+  if (state === 'friends') return (
+    <button onClick={(e) => { stop(e); onAction?.('remove'); }} title="Freund entfernen"
+      className="text-[10px] font-semibold px-2 py-1 rounded-full shrink-0" style={{ color: 'var(--teal)', border: '1px solid rgba(45,212,191,0.4)' }}>✓ Freund</button>
+  );
+  if (state === 'outgoing') return (
+    <button onClick={(e) => { stop(e); onAction?.('remove'); }} title="Anfrage zurückziehen"
+      className="text-[10px] font-semibold px-2 py-1 rounded-full shrink-0" style={{ color: 'var(--faint)', border: '1px solid var(--border-soft)' }}>Angefragt</button>
+  );
+  if (state === 'incoming') return (
+    <button onClick={(e) => { stop(e); onAction?.('accept'); }}
+      className="text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0" style={{ background: 'var(--accent)', color: '#fff' }}>Annehmen</button>
+  );
+  return (
+    <button onClick={(e) => { stop(e); onAction?.('request'); }}
+      className="text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0" style={{ background: 'var(--surface-2)', color: 'var(--accent)', border: '1px solid rgba(255,59,48,0.4)' }}>+ Freund</button>
+  );
+}
+
+/** Eine Personen-Zeile (Avatar + Name), optional mit Streak + Freund-Aktion. */
+function PersonRow({ u, showStreak, me, onClick, delay, friendState, onFriend }: { u: Person; showStreak?: boolean; me?: boolean; onClick?: () => void; delay?: number; friendState?: FriendState; onFriend?: (a: FriendAction) => void }) {
   const c = colorFor(u.user_name, u.color);
   return (
     <a href={`/profil/${encodeURIComponent(u.user_name)}`} onClick={onClick}
@@ -33,6 +57,7 @@ function PersonRow({ u, showStreak, me, onClick, delay }: { u: Person; showStrea
         <span className="text-xs font-semibold tnum shrink-0" title="Aktuelle Streak"
           style={{ color: (u.streak ?? 0) > 0 ? 'var(--accent)' : 'var(--faint)' }}>🔥 {u.streak ?? 0}</span>
       )}
+      {friendState && friendState !== 'self' && <FriendButton state={friendState} onAction={onFriend} />}
       {me && <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>Du</span>}
       <span className="text-[var(--faint)]">›</span>
     </a>
@@ -41,7 +66,7 @@ function PersonRow({ u, showStreak, me, onClick, delay }: { u: Person; showStrea
 
 export default function MitgliederPage() {
   const { userName } = useUser();
-  const [tab, setTab] = useState<'group' | 'public'>('group');
+  const [tab, setTab] = useState<'group' | 'public' | 'friends'>('group');
 
   // Gruppe
   const [users, setUsers] = useState<Person[]>([]);
@@ -54,9 +79,49 @@ export default function MitgliederPage() {
   const [searching, setSearching] = useState(false);
   const [recent, setRecent] = useState<Person[]>([]);
 
+  // Freunde
+  const [friendsList, setFriendsList] = useState<Person[]>([]);
+  const [incomingList, setIncomingList] = useState<Person[]>([]);
+  const [friendSet, setFriendSet] = useState<Set<string>>(new Set());
+  const [incomingSet, setIncomingSet] = useState<Set<string>>(new Set());
+  const [outgoingSet, setOutgoingSet] = useState<Set<string>>(new Set());
+
+  function loadFriends() {
+    fetch('/api/friends').then((r) => r.json()).then((d) => {
+      const fr: Person[] = Array.isArray(d.friends) ? d.friends : [];
+      const inc: Person[] = Array.isArray(d.incoming) ? d.incoming : [];
+      setFriendsList(fr); setIncomingList(inc);
+      setFriendSet(new Set(fr.map((p) => p.user_name)));
+      setIncomingSet(new Set(inc.map((p) => p.user_name)));
+      setOutgoingSet(new Set(Array.isArray(d.outgoing) ? d.outgoing : []));
+    }).catch(() => {});
+  }
+
+  function friendStateFor(name: string): FriendState {
+    if (name === userName) return 'self';
+    if (friendSet.has(name)) return 'friends';
+    if (incomingSet.has(name)) return 'incoming';
+    if (outgoingSet.has(name)) return 'outgoing';
+    return 'none';
+  }
+
+  async function friendAction(name: string, action: FriendAction) {
+    // Optimistisch die Sets anpassen, danach vom Server synchronisieren.
+    setFriendSet((s) => { const n = new Set(s); if (action === 'accept') n.add(name); if (action === 'remove') n.delete(name); return n; });
+    setOutgoingSet((s) => { const n = new Set(s); if (action === 'request') n.add(name); else n.delete(name); return n; });
+    setIncomingSet((s) => { const n = new Set(s); if (action === 'accept' || action === 'reject') n.delete(name); return n; });
+    try {
+      await fetch('/api/friends', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, user: name }) });
+    } catch { /* egal */ }
+    loadFriends();
+  }
+
   useEffect(() => {
     fetch('/api/users?avatars=1').then((r) => r.json()).then((d) => setUsers(Array.isArray(d) ? d : [])).finally(() => setLoading(false));
+    loadFriends();
     try { const r = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); if (Array.isArray(r)) setRecent(r); } catch { /* egal */ }
+    // Direktlink aus der Freundschaftsanfrage-Benachrichtigung.
+    try { if (new URLSearchParams(window.location.search).get('tab') === 'friends') setTab('friends'); } catch { /* egal */ }
   }, []);
 
   // Debounced Suche über öffentliche Profile.
@@ -96,15 +161,17 @@ export default function MitgliederPage() {
       <main className="max-w-md mx-auto px-4 pb-16">
         {/* Tab-Umschalter */}
         <div className="flex gap-2 mb-4 anim-in">
-          {([['group', 'Gruppe'], ['public', 'Alle']] as const).map(([key, label]) => {
+          {([['group', 'Gruppe'], ['public', 'Alle'], ['friends', 'Freunde']] as const).map(([key, label]) => {
             const on = tab === key;
+            const badge = key === 'friends' && incomingList.length > 0 ? incomingList.length : 0;
             return (
               <button key={key} onClick={() => setTab(key)}
-                className="flex-1 py-2 rounded-xl text-sm font-semibold transition-colors"
+                className="flex-1 py-2 rounded-xl text-sm font-semibold transition-colors relative"
                 style={on
                   ? { background: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid rgba(255,59,48,0.35)' }
                   : { background: 'var(--surface-2)', color: 'var(--muted)', border: '1px solid var(--border-soft)' }}>
                 {label}
+                {badge > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[1.05rem] h-[1.05rem] px-1 grid place-items-center rounded-full text-[9px] font-bold text-white tnum" style={{ background: 'var(--accent)' }}>{badge}</span>}
               </button>
             );
           })}
@@ -135,14 +202,15 @@ export default function MitgliederPage() {
               return (
                 <div className="space-y-2">
                   {shown.map((u, i) => (
-                    <PersonRow key={u.user_name} u={u} showStreak me={u.user_name === userName} delay={i * 40} />
+                    <PersonRow key={u.user_name} u={u} showStreak me={u.user_name === userName} delay={i * 40}
+                      friendState={friendStateFor(u.user_name)} onFriend={(a) => friendAction(u.user_name, a)} />
                   ))}
                   {shown.length === 0 && <div className="py-16 text-center text-[var(--faint)] text-sm">{roleFilter === 'coach' ? 'Keine Coaches in dieser Crew.' : 'Niemand hier.'}</div>}
                 </div>
               );
             })()}
           </>
-        ) : (
+        ) : tab === 'public' ? (
           <>
             <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus
               placeholder="Öffentliche Profile suchen…"
@@ -156,7 +224,8 @@ export default function MitgliederPage() {
               ) : (
                 <div className="space-y-2">
                   {results.map((u, i) => (
-                    <PersonRow key={u.user_name} u={u} me={u.user_name === userName} onClick={() => remember(u)} delay={i * 30} />
+                    <PersonRow key={u.user_name} u={u} me={u.user_name === userName} onClick={() => remember(u)} delay={i * 30}
+                      friendState={friendStateFor(u.user_name)} onFriend={(a) => friendAction(u.user_name, a)} />
                   ))}
                 </div>
               )
@@ -173,11 +242,42 @@ export default function MitgliederPage() {
                 ) : (
                   <div className="space-y-2">
                     {recent.map((u, i) => (
-                      <PersonRow key={u.user_name} u={u} me={u.user_name === userName} onClick={() => remember(u)} delay={i * 30} />
+                      <PersonRow key={u.user_name} u={u} me={u.user_name === userName} onClick={() => remember(u)} delay={i * 30}
+                        friendState={friendStateFor(u.user_name)} onFriend={(a) => friendAction(u.user_name, a)} />
                     ))}
                   </div>
                 )}
               </>
+            )}
+          </>
+        ) : (
+          <>
+            {incomingList.length > 0 && (
+              <div className="mb-5">
+                <div className="section-label mb-2">Anfragen ({incomingList.length})</div>
+                <div className="space-y-2">
+                  {incomingList.map((u, i) => (
+                    <div key={u.user_name} className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0"><PersonRow u={u} delay={i * 30} friendState="incoming" onFriend={(a) => friendAction(u.user_name, a)} /></div>
+                      <button onClick={() => friendAction(u.user_name, 'reject')}
+                        className="text-[11px] font-semibold px-2.5 py-2 rounded-xl border border-[var(--border-soft)] text-[var(--faint)] hover:text-white shrink-0 transition-colors">Ablehnen</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="section-label mb-2">Deine Freunde ({friendsList.length})</div>
+            {friendsList.length === 0 ? (
+              <div className="py-16 text-center text-[var(--faint)] text-sm">
+                Noch keine Freunde. Tipp bei jemandem auf <span style={{ color: 'var(--accent)' }}>+ Freund</span> — nur befreundete Namen tauchen in deinen Trainings-Benachrichtigungen auf.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {friendsList.map((u, i) => (
+                  <PersonRow key={u.user_name} u={u} delay={i * 30}
+                    friendState="friends" onFriend={(a) => friendAction(u.user_name, a)} />
+                ))}
+              </div>
             )}
           </>
         )}

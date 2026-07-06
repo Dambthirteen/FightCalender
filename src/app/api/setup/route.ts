@@ -104,6 +104,30 @@ export async function POST(req: NextRequest) {
         UNIQUE(user_name, week_start)
       )
     `;
+    // Trainingsplan der Coaches: welche Kurse ein Coach in einer KW gibt (pro Woche).
+    await sql`
+      CREATE TABLE IF NOT EXISTS coach_schedule (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        week_start DATE NOT NULL,
+        class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+        UNIQUE(user_name, week_start, class_id)
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS coach_schedule_wk_idx ON coach_schedule (week_start, class_id)`;
+    // Freundschaften (gegenseitig): eine Zeile je Anfrage; Freund = Zeile mit status 'accepted'.
+    await sql`
+      CREATE TABLE IF NOT EXISTS friendships (
+        id SERIAL PRIMARY KEY,
+        requester VARCHAR(100) NOT NULL,
+        addressee VARCHAR(100) NOT NULL,
+        status VARCHAR(10) NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        UNIQUE(requester, addressee)
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS friendships_addressee_idx ON friendships (addressee, status)`;
+    await sql`CREATE INDEX IF NOT EXISTS friendships_requester_idx ON friendships (requester, status)`;
     await sql`
       CREATE TABLE IF NOT EXISTS excuse_votes (
         id SERIAL PRIMARY KEY,
@@ -237,6 +261,7 @@ export async function POST(req: NextRequest) {
       )
     `;
     await sql`ALTER TABLE notification_prefs ADD COLUMN IF NOT EXISTS bitch_reminders BOOLEAN NOT NULL DEFAULT TRUE`;
+    await sql`ALTER TABLE notification_prefs ADD COLUMN IF NOT EXISTS coach_reminders BOOLEAN NOT NULL DEFAULT TRUE`;
     // Dedup für personalisierte (pro-Nutzer) Erinnerungen — einmal pro Tag/Art.
     await sql`
       CREATE TABLE IF NOT EXISTS user_notif_log (

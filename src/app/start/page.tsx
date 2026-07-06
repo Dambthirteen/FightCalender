@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { resetAnalytics } from '@/lib/analytics';
 import { nextStreakBadge, STREAK_BADGES } from '@/lib/badges';
+import { isCoach, isFighter } from '@/lib/fighter';
 import StreakFlame from '@/components/StreakFlame';
 import FullscreenLoader from '@/components/FullscreenLoader';
 import { XP } from '@/lib/xp';
@@ -18,6 +19,7 @@ export default function StartPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
   const [isHobby, setIsHobby] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   // Alles laden, dann erst die Seite zeigen (kein sichtbarer Aufbau).
@@ -32,8 +34,11 @@ export default function StartPage() {
       fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {}),
       fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {}),
       fetch('/api/streak').then((r) => r.json()).then((d) => setStreak({ days: d.days ?? 0, weeks: d.weeks ?? 0 })).catch(() => {}),
-      // Accountart: Hobby → Wettkämpfe wandert von der großen Karte in die Liste.
-      fetch(`/api/profile-info?user=${encodeURIComponent(userName)}`).then((r) => r.json()).then((d) => setIsHobby(d?.fighter_info?.athlete === 'hobby')).catch(() => {}),
+      // Accountart: Hobby → Wettkämpfe wandert in die Liste; Rolle → Coach-Trainingsplan-Eintrag.
+      fetch(`/api/profile-info?user=${encodeURIComponent(userName)}`).then((r) => r.json()).then((d) => {
+        setIsHobby(d?.fighter_info?.athlete === 'hobby');
+        setRole(d?.fighter_info?.role ?? null);
+      }).catch(() => {}),
     ]).finally(() => setReady(true));
   }, [userLoading, userName]);
 
@@ -57,7 +62,9 @@ export default function StartPage() {
   ];
   const duRows: Row[] = [
     { icon: '/more-status.png', label: 'Mein Status', href: '/account' },
-    { icon: '/more-timetable.png', label: 'Stundenplan ändern', href: '/?plan=1' },
+    // Fighter: Stundenplan (Anwesenheit). Coach: Trainingsplan (welche Kurse man gibt).
+    ...(isFighter(role) ? [{ icon: '/more-timetable.png', label: 'Stundenplan ändern', href: '/?plan=1' }] : []),
+    ...(isCoach(role) ? [{ icon: '/more-timetable.png', label: 'Trainingsplan ändern', href: '/?plan=1&tab=coach' }] : []),
   ];
   const listCard = (rows: Row[], delay: number) => (
     <div className="card overflow-hidden anim-up" style={{ animationDelay: `${delay}ms` }}>

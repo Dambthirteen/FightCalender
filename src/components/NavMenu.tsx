@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { getDaysInMonth } from 'date-fns';
 import { useUser } from '@/components/UserProvider';
+import { isCoach, isFighter } from '@/lib/fighter';
 
 function isVotingWindow() {
   const now = new Date();
@@ -19,6 +20,7 @@ export default function NavMenu() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [groupName, setGroupName] = useState('');
+  const [role, setRole] = useState<string | null>(null);
   const pathname = usePathname();
 
   useEffect(() => setMounted(true), []);
@@ -28,6 +30,11 @@ export default function NavMenu() {
       if (cur) setGroupName(cur.name);
     }).catch(() => {});
   }, []);
+  useEffect(() => {
+    if (!userName) return;
+    fetch(`/api/profile-info?user=${encodeURIComponent(userName)}`).then((r) => r.json())
+      .then((d) => setRole(d?.fighter_info?.role ?? null)).catch(() => {});
+  }, [userName]);
   // Menü bei Routenwechsel schließen
   useEffect(() => setOpen(false), [pathname]);
   // Body-Scroll sperren, solange offen
@@ -49,8 +56,11 @@ export default function NavMenu() {
     {
       cat: 'Profil', items: [
         { icon: '👤', label: 'Mein Profil', href: `/profil/${me}` },
-        { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },
-        { icon: '🗓️', label: 'Wochenplan (diese Woche)', href: '/?plan=1&tab=week' },
+        ...(isFighter(role) ? [
+          { icon: '📋', label: 'Stundenplan ändern', href: '/?plan=1' },
+          { icon: '🗓️', label: 'Wochenplan (diese Woche)', href: '/?plan=1&tab=week' },
+        ] : []),
+        ...(isCoach(role) ? [{ icon: '🎓', label: 'Trainingsplan ändern', href: '/?plan=1&tab=coach' }] : []),
         { icon: '🏥', label: 'Mein Status', href: '/account' },
         { icon: '🏆', label: 'Wettkämpfe', href: '/competitions' },
       ],

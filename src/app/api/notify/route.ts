@@ -6,6 +6,7 @@ import { isHoliday } from '@/lib/holidays';
 import { CUTOVER } from '@/lib/bitch-scoring';
 import { broadcastToGroup } from '@/lib/feed';
 import { getMyGroups } from '@/lib/groups';
+import { loadFriendGraph } from '@/lib/friends';
 
 // web-push braucht Node-Crypto → kein Edge-Runtime.
 export const runtime = 'nodejs';
@@ -72,17 +73,22 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   const courtOpenOut = new Set<string>();
   const courtResultOut = new Set<string>();
   const bitchRemindOut = new Set<string>();
+  const coachRemindOut = new Set<string>();
   try {
     const prefs = (await sql`
-      SELECT user_name, class_reminders, court_open, court_result, bitch_reminders FROM notification_prefs
-    `) as { user_name: string; class_reminders: boolean; court_open: boolean; court_result: boolean; bitch_reminders: boolean }[];
+      SELECT user_name, class_reminders, court_open, court_result, bitch_reminders, coach_reminders FROM notification_prefs
+    `) as { user_name: string; class_reminders: boolean; court_open: boolean; court_result: boolean; bitch_reminders: boolean; coach_reminders: boolean }[];
     for (const p of prefs) {
       if (p.class_reminders === false) classOut.add(p.user_name);
       if (p.court_open === false) courtOpenOut.add(p.user_name);
       if (p.court_result === false) courtResultOut.add(p.user_name);
       if (p.bitch_reminders === false) bitchRemindOut.add(p.user_name);
+      if (p.coach_reminders === false) coachRemindOut.add(p.user_name);
     }
   } catch { /* notification_prefs / Spalte noch nicht vorhanden */ }
+
+  // Freundschaftsgraph (nur „Auch dabei" zeigt Freunde) einmal laden.
+  const friendGraph = await loadFriendGraph(sql);
 
   let totalSent = 0;
 
@@ -343,6 +349,31 @@ async function handle(req: NextRequest): Promise<NextResponse> {
         )
     `) as { user_name: string }[];
     const attendeeNames = attendees.map((r) => r.user_name);
+
+    // Coach-Erinnerung: an die Coaches, die diesen Kurs diese Woche geben (auch bei 0 Zusagen).
+    try {
+      const coaches = (await sql`SELECT user_name FROM coach_schedule WHERE class_id = ${cls.id} AND week_start = ${weekStart}`) as { user_name: string }[];
+      for (const co of coaches) {
+        if (coachRemindOut.has(co.user_name)) continue;
+        const subs = allSubs.filter((s) => s.user_name === co.user_name);
+        if (subs.length === 0) continue;
+        const claim = await sql`
+          INSERT INTO user_notif_log (user_name, notify_date, kind)
+          VALUES (${co.user_name}, ${today}, ${`coach_reminder_2h_${cls.id}`})
+          ON CONFLICT (user_name, notify_date, kind) DO NOTHING RETURNING id
+        `;
+        if (claim.length === 0) continue;
+        for (const s of subs) {
+          const result = await sendPush(
+            { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+            { title: '🎓 Dein Kurs startet bald', body: `${cls.name} um ${cls.start_time} · ${attendeeNames.length} angemeldet — schau, wer kommt`, url: '/' }
+          );
+          if (result.ok) totalSent++;
+          else if (result.gone) await sql`DELETE FROM push_subscriptions WHERE endpoint = ${s.endpoint}`;
+        }
+      }
+    } catch { /* coach_schedule evtl. noch nicht angelegt */ }
+
     if (attendeeNames.length === 0) continue; // niemand zugesagt → nächster Lauf prüft erneut
 
     // 5) Empfänger = Zugesagte mit Push-Abo.
@@ -362,11 +393,13 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     // 7) Personalisiert senden: jedem die jeweils anderen Zugesagten nennen.
     let sentForClass = 0;
     for (const s of recipientSubs) {
-      const others = attendeeNames.filter((n) => n !== s.user_name);
+      // „Auch dabei" nennt nur befreundete Namen (keine Fremden preisgeben).
+      const myFriends = friendGraph.get(s.user_name) ?? new Set<string>();
+      const others = attendeeNames.filter((n) => n !== s.user_name && myFriends.has(n));
       const body =
         others.length > 0
           ? `Auch dabei: ${joinNames(others)}`
-          : 'Heute bist du allein am Start 🥲';
+          : `Gleich geht's los — auf die Matte 🥊`;
       const result = await sendPush(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         { title: `🥊 ${cls.name} heute um ${cls.start_time}`, body, url: '/' }
