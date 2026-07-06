@@ -16,6 +16,7 @@ export default function StartPage() {
   const [hardMode, setHardMode] = useState(false);
   const [pendingVotes, setPendingVotes] = useState(0);
   const [unread, setUnread] = useState(0);
+  const [chatUnread, setChatUnread] = useState(0);
   const [streak, setStreak] = useState({ days: 0, weeks: 0 });
   const [helpOpen, setHelpOpen] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
@@ -35,6 +36,7 @@ export default function StartPage() {
       }).catch(() => {}),
       fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {}),
       fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {}),
+      fetch('/api/chat/read').then((r) => r.json()).then((d) => setChatUnread(d.count ?? 0)).catch(() => {}),
       fetch('/api/streak').then((r) => r.json()).then((d) => setStreak({ days: d.days ?? 0, weeks: d.weeks ?? 0 })).catch(() => {}),
       // Flammen-Farbe (Cosmetic) für die Streak-Flamme.
       fetch('/api/cosmetics').then((r) => r.json()).then((d) => setFlameTint(flameFilter(d?.cosmetics?.flame))).catch(() => {}),
@@ -114,6 +116,14 @@ export default function StartPage() {
           </button>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <a href="/chat" aria-label="Gruppenchat" className={iconBtn}>
+            💬
+            {chatUnread > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 grid place-items-center rounded-full text-[9px] font-bold text-white tnum" style={{ background: 'var(--accent)' }}>
+                {chatUnread > 99 ? '99+' : chatUnread}
+              </span>
+            )}
+          </a>
           <a href="/benachrichtigungen" aria-label="Benachrichtigungen" className={iconBtn}>
             🔔
             {unread > 0 && (

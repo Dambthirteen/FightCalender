@@ -39,6 +39,13 @@ export async function deleteAllUserData(sql: Sql, userName: string): Promise<voi
   await sql`DELETE FROM streak_point_log WHERE user_name = ${userName}`;
   await sql`DELETE FROM badges_awarded WHERE user_name = ${userName}`;
   await sql`DELETE FROM wrapped_seen WHERE user_name = ${userName}`;
+  // Chat + Freundschaften + Coach-Plan (best effort — Tabellen evtl. noch nicht angelegt).
+  try { await sql`DELETE FROM messages WHERE user_name = ${userName}`; } catch {}
+  try { await sql`DELETE FROM chat_reads WHERE user_name = ${userName}`; } catch {}
+  try { await sql`DELETE FROM chat_blocks WHERE blocker = ${userName} OR blocked = ${userName}`; } catch {}
+  try { await sql`DELETE FROM message_reports WHERE reporter = ${userName}`; } catch {}
+  try { await sql`DELETE FROM friendships WHERE requester = ${userName} OR addressee = ${userName}`; } catch {}
+  try { await sql`DELETE FROM coach_schedule WHERE user_name = ${userName}`; } catch {}
   await sql`DELETE FROM group_members WHERE user_name = ${userName}`;
   await sql`DELETE FROM auth_tokens WHERE user_name = ${userName}`;
   await sql`UPDATE groups SET created_by = NULL WHERE created_by = ${userName}`;

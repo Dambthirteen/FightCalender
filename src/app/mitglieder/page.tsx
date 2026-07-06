@@ -72,6 +72,7 @@ export default function MitgliederPage() {
   const [users, setUsers] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState<'all' | 'fighter' | 'coach'>('all');
+  const [groupInfo, setGroupInfo] = useState<{ name: string; clan_tag: string | null; avatar: string | null; description: string } | null>(null);
 
   // Öffentlich (Suche)
   const [q, setQ] = useState('');
@@ -118,6 +119,10 @@ export default function MitgliederPage() {
 
   useEffect(() => {
     fetch('/api/users?avatars=1').then((r) => r.json()).then((d) => setUsers(Array.isArray(d) ? d : [])).finally(() => setLoading(false));
+    fetch('/api/groups').then((r) => r.json()).then((d) => {
+      const cur = (d.groups ?? []).find((g: { id: number }) => g.id === d.current);
+      if (cur) setGroupInfo({ name: cur.name, clan_tag: cur.clan_tag ?? null, avatar: cur.avatar ?? null, description: cur.description ?? '' });
+    }).catch(() => {});
     loadFriends();
     try { const r = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); if (Array.isArray(r)) setRecent(r); } catch { /* egal */ }
     // Direktlink aus der Freundschaftsanfrage-Benachrichtigung.
@@ -179,6 +184,23 @@ export default function MitgliederPage() {
 
         {tab === 'group' ? (
           <>
+            {/* Gruppenprofil */}
+            {groupInfo && (
+              <div className="card p-4 mb-4 anim-up flex items-center gap-3.5">
+                {groupInfo.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={groupInfo.avatar} alt="" className="w-14 h-14 rounded-2xl object-cover shrink-0" style={{ border: `1.5px solid ${colorFor(groupInfo.name)}` }} />
+                ) : (
+                  <span className="w-14 h-14 rounded-2xl grid place-items-center font-display text-xl shrink-0" style={{ background: `${colorFor(groupInfo.name)}22`, color: colorFor(groupInfo.name), border: `1.5px solid ${colorFor(groupInfo.name)}` }}>{initials(groupInfo.name)}</span>
+                )}
+                <div className="min-w-0">
+                  <div className="font-display text-xl tracking-wide truncate">{groupInfo.clan_tag ? `[${groupInfo.clan_tag}] ` : ''}{groupInfo.name}</div>
+                  {groupInfo.description
+                    ? <p className="text-[12px] text-[var(--muted)] mt-0.5 line-clamp-3 whitespace-pre-line">{groupInfo.description}</p>
+                    : <p className="text-[11px] text-[var(--faint)] mt-0.5">Noch keine Beschreibung.</p>}
+                </div>
+              </div>
+            )}
             {/* Rollen-Filter */}
             <div className="flex gap-2 mb-3">
               {([['all', 'Alle'], ['fighter', 'Fighter'], ['coach', 'Coaches']] as const).map(([key, label]) => {

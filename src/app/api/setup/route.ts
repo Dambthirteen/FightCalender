@@ -128,6 +128,50 @@ export async function POST(req: NextRequest) {
     `;
     await sql`CREATE INDEX IF NOT EXISTS friendships_addressee_idx ON friendships (addressee, status)`;
     await sql`CREATE INDEX IF NOT EXISTS friendships_requester_idx ON friendships (requester, status)`;
+    // --- Gruppen-Chat ---
+    await sql`
+      CREATE TABLE IF NOT EXISTS messages (
+        id BIGSERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        user_name VARCHAR(100) NOT NULL,
+        text TEXT NOT NULL,
+        deleted_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS messages_group_idx ON messages (group_id, id)`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS chat_reads (
+        user_name VARCHAR(100) NOT NULL,
+        group_id INTEGER NOT NULL,
+        last_read_id BIGINT NOT NULL DEFAULT 0,
+        UNIQUE(user_name, group_id)
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS chat_blocks (
+        blocker VARCHAR(100) NOT NULL,
+        blocked VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        UNIQUE(blocker, blocked)
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS message_reports (
+        id SERIAL PRIMARY KEY,
+        message_id BIGINT NOT NULL,
+        reporter VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        UNIQUE(message_id, reporter)
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS chat_push_throttle (
+        group_id INTEGER PRIMARY KEY,
+        last_push_at TIMESTAMP WITH TIME ZONE
+      )
+    `;
+    await sql`ALTER TABLE notification_prefs ADD COLUMN IF NOT EXISTS chat_pushes BOOLEAN NOT NULL DEFAULT TRUE`;
     await sql`
       CREATE TABLE IF NOT EXISTS excuse_votes (
         id SERIAL PRIMARY KEY,
