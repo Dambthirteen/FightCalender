@@ -17,12 +17,14 @@ export async function GET() {
   const { xp } = await computeXp(sql, me);
   const level = levelForXp(xp);
   let cosmetics: Record<string, string> = {};
+  let color: string | null = null;
   try {
-    const [row] = (await sql`SELECT cosmetics FROM users WHERE user_name = ${me}`) as { cosmetics: Record<string, string> | null }[];
+    const [row] = (await sql`SELECT cosmetics, color FROM users WHERE user_name = ${me}`) as { cosmetics: Record<string, string> | null; color: string | null }[];
     cosmetics = row?.cosmetics ?? {};
+    color = row?.color ?? null;
   } catch { /* Spalte evtl. noch nicht angelegt */ }
   const owned = await getEntitlements(me);
-  return NextResponse.json({ level, cosmetics, owned: [...owned], monetization: isMonetizationActive() });
+  return NextResponse.json({ level, cosmetics, color, owned: [...owned], monetization: isMonetizationActive() });
 }
 
 /** Ein Cosmetic ausrüsten (nur wenn per Level freigeschaltet). */

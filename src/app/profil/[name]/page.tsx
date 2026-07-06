@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
-import { colorFor, initials, PALETTE } from '@/lib/avatar';
+import { colorFor, initials } from '@/lib/avatar';
 import { ARTS, SKILLS, BELT_COLORS, ROLES, isCoach, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, TOURNAMENT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
@@ -304,14 +304,6 @@ export default function ProfilePage() {
     } finally {
       setSavingBio(false);
     }
-  }
-
-  async function pickColor(col: string | null) {
-    setColor(col);
-    await fetch('/api/profile-info', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ color: col }),
-    });
   }
 
   async function saveArts(next: MartialArtEntry[]) {
@@ -1129,22 +1121,9 @@ export default function ProfilePage() {
             {editing && (
               <div className="mt-7 space-y-3">
                 <a href="/spind" className="card px-4 py-3 flex items-center justify-between text-sm font-semibold">
-                  <span>Spind — Anpassung</span>
+                  <span>Spind — Anpassung (inkl. Profilfarbe)</span>
                   <span className="text-[var(--faint)]">›</span>
                 </a>
-                <div className="card px-4 py-3">
-                  <div className="section-label mb-2.5">Profilfarbe (im Kalender)</div>
-                  <div className="flex flex-wrap gap-2.5">
-                    {PALETTE.map((col) => (
-                      <button key={col} onClick={() => pickColor(col)}
-                        className="w-8 h-8 rounded-full transition-transform active:scale-90"
-                        style={{ background: col, outline: color === col ? '2px solid #fff' : 'none', outlineOffset: '2px' }} />
-                    ))}
-                    <button onClick={() => pickColor(null)} title="Automatisch"
-                      className="w-8 h-8 rounded-full grid place-items-center text-[10px] border border-[var(--border)] text-[var(--muted)]"
-                      style={{ outline: !color ? '2px solid #fff' : 'none', outlineOffset: '2px' }}>auto</button>
-                  </div>
-                </div>
                 {isAdmin && (
                   <a href="/admin" className="card px-4 py-3 flex items-center gap-2.5 text-sm font-semibold" style={{ color: 'var(--muted)' }}>
                     Admin-Bereich

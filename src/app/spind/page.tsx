@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useUser } from '@/components/UserProvider';
-import { colorFor, initials } from '@/lib/avatar';
+import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, beltSkin, xpBarColor, type CosmeticCategory } from '@/lib/cosmetics';
 
 export default function SpindPage() {
@@ -11,14 +11,20 @@ export default function SpindPage() {
   const [level, setLevel] = useState(1);
   const [cos, setCos] = useState<Record<string, string>>({});
   const [owned, setOwned] = useState<string[]>([]);
+  const [color, setColor] = useState<string | null>(null);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
     fetch('/api/cosmetics').then((r) => r.json()).then((d) => {
-      if (d && !d.error) { setLevel(d.level ?? 1); setCos(d.cosmetics ?? {}); setOwned(Array.isArray(d.owned) ? d.owned : []); }
+      if (d && !d.error) { setLevel(d.level ?? 1); setCos(d.cosmetics ?? {}); setOwned(Array.isArray(d.owned) ? d.owned : []); setColor(d.color ?? null); }
     }).catch(() => {});
   }, []);
+
+  async function pickColor(col: string | null) {
+    setColor(col);
+    await fetch('/api/profile-info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color: col }) }).catch(() => {});
+  }
 
   async function equip(category: CosmeticCategory, itemId: string, locked: boolean) {
     if (locked || busy) return;
@@ -38,7 +44,7 @@ export default function SpindPage() {
   }
 
   const name = userName ?? 'Du';
-  const c = colorFor(name, null);
+  const c = colorFor(name, color);
   const frame = avatarFrame(cos.avatarFrame, c);
 
   // Mini-Vorschau je Kategorie auf der Item-Kachel.
@@ -95,6 +101,21 @@ export default function SpindPage() {
         </div>
 
         {msg && <p className="text-xs text-[var(--accent)] text-center">{msg}</p>}
+
+        {/* Profilfarbe (Avatar & Kalender) */}
+        <section className="anim-up">
+          <div className="section-label mb-2.5">Profilfarbe</div>
+          <div className="flex flex-wrap gap-2.5">
+            {PALETTE.map((col) => (
+              <button key={col} onClick={() => pickColor(col)}
+                className="w-9 h-9 rounded-full transition-transform active:scale-90"
+                style={{ background: col, outline: color === col ? '2px solid #fff' : 'none', outlineOffset: '2px' }} />
+            ))}
+            <button onClick={() => pickColor(null)} title="Automatisch"
+              className="w-9 h-9 rounded-full grid place-items-center text-[10px] border border-[var(--border)] text-[var(--muted)]"
+              style={{ outline: !color ? '2px solid #fff' : 'none', outlineOffset: '2px' }}>auto</button>
+          </div>
+        </section>
 
         {(Object.keys(COSMETICS) as CosmeticCategory[]).map((catKey) => {
           const cat = COSMETICS[catKey];
