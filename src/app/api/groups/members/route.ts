@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Du bist der letzte Admin — ernenne erst jemanden.' }, { status: 400 });
     }
     await sql`DELETE FROM group_members WHERE group_id = ${gid} AND user_name = ${me}`;
+    await sql`DELETE FROM coach_schedule WHERE user_name = ${me} AND class_id IN (SELECT id FROM classes WHERE group_id = ${gid})`.catch(() => {});
     return NextResponse.json({ ok: true });
   }
 
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
       if ((await countAdmins()) <= 1) return NextResponse.json({ error: 'Letzter Admin kann nicht entfernt werden.' }, { status: 400 });
     }
     await sql`DELETE FROM group_members WHERE group_id = ${gid} AND user_name = ${user_name}`;
+    await sql`DELETE FROM coach_schedule WHERE user_name = ${user_name} AND class_id IN (SELECT id FROM classes WHERE group_id = ${gid})`.catch(() => {});
   } else if (action === 'promote') {
     if (!isAdmin) return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
     await sql`UPDATE group_members SET role = 'admin' WHERE group_id = ${gid} AND user_name = ${user_name} AND status = 'active'`;

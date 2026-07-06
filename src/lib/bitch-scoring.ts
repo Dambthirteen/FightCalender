@@ -147,9 +147,20 @@ export async function getBitchCounts(
     const exempt = (u: string, d: string) =>
       statusRows.some((st) => st.user_name === u && d >= st.s && d <= st.e);
 
+    // Ab wann zählt jemand in DIESER Gruppe? Erst ab dem Beitritt — sonst würde ein frisch
+    // beigetretener Account mit Stundenplan rückwirkend Bitch-Punkte für den ganzen Vormonat
+    // (vor seinem Beitritt) bekommen und fälschlich „Chicken des Monats" werden.
+    const sinceRows = (await sql`
+      SELECT user_name, created_at::date::text AS since FROM group_members
+      WHERE group_id = ${groupId} AND created_at IS NOT NULL
+    `) as { user_name: string; since: string }[];
+    const joinFloor = new Map(sinceRows.map((r) => [r.user_name, r.since]));
+
     for (const user of allUsers) {
+      const floor = joinFloor.get(user);
       let n = 0;
       for (let d = bStart; d < bEnd; d = addDaysStr(d, 1)) {
+        if (floor && d < floor) continue;                 // vor dem Gruppen-Beitritt → kein Bitch
         if (!dowsFor(user, d).has(isodow(d))) continue;   // an dem Wochentag nichts geplant (KW-Plan)
         if (holidaySet.has(d)) continue;             // Feiertag
         if (exempt(user, d)) continue;               // krank/Urlaub

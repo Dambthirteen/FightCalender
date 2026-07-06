@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
     const rows = gid ? ((await sql`
       SELECT cs.class_id, cs.user_name FROM coach_schedule cs
       JOIN classes c ON c.id = cs.class_id AND c.group_id = ${gid}
+      JOIN group_members gm ON gm.user_name = cs.user_name AND gm.group_id = ${gid} AND gm.status = 'active'
       WHERE cs.week_start = ${week}
     `) as { class_id: number; user_name: string }[]) : [];
     const coaches: Record<number, string[]> = {};
