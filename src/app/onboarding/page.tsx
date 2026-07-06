@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { ARTS, SKILLS, artBelts } from '@/lib/fighter';
+import { GENDERS, competitorLabel } from '@/lib/gender';
 import { PALETTE, initials, colorFor } from '@/lib/avatar';
 import { track } from '@/lib/analytics';
 
@@ -38,6 +39,8 @@ export default function OnboardingPage() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
   const [role, setRole] = useState<'fighter' | 'coach' | 'both'>('fighter');
+  const [athlete, setAthlete] = useState<'hobby' | 'competitor'>('competitor');
+  const [gender, setGender] = useState<'m' | 'f' | 'd' | ''>('');
   const [trainingSince, setTrainingSince] = useState('');
   const [coachingSince, setCoachingSince] = useState('');
   const [coachingArts, setCoachingArts] = useState<string[]>([]);
@@ -94,6 +97,8 @@ export default function OnboardingPage() {
       const martial_arts = Object.entries(arts).map(([art, belt]) => ({ art, belt }));
       const fighter_info = {
         role,
+        athlete,
+        ...(gender ? { gender } : {}),
         ...(trainingSince ? { trainingSince } : {}),
         ...(isCoachRole && coachingSince ? { coachingSince } : {}),
         ...(isCoachRole && coachingArts.length ? { coachingArts } : {}),
@@ -229,6 +234,36 @@ export default function OnboardingPage() {
                         className="flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors"
                         style={on ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--accent-soft)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
                         {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div className="section-label mb-2">Typ</div>
+                <div className="flex gap-2">
+                  {([['hobby', 'Hobby'], ['competitor', competitorLabel(gender || undefined)]] as const).map(([key, label]) => {
+                    const on = athlete === key;
+                    return (
+                      <button key={key} onClick={() => setAthlete(key)}
+                        className="flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors"
+                        style={on ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--accent-soft)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div className="section-label mb-2">Geschlecht</div>
+                <div className="flex gap-2">
+                  {GENDERS.map(g => {
+                    const on = gender === g.key;
+                    return (
+                      <button key={g.key} onClick={() => setGender(g.key)}
+                        className="flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors"
+                        style={on ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--accent-soft)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                        {g.short} {g.label}
                       </button>
                     );
                   })}

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials } from '@/lib/avatar';
 import { ARTS, SKILLS, BELT_COLORS, ROLES, isCoach, artLabel, artBelts, overallRating, type MartialArtEntry, type Skills } from '@/lib/fighter';
+import { GENDERS, athleteLabel, competitorLabel, trainerLabel, macherMonth } from '@/lib/gender';
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, TOURNAMENT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
 import FullscreenLoader from '@/components/FullscreenLoader';
@@ -116,6 +117,8 @@ type CompRow = { id: number; name: string; competition_date: string; weight_clas
 
 interface FighterInfo {
   role?: string; // 'fighter' | 'coach' | 'both'
+  athlete?: string; // 'hobby' | 'competitor'
+  gender?: string; // 'm' | 'f' | 'd'
   trainingSince?: string; // 'YYYY-MM'
   coachingSince?: string; // 'YYYY-MM' (Trainer seit)
   coachingArts?: string[]; // Kampfsportarten, die der Coach trainiert
@@ -644,6 +647,36 @@ export default function ProfilePage() {
                         </div>
                       </div>
                       <div>
+                        <label className="text-[11px] text-[var(--muted)] mb-1 block">Typ</label>
+                        <div className="flex gap-2">
+                          {([['hobby', 'Hobby'], ['competitor', competitorLabel(fighterInfo.gender)]] as const).map(([key, label]) => {
+                            const on = (fighterInfo.athlete ?? 'competitor') === key;
+                            return (
+                              <button key={key} onClick={() => setFighterField('athlete', key)}
+                                className="flex-1 py-2 rounded-lg border text-xs font-semibold"
+                                style={on ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-[var(--muted)] mb-1 block">Geschlecht</label>
+                        <div className="flex gap-2">
+                          {GENDERS.map((g) => {
+                            const on = fighterInfo.gender === g.key;
+                            return (
+                              <button key={g.key} onClick={() => setFighterField('gender', g.key)}
+                                className="flex-1 py-2 rounded-lg border text-xs font-semibold"
+                                style={on ? { borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--surface-2)' } : { borderColor: 'var(--border)', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+                                {g.short} {g.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
                         <label className="text-[11px] text-[var(--muted)] mb-1 block">Trainiert seit</label>
                         <input type="month" value={fighterInfo.trainingSince ?? ''} max={new Date().toISOString().slice(0, 7)}
                           onChange={(e) => setFighterField('trainingSince', e.target.value)} className="field" />
@@ -695,11 +728,12 @@ export default function ProfilePage() {
                           onChange={(e) => setFighterField('instagram', e.target.value.replace(/^@/, ''))} className="field" />
                       </div>
                     </div>
-                  ) : (fighterInfo.trainingSince || fighterInfo.weightKg || fighterInfo.heightCm || fighterInfo.instagram || (isCoach(fighterInfo.role) && (fighterInfo.coachingSince || fighterInfo.coachingArts?.length || fighterInfo.licenses))) ? (
+                  ) : (fighterInfo.athlete || fighterInfo.trainingSince || fighterInfo.weightKg || fighterInfo.heightCm || fighterInfo.instagram || (isCoach(fighterInfo.role) && (fighterInfo.coachingSince || fighterInfo.coachingArts?.length || fighterInfo.licenses))) ? (
                     <div className="space-y-2 text-sm">
+                      {fighterInfo.athlete && <InfoRow label="Typ" value={athleteLabel(fighterInfo.athlete, fighterInfo.gender)} />}
                       {fighterInfo.trainingSince && <InfoRow label="Trainiert" value={trainingLabel(fighterInfo.trainingSince)} />}
-                      {isCoach(fighterInfo.role) && fighterInfo.coachingSince && <InfoRow label="Trainer seit" value={trainingLabel(fighterInfo.coachingSince)} />}
-                      {isCoach(fighterInfo.role) && !!fighterInfo.coachingArts?.length && <InfoRow label="Trainer für" value={fighterInfo.coachingArts.map(artLabel).join(' · ')} />}
+                      {isCoach(fighterInfo.role) && fighterInfo.coachingSince && <InfoRow label={`${trainerLabel(fighterInfo.gender)} seit`} value={trainingLabel(fighterInfo.coachingSince)} />}
+                      {isCoach(fighterInfo.role) && !!fighterInfo.coachingArts?.length && <InfoRow label={`${trainerLabel(fighterInfo.gender)} für`} value={fighterInfo.coachingArts.map(artLabel).join(' · ')} />}
                       {isCoach(fighterInfo.role) && fighterInfo.licenses && <InfoRow label="Lizenzen" value={fighterInfo.licenses} />}
                       {fighterInfo.weightKg && <InfoRow label="Gewicht" value={`${fighterInfo.weightKg} kg · ${weightClass(fighterInfo.weightKg)}`} />}
                       {fighterInfo.heightCm && <InfoRow label="Größe" value={`${fighterInfo.heightCm} cm`} />}
@@ -940,7 +974,7 @@ export default function ProfilePage() {
                 <div>
                   <div className="section-label mb-2.5">Titel &amp; Anwesenheit</div>
                   <div className="flex gap-2.5">
-                    <Stat value={stats?.macherTitles ?? '–'} label="Macher des Monats" color="var(--gold)" />
+                    <Stat value={stats?.macherTitles ?? '–'} label={macherMonth(fighterInfo.gender)} color="var(--gold)" />
                     <Stat value={stats?.bitchTitles ?? '–'} label="Chicken des Monats" color="var(--bitch)" />
                     <Stat value={stats?.daysOut ?? '–'} label="Tage weg" color="var(--teal)" />
                   </div>

@@ -17,6 +17,7 @@ export default function StartPage() {
   const [streak, setStreak] = useState({ days: 0, weeks: 0 });
   const [helpOpen, setHelpOpen] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
+  const [isHobby, setIsHobby] = useState(false);
   const [ready, setReady] = useState(false);
 
   // Alles laden, dann erst die Seite zeigen (kein sichtbarer Aufbau).
@@ -31,6 +32,8 @@ export default function StartPage() {
       fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {}),
       fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {}),
       fetch('/api/streak').then((r) => r.json()).then((d) => setStreak({ days: d.days ?? 0, weeks: d.weeks ?? 0 })).catch(() => {}),
+      // Accountart: Hobby → Wettkämpfe wandert von der großen Karte in die Liste.
+      fetch(`/api/profile-info?user=${encodeURIComponent(userName)}`).then((r) => r.json()).then((d) => setIsHobby(d?.fighter_info?.athlete === 'hobby')).catch(() => {}),
     ]).finally(() => setReady(true));
   }, [userLoading, userName]);
 
@@ -44,8 +47,10 @@ export default function StartPage() {
 
   const iconBtn = 'relative w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all text-lg';
   type Row = { icon: string; label: string; href: string; badge?: number };
-  // „Allgemein" = gruppenweite Features (Statistiken/Wettkämpfe als Karten darüber), „Du" = persönlich.
+  // „Allgemein" = gruppenweite Features, „Du" = persönlich. Wettkämpfer: Statistiken + Wettkämpfe
+  // als große Karten. Hobby: keine Wettkampf-Karte — stattdessen als Zeile in der Liste.
   const allgemeinRows: Row[] = [
+    ...(isHobby ? [{ icon: '/tile-competition.png', label: 'Wettkämpfe', href: '/competitions' }] : []),
     // Ausreden-Gericht nur im harten Modus zeigen.
     ...(hardMode ? [{ icon: '/more-court.png', label: 'Ausreden-Gericht', href: '/vote', badge: pendingVotes }] : []),
     { icon: '/more-members.png', label: 'Mitglieder', href: '/mitglieder' },
@@ -123,14 +128,16 @@ export default function StartPage() {
           <span className="text-[var(--faint)] text-lg">›</span>
         </a>
 
-        {/* Feature: Wettkämpfe */}
-        <a href="/competitions"
-          className="card px-5 py-4 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up" style={{ animationDelay: '40ms' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/tile-competition.png" alt="" className="w-11 h-11 object-contain shrink-0" />
-          <div className="flex-1 min-w-0 font-display text-2xl tracking-wide leading-none">Wettkämpfe</div>
-          <span className="text-[var(--faint)] text-lg">›</span>
-        </a>
+        {/* Feature: Wettkämpfe — nur für Wettkämpfer als große Karte (Hobby: Zeile in der Liste). */}
+        {!isHobby && (
+          <a href="/competitions"
+            className="card px-5 py-4 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up" style={{ animationDelay: '40ms' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/tile-competition.png" alt="" className="w-11 h-11 object-contain shrink-0" />
+            <div className="flex-1 min-w-0 font-display text-2xl tracking-wide leading-none">Wettkämpfe</div>
+            <span className="text-[var(--faint)] text-lg">›</span>
+          </a>
+        )}
 
         {allgemeinRows.length > 0 && listCard(allgemeinRows, 80)}
 

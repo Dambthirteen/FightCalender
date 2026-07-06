@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useUser } from './UserProvider';
 import { renderWrappedCard } from '@/lib/wrapped-card';
 import { track } from '@/lib/analytics';
+import { macherMonth } from '@/lib/gender';
 
 interface Highlight { user: string; count: number }
 interface ExcuseHi { user: string; excuse: string; accept?: number; reject?: number }
@@ -13,6 +14,7 @@ interface WrappedData {
   month: string;
   groupName: string;
   macher: Highlight | null;
+  macherGender?: string | null;
   bitch: Highlight | null;
   bestExcuse: ExcuseHi | null;
   worstExcuse: ExcuseHi | null;
@@ -41,7 +43,7 @@ interface Card { emoji: string; label: string; big: string; sub?: string; lines?
 function buildCards(d: WrappedData): Card[] {
   const cards: Card[] = [];
   cards.push({ emoji: '📅', label: `${d.groupName} · Rückblick`, big: monthLabel(d.month), sub: 'Dein Monat in Zahlen', color: 'var(--teal)' });
-  if (d.macher) cards.push({ emoji: '🏆', label: 'Macher des Monats', big: d.macher.user, sub: `${d.macher.count}× am Start`, color: 'var(--gold)' });
+  if (d.macher) cards.push({ emoji: '🏆', label: macherMonth(d.macherGender), big: d.macher.user, sub: `${d.macher.count}× am Start`, color: 'var(--gold)' });
   if (d.bitch) cards.push({ emoji: '🐔', label: 'Chicken des Monats', big: d.bitch.user, sub: `${d.bitch.count}× gefehlt`, color: 'var(--bitch)' });
   if (d.bestExcuse) cards.push({ emoji: '😇', label: 'Beste Ausrede', big: d.bestExcuse.user, sub: `„${d.bestExcuse.excuse}"`, color: 'var(--good)' });
   if (d.worstExcuse) cards.push({ emoji: '🙄', label: 'Härtester Reinfall', big: d.worstExcuse.user, sub: `„${d.worstExcuse.excuse}"`, color: 'var(--accent)' });
@@ -91,7 +93,7 @@ function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
       const blob = cardBlob.current ?? await renderWrappedCard({
         month: data.month, groupName: data.groupName,
         trainingDays: data.trainingDays ?? data.me.trainings,
-        streak: data.streak, youMacher: data.youMacher, topClass: data.topClass,
+        streak: data.streak, youMacher: data.youMacher, macherGender: data.macherGender, topClass: data.topClass,
       });
       if (!blob) return;
       track('wrapped_shared', { month: data.month });

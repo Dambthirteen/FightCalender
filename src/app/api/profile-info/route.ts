@@ -26,6 +26,8 @@ function sanitizeFighterInfo(input: Record<string, unknown>): Record<string, unk
   const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
 
   set('role', typeof input.role === 'string' && ['fighter', 'coach', 'both'].includes(input.role) ? input.role : undefined);
+  set('athlete', typeof input.athlete === 'string' && ['hobby', 'competitor'].includes(input.athlete) ? input.athlete : undefined); // Hobby vs. Wettkämpfer
+  set('gender', typeof input.gender === 'string' && ['m', 'f', 'd'].includes(input.gender) ? input.gender : undefined);
   set('trainingSince', str(input.trainingSince, 7));            // 'YYYY-MM'
   set('coachingSince', str(input.coachingSince, 7));            // 'YYYY-MM' (Trainer seit)
   set('coachingArts', Array.isArray(input.coachingArts) ? input.coachingArts.filter((a) => typeof a === 'string').slice(0, 12) : undefined);

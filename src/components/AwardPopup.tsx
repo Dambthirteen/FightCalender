@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useUser } from './UserProvider';
+import { macherMonth } from '@/lib/gender';
 
 type Kind = 'macher' | 'bitch';
 interface VoteItem { groupId: number; groupName: string; month: string; kind: Kind; candidates: string[]; }
@@ -39,6 +40,7 @@ export default function AwardPopup() {
   const [congrats, setCongrats] = useState<CongratItem[]>([]);
   const [choice, setChoice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [gender, setGender] = useState<string | null>(null);
   const loadedFor = useRef('');
 
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function AwardPopup() {
       .then((d) => {
         setVotes(Array.isArray(d.votes) ? d.votes : []);
         setCongrats(Array.isArray(d.congrats) ? d.congrats : []);
+        setGender(d.gender ?? null);
       })
       .catch(() => {});
   }, [userName, loading]);
@@ -157,7 +160,7 @@ export default function AwardPopup() {
           <div className="text-7xl mb-3 award-bounce">{m.emoji}</div>
           <div className="text-[11px] uppercase tracking-[0.2em] text-[var(--faint)]">{congrat.groupName} · {monthLabel(congrat.month)}</div>
           <h2 className="font-display text-2xl tracking-wide mt-2">{isMacher ? 'Glückwunsch!' : 'Autsch.'}</h2>
-          <p className="text-lg mt-1">Du bist <strong style={{ color: m.color }}>{m.label}</strong></p>
+          <p className="text-lg mt-1">Du bist <strong style={{ color: m.color }}>{isMacher ? macherMonth(gender) : m.label}</strong></p>
           <p className="text-[var(--muted)] text-sm mt-2">
             {isMacher ? 'Stark — niemand war öfter da. 🥊' : 'Diesen Monat hast du am meisten gefehlt. 💩'}
           </p>

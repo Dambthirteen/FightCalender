@@ -24,6 +24,8 @@ export async function GET() {
     const sql = getSql();
     const ym = ymPrev(currentYm()); // letzter abgeschlossener Monat
     const groups = await getMyGroups(user);
+    const [gRow] = (await sql`SELECT fighter_info->>'gender' AS gender FROM users WHERE user_name = ${user}`) as { gender: string | null }[];
+    const gender = gRow?.gender ?? null; // für die gegenderte Verleihung („Macherin des Monats")
 
     const votes: VoteItem[] = [];
     const congrats: CongratItem[] = [];
@@ -52,7 +54,7 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ votes, congrats });
+    return NextResponse.json({ votes, congrats, gender });
   } catch (error) {
     return NextResponse.json({ votes: [], congrats: [], error: String(error) });
   }

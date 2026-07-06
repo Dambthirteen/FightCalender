@@ -1,5 +1,6 @@
 // Rendert den Monats-Rückblick als teilbares Story-Bild (1080×1920 PNG) — reines Canvas,
 // keine Abhängigkeit. Client-only (nutzt document/canvas).
+import { macherMonth } from './gender';
 
 export interface WrappedForCard {
   month: string;      // 'YYYY-MM'
@@ -7,6 +8,7 @@ export interface WrappedForCard {
   trainingDays: number;
   streak?: { days: number; weeks: number } | null;
   youMacher?: boolean;
+  macherGender?: string | null; // eigenes Geschlecht (bei youMacher) → gegenderter Titel
   topClass?: { name: string; count: number } | null;
 }
 
@@ -121,7 +123,7 @@ export async function renderWrappedCard(d: WrappedForCard): Promise<Blob | null>
     items.push({
       h: 96,
       draw: (top) => {
-        const txt = '🏆 MACHER DES MONATS';
+        const txt = `🏆 ${macherMonth(d.macherGender).toUpperCase()}`;
         font('700 44px');
         const w = ctx.measureText(txt).width + 84;
         const h = 88, y = top + 4;

@@ -133,6 +133,12 @@ export async function GET(req: NextRequest) {
     const macher = macherRows[0] ? { user: macherRows[0].user_name, count: macherRows[0].n } : null;
     const bitch = topBitch ? { user: topBitch.user_name, count: topBitch.count } : null;
     const available = !!(macher || bitch || (myAtt[0]?.n ?? 0) > 0);
+    // Geschlecht des Machers → gegenderter Titel („Macherin des Monats").
+    let macherGender: string | null = null;
+    if (macher) {
+      const [g] = (await sql`SELECT fighter_info->>'gender' AS gender FROM users WHERE user_name = ${macher.user}`) as { gender: string | null }[];
+      macherGender = g?.gender ?? null;
+    }
 
     return NextResponse.json({
       available,
@@ -140,6 +146,7 @@ export async function GET(req: NextRequest) {
       month: ym,
       groupName,
       macher,
+      macherGender,
       bitch,
       bestExcuse: bestRows[0] ? { user: bestRows[0].user_name, excuse: bestRows[0].excuse, accept: bestRows[0].votes } : null,
       worstExcuse: worstRows[0] && worstRows[0].reject > 0 ? { user: worstRows[0].user_name, excuse: worstRows[0].excuse, reject: worstRows[0].reject } : null,
