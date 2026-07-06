@@ -7,7 +7,7 @@ import { useUser } from '@/components/UserProvider';
 export default function BottomNav() {
   const pathname = usePathname();
   const { userName } = useUser();
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname.startsWith('/chat')) return null; // Chat = Vollbild mit eigenem Footer
 
   const profileHref = `/profil/${encodeURIComponent(userName ?? '')}`;
   const tabs = [

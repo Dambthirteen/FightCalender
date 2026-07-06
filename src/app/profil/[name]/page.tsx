@@ -26,8 +26,8 @@ function Belt({ clanTag, badges, onBadge, skin, fx }: { clanTag: string | null; 
   const s = beltSkin(skin);
   const slots = s.bjj ? BJJ_SLOTS : BELT_SLOTS;
   const clanLeft = s.bjj ? '47%' : '49.8%';
-  const clanTop = s.bjj ? '50%' : '53%';
-  const badgeTop = s.bjj ? '50%' : '48%';
+  const clanTop = s.bjj ? '63%' : '53%';
+  const badgeTop = s.bjj ? '63%' : '48%';
   const badgeSize = s.bjj ? '5cqw' : '5.5cqw';
   return (
     <div className="relative w-full select-none" style={{ aspectRatio: '1400 / 319', containerType: 'inline-size' }}>

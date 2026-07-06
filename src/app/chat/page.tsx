@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials } from '@/lib/avatar';
 
-interface Msg { id: string; user: string; text: string; ts: string; color: string | null }
+interface Msg { id: string; user: string; text: string; ts: string; color: string | null; avatar: string | null }
 
 function timeLabel(ts: string): string {
   const d = new Date(ts);
@@ -91,7 +91,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col text-[var(--text)]" style={{ height: '100dvh' }}>
+    <div className="fixed inset-0 z-40 flex flex-col text-[var(--text)]" style={{ background: 'var(--bg)' }}>
       {/* Kopf */}
       <header className="shrink-0 flex items-center gap-3 px-4 border-b" style={{ borderColor: 'var(--border-soft)', paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)', paddingBottom: '0.75rem' }}>
         <a href="/start" className="w-9 h-9 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
@@ -118,7 +118,12 @@ export default function ChatPage() {
           const c = colorFor(m.user, m.color);
           return (
             <div key={m.id} className={`flex gap-2 ${mine ? 'flex-row-reverse' : ''}`}>
-              {!mine && <span className="w-8 h-8 rounded-full grid place-items-center text-[11px] font-display shrink-0 self-end" style={{ background: `${c}22`, color: c, border: `1px solid ${c}` }}>{initials(m.user)}</span>}
+              {m.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.avatar} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 self-end" style={{ border: `1px solid ${c}` }} />
+              ) : (
+                <span className="w-8 h-8 rounded-full grid place-items-center text-[11px] font-display shrink-0 self-end" style={{ background: `${c}22`, color: c, border: `1px solid ${c}` }}>{initials(m.user)}</span>
+              )}
               <button onClick={() => setMenu(m)} className="max-w-[76%] text-left active:opacity-80">
                 {!mine && <div className="text-[11px] font-semibold mb-0.5 ml-1" style={{ color: c }}>{m.user}</div>}
                 <div className="px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words"

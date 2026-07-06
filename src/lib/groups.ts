@@ -99,6 +99,27 @@ export async function getCurrentGroupId(userName: string): Promise<number | null
   return groups[0].id;
 }
 
+/** Gruppe endgültig löschen: alle gruppen-bezogenen Daten entfernen (Wettkämpfe bleiben
+ *  als persönliche Historie erhalten). Nur nach Admin-Check aufrufen! */
+export async function deleteGroup(groupId: number): Promise<void> {
+  const sql = getSql();
+  // Kurse zuerst → cascadet user_schedule / weekly_schedule / coach_schedule / attendance.
+  await sql`DELETE FROM classes WHERE group_id = ${groupId}`;
+  await sql`DELETE FROM skipping WHERE group_id = ${groupId}`;
+  const safe = async (fn: () => Promise<unknown>) => { try { await fn(); } catch { /* Tabelle evtl. noch nicht angelegt */ } };
+  await safe(() => sql`DELETE FROM best_excuse_votes WHERE group_id = ${groupId}`);
+  await safe(() => sql`DELETE FROM monthly_titles WHERE group_id = ${groupId}`);
+  await safe(() => sql`DELETE FROM title_votes WHERE group_id = ${groupId}`);
+  await safe(() => sql`DELETE FROM title_awards_seen WHERE group_id = ${groupId}`);
+  await safe(() => sql`DELETE FROM feed_events WHERE group_id = ${groupId}`); // cascadet feed_reactions
+  await safe(() => sql`DELETE FROM message_reports WHERE message_id IN (SELECT id FROM messages WHERE group_id = ${groupId})`);
+  await safe(() => sql`DELETE FROM messages WHERE group_id = ${groupId}`);
+  await safe(() => sql`DELETE FROM chat_reads WHERE group_id = ${groupId}`);
+  await safe(() => sql`DELETE FROM chat_push_throttle WHERE group_id = ${groupId}`);
+  await sql`DELETE FROM group_members WHERE group_id = ${groupId}`;
+  await sql`DELETE FROM groups WHERE id = ${groupId}`;
+}
+
 /** Rolle des Nutzers in einer Gruppe ('admin' | 'member') oder null, wenn kein aktives Mitglied. */
 export async function getRole(userName: string, groupId: number): Promise<string | null> {
   try {

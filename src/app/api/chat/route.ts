@@ -8,7 +8,7 @@ export const runtime = 'nodejs'; // verschickt Push
 
 function getSql() { return neon(process.env.DATABASE_URL!); }
 
-interface MsgRow { id: string; user_name: string; text: string; created_at: string; color: string | null }
+interface MsgRow { id: string; user_name: string; text: string; created_at: string; color: string | null; avatar: string | null }
 
 /** GET ?after=<id> → Chat der aktuellen Gruppe (blockierte & gelöschte ausgefiltert). */
 export async function GET(req: NextRequest) {
@@ -25,14 +25,14 @@ export async function GET(req: NextRequest) {
 
   const rows = after
     ? (await sql`
-        SELECT m.id::text, m.user_name, m.text, m.created_at::text, u.color
+        SELECT m.id::text, m.user_name, m.text, m.created_at::text, u.color, u.avatar
         FROM messages m LEFT JOIN users u ON u.user_name = m.user_name
         WHERE m.group_id = ${gid} AND m.id > ${after} AND m.deleted_at IS NULL
           AND m.user_name NOT IN (SELECT blocked FROM chat_blocks WHERE blocker = ${me})
         ORDER BY m.id ASC LIMIT 200
       `) as MsgRow[]
     : ((await sql`
-        SELECT m.id::text, m.user_name, m.text, m.created_at::text, u.color
+        SELECT m.id::text, m.user_name, m.text, m.created_at::text, u.color, u.avatar
         FROM messages m LEFT JOIN users u ON u.user_name = m.user_name
         WHERE m.group_id = ${gid} AND m.deleted_at IS NULL
           AND m.user_name NOT IN (SELECT blocked FROM chat_blocks WHERE blocker = ${me})
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       `) as MsgRow[]).reverse();
 
   return NextResponse.json({
-    messages: rows.map((r) => ({ id: r.id, user: r.user_name, text: r.text, ts: r.created_at, color: r.color })),
+    messages: rows.map((r) => ({ id: r.id, user: r.user_name, text: r.text, ts: r.created_at, color: r.color, avatar: r.avatar })),
     canModerate: role === 'admin' || role === 'moderator',
     me,
   });
@@ -98,5 +98,6 @@ export async function POST(req: NextRequest) {
     }
   } catch { /* Push best effort */ }
 
-  return NextResponse.json({ id: row.id, user: me, text: t, ts: row.created_at, color: null });
+  const [self] = (await sql`SELECT color, avatar FROM users WHERE user_name = ${me}`) as { color: string | null; avatar: string | null }[];
+  return NextResponse.json({ id: row.id, user: me, text: t, ts: row.created_at, color: self?.color ?? null, avatar: self?.avatar ?? null });
 }

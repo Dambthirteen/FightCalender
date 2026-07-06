@@ -162,6 +162,19 @@ export default function GroupsPage() {
       setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, bundesland: bl } : g)));
     } finally { setBusy(false); }
   }
+  async function deleteGroupNow() {
+    if (!current) return;
+    const name = (groupName || '').trim();
+    const typed = prompt(`Diese Gruppe wird UNWIDERRUFLICH gelöscht — inklusive Kurse, Chat, Anwesenheiten & Wertungen. Wettkämpfe bleiben als persönliche Historie.\n\nZum Bestätigen den Gruppennamen eingeben:\n${name}`);
+    if (typed == null) return;
+    if (typed.trim() !== name) { alert('Name stimmt nicht — abgebrochen.'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/groups', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current }) });
+      if (res.ok) { track('group_deleted', {}); window.location.href = '/'; }
+      else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Konnte nicht löschen.'); }
+    } finally { setBusy(false); }
+  }
   async function switchGroup(id: number) {
     await fetch('/api/groups/current', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: id }) });
     window.location.href = '/';
@@ -485,6 +498,21 @@ export default function GroupsPage() {
               </div>
               <button onClick={addClass} disabled={busy || !form.name.trim()} className="w-full text-white font-bold py-2.5 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>+ Kurs hinzufügen</button>
             </div>
+          </section>
+        )}
+
+        {/* Gefahrenzone: Gruppe löschen (nur Admin) */}
+        {current && isAdmin && (
+          <section className="card p-4 anim-up" style={{ borderColor: 'rgba(255,59,48,0.3)' }}>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--accent)] mb-1.5">Gefahrenzone</div>
+            <p className="text-[11px] text-[var(--faint)] mb-3 leading-relaxed">
+              Gruppe endgültig löschen — inkl. Kurse, Chat, Anwesenheiten &amp; Wertungen. Wettkämpfe bleiben als persönliche Historie erhalten. Nicht rückgängig machbar.
+            </p>
+            <button onClick={deleteGroupNow} disabled={busy}
+              className="w-full font-bold py-2.5 rounded-xl border transition-colors disabled:opacity-40"
+              style={{ borderColor: 'rgba(255,59,48,0.5)', color: 'var(--accent)' }}>
+              Gruppe löschen
+            </button>
           </section>
         )}
       </main>

@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getMyGroups, getCurrentGroupId, getRole, makeInviteCode, GROUP_COOKIE, countMyGroupMemberships, MAX_GROUPS } from '@/lib/groups';
+import { getMyGroups, getCurrentGroupId, getRole, makeInviteCode, GROUP_COOKIE, countMyGroupMemberships, MAX_GROUPS, deleteGroup } from '@/lib/groups';
 import { hasSupporter, isMonetizationActive } from '@/lib/entitlements';
 import { normalizeBundesland } from '@/lib/holidays';
 
@@ -62,6 +62,21 @@ export async function POST(req: NextRequest) {
 
   const res = NextResponse.json({ ok: true, id: gid, invite_code: code });
   res.cookies.set(GROUP_COOKIE, String(gid), { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
+  return res;
+}
+
+/** Gruppe löschen — nur Admin der Gruppe. Entfernt alle gruppen-bezogenen Daten. */
+export async function DELETE(req: NextRequest) {
+  const me = await getCurrentUser();
+  if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { groupId } = await req.json().catch(() => ({}));
+  const gid = Number(groupId);
+  if (!gid) return NextResponse.json({ error: 'Gruppe fehlt' }, { status: 400 });
+  if ((await getRole(me, gid)) !== 'admin') return NextResponse.json({ error: 'Nur Admins können die Gruppe löschen.' }, { status: 403 });
+
+  await deleteGroup(gid);
+  const res = NextResponse.json({ ok: true });
+  res.cookies.set(GROUP_COOKIE, '', { path: '/', maxAge: 0 }); // Cookie zeigte evtl. auf die gelöschte Gruppe
   return res;
 }
 
