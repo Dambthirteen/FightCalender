@@ -5,7 +5,7 @@
  */
 import type { CSSProperties } from 'react';
 
-export type CosmeticCategory = 'nameplate' | 'avatarFrame' | 'flame' | 'belt' | 'xpbar';
+export type CosmeticCategory = 'nameplate' | 'avatarFrame' | 'flame' | 'belt' | 'beltFx' | 'xpbar';
 export interface CosmeticItem { id: string; label: string; minLevel: number; sku?: string }
 
 /** Premium-Verläufe der XP-Leiste (Supporter). 'default' = Rangfarbe (kein Override).
@@ -37,6 +37,17 @@ export const BELT_SKINS: Record<string, BeltSkin> = {
 };
 export function beltSkin(id?: string): BeltSkin {
   return BELT_SKINS[id ?? 'default'] ?? BELT_SKINS.default;
+}
+
+/** Gürtel-Effekt (Supporter) → CSS-Klasse. Der drop-shadow-Glow folgt der Gürtel-Silhouette. */
+export function beltFxClass(id?: string): string {
+  switch (id) {
+    case 'glow': return 'belt-fx-glow';
+    case 'fire': return 'belt-fx-fire';
+    case 'ice': return 'belt-fx-ice';
+    case 'pulse': return 'belt-fx-pulse';
+    default: return '';
+  }
 }
 
 export const COSMETICS: Record<CosmeticCategory, { label: string; items: CosmeticItem[] }> = {
@@ -74,6 +85,17 @@ export const COSMETICS: Record<CosmeticCategory, { label: string; items: Cosmeti
       { id: 'default', label: 'Klassisch', minLevel: 1 },
       { id: 'ice', label: 'Eis', minLevel: 1 }, // zum Testen auf Level 1
       { id: 'fire', label: 'Fire', minLevel: 5 },
+    ],
+  },
+  // Gürtel-Effekt: reine CSS-Glows, Supporter-exklusiv (minLevel unerreichbar → nur per Entitlement).
+  beltFx: {
+    label: 'Gürtel-Effekt',
+    items: [
+      { id: 'default', label: 'Kein Effekt', minLevel: 1 },
+      { id: 'glow', label: 'Glow · Gold', minLevel: 999, sku: 'supporter' },
+      { id: 'fire', label: 'Glow · Feuer', minLevel: 999, sku: 'supporter' },
+      { id: 'ice', label: 'Glow · Eis', minLevel: 999, sku: 'supporter' },
+      { id: 'pulse', label: 'Puls', minLevel: 999, sku: 'supporter' },
     ],
   },
   xpbar: {

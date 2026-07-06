@@ -9,7 +9,7 @@ import { GENDERS, athleteLabel, competitorLabel, trainerLabel, macherMonth } fro
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, TOURNAMENT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
 import FullscreenLoader from '@/components/FullscreenLoader';
-import { nameplateStyle, avatarFrame, flameFilter, beltSkin, xpBarColor } from '@/lib/cosmetics';
+import { nameplateStyle, avatarFrame, flameFilter, beltSkin, beltFxClass, xpBarColor } from '@/lib/cosmetics';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
 interface BadgeData { streakDays: number; streakWeeks: number; longest: number; competitions: number; earned: BadgeInfo[]; displayed: string[]; clanTag?: string | null; points?: number; adAvailable?: boolean }
@@ -19,12 +19,12 @@ interface BadgeData { streakDays: number; streakWeeks: number; longest: number; 
 // damit 1 Badge neben dem Clantag sitzt und 2 symmetrisch sind:
 // inner-links · inner-rechts · outer-links · outer-rechts.
 const BELT_SLOTS = [32, 67.9, 21.4, 78.6];
-function Belt({ clanTag, badges, onBadge, skin }: { clanTag: string | null; badges: BadgeInfo[]; onBadge?: (b: BadgeInfo) => void; skin?: string }) {
+function Belt({ clanTag, badges, onBadge, skin, fx }: { clanTag: string | null; badges: BadgeInfo[]; onBadge?: (b: BadgeInfo) => void; skin?: string; fx?: string }) {
   const s = beltSkin(skin);
   return (
     <div className="relative w-full select-none" style={{ aspectRatio: '1400 / 319', containerType: 'inline-size' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={s.src} alt="Championship Belt" className="w-full h-full object-contain pointer-events-none" />
+      <img src={s.src} alt="Championship Belt" className={`w-full h-full object-contain pointer-events-none ${beltFxClass(fx)}`} />
       {clanTag && (
         <div className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: '49.8%', top: '53%' }}>
           <span className="font-display tracking-wide" style={{ color: s.clanColor, fontSize: '6.5cqw', lineHeight: 1 }}>{clanTag}</span>
@@ -599,7 +599,7 @@ export default function ProfilePage() {
 
           {/* Championship-Belt: Clantag + ausgestellte Badges */}
           <div className="w-full mt-2">
-            <Belt clanTag={badgeData?.clanTag ?? null} badges={displayedBadges} onBadge={setBeltBadge} skin={cosmetics.belt} />
+            <Belt clanTag={badgeData?.clanTag ?? null} badges={displayedBadges} onBadge={setBeltBadge} skin={cosmetics.belt} fx={cosmetics.beltFx} />
           </div>
 
         </div>

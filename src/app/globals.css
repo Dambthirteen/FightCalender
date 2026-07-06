@@ -164,6 +164,19 @@ h1, h2, h3, .font-display {
   .flame-wave { filter: none; }
 }
 
+/* Gürtel-Effekte (Supporter). drop-shadow folgt der Gürtel-Silhouette → geformter Schein. */
+.belt-fx-glow { filter: drop-shadow(0 0 9px rgba(255,194,75,0.62)) drop-shadow(0 0 22px rgba(255,194,75,0.34)); }
+.belt-fx-fire { filter: drop-shadow(0 0 9px rgba(255,90,40,0.64)) drop-shadow(0 0 24px rgba(255,59,48,0.36)); }
+.belt-fx-ice  { filter: drop-shadow(0 0 9px rgba(120,205,255,0.62)) drop-shadow(0 0 24px rgba(56,189,248,0.34)); }
+@keyframes beltGlowPulse {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(255,194,75,0.4))  drop-shadow(0 0 12px rgba(255,194,75,0.22)); }
+  50%      { filter: drop-shadow(0 0 14px rgba(255,194,75,0.82)) drop-shadow(0 0 30px rgba(255,194,75,0.5)); }
+}
+.belt-fx-pulse { animation: beltGlowPulse 2.6s ease-in-out infinite; will-change: filter; }
+@media (prefers-reduced-motion: reduce) {
+  .belt-fx-pulse { animation: none; filter: drop-shadow(0 0 9px rgba(255,194,75,0.62)) drop-shadow(0 0 22px rgba(255,194,75,0.34)); }
+}
+
 /* ===================== Bausteine ===================== */
 .card {
   background: linear-gradient(180deg, var(--surface) 0%, var(--bg-elev) 100%);

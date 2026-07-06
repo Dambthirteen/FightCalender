@@ -5,7 +5,7 @@ import PageHeader from '@/components/PageHeader';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
 import StreakFlame from '@/components/StreakFlame';
-import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, beltSkin, xpBarColor, type CosmeticCategory } from '@/lib/cosmetics';
+import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, beltSkin, beltFxClass, xpBarColor, type CosmeticCategory } from '@/lib/cosmetics';
 
 export default function SpindPage() {
   const { userName } = useUser();
@@ -66,6 +66,11 @@ export default function SpindPage() {
       // eslint-disable-next-line @next/next/no-img-element
       return <img src={beltSkin(id).src} alt="" className="w-full" style={{ maxHeight: 40, objectFit: 'contain' }} />;
     }
+    if (category === 'beltFx') {
+      // Effekt auf dem aktuell getragenen Gürtel vorschauen.
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img src={beltSkin(cos.belt).src} alt="" className={`w-full ${beltFxClass(id)}`} style={{ maxHeight: 40, objectFit: 'contain' }} />;
+    }
     if (category === 'xpbar') {
       const col = xpBarColor(id);
       return (
@@ -93,7 +98,7 @@ export default function SpindPage() {
             <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--muted)] mt-1">Tage Streak</div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={beltSkin(cos.belt).src} alt="Gürtel" className="w-full mt-4" style={{ aspectRatio: '1400 / 319', objectFit: 'contain' }} />
+          <img src={beltSkin(cos.belt).src} alt="Gürtel" className={`w-full mt-4 ${beltFxClass(cos.beltFx)}`} style={{ aspectRatio: '1400 / 319', objectFit: 'contain' }} />
           <div className="w-full mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
             <div className="h-full rounded-full" style={{ width: '72%', background: xpBarColor(cos.xpbar) ?? 'linear-gradient(90deg, var(--gold), var(--accent))' }} />
           </div>
