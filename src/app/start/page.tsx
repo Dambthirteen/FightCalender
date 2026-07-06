@@ -43,13 +43,40 @@ export default function StartPage() {
   }
 
   const iconBtn = 'relative w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all text-lg';
-  const moreRows: { icon: string; label: string; href: string; badge?: number }[] = [
+  type Row = { icon: string; label: string; href: string; badge?: number };
+  // „Allgemein" = gruppenweite Features (Statistiken/Wettkämpfe als Karten darüber), „Du" = persönlich.
+  const allgemeinRows: Row[] = [
     // Ausreden-Gericht nur im harten Modus zeigen.
     ...(hardMode ? [{ icon: '/more-court.png', label: 'Ausreden-Gericht', href: '/vote', badge: pendingVotes }] : []),
     { icon: '/more-members.png', label: 'Mitglieder', href: '/mitglieder' },
+  ];
+  const duRows: Row[] = [
     { icon: '/more-status.png', label: 'Mein Status', href: '/account' },
     { icon: '/more-timetable.png', label: 'Stundenplan ändern', href: '/?plan=1' },
   ];
+  const listCard = (rows: Row[], delay: number) => (
+    <div className="card overflow-hidden anim-up" style={{ animationDelay: `${delay}ms` }}>
+      {rows.map((row, i) => (
+        <a key={row.label} href={row.href}
+          className={`flex items-center gap-3 px-4 py-3.5 active:bg-[var(--surface-2)] transition-colors ${i < rows.length - 1 ? 'border-b border-[var(--border-soft)]' : ''}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={row.icon} alt="" className="w-6 h-6 object-contain shrink-0" style={{ opacity: 0.9 }} />
+          <span className="flex-1 text-sm font-semibold">{row.label}</span>
+          {!!row.badge && row.badge > 0 && (
+            <span className="text-[11px] font-semibold" style={{ color: 'var(--bitch)' }}>● {row.badge} offen</span>
+          )}
+          <span className="text-[var(--faint)]">›</span>
+        </a>
+      ))}
+    </div>
+  );
+  const divider = (label: string) => (
+    <div className="flex items-center gap-3 pt-3 pb-1">
+      <div className="flex-1 h-px" style={{ background: 'var(--border-soft)' }} />
+      <span className="section-label">{label}</span>
+      <div className="flex-1 h-px" style={{ background: 'var(--border-soft)' }} />
+    </div>
+  );
 
   if (userLoading || !ready) return <FullscreenLoader />;
 
@@ -84,6 +111,9 @@ export default function StartPage() {
           <div className="text-[11px] uppercase tracking-[0.22em] text-[var(--muted)] mt-1">{streak.days === 1 ? 'Tag' : 'Tage'} Streak</div>
         </button>
 
+        {/* ── Allgemein ── */}
+        {divider('Allgemein')}
+
         {/* Feature: Statistiken */}
         <a href="/statistik"
           className="card px-5 py-4 flex items-center gap-4 active:scale-[0.99] transition-transform anim-up">
@@ -102,28 +132,11 @@ export default function StartPage() {
           <span className="text-[var(--faint)] text-lg">›</span>
         </a>
 
-        {/* Trenner */}
-        <div className="flex items-center gap-3 pt-3 pb-1">
-          <div className="flex-1 h-px" style={{ background: 'var(--border-soft)' }} />
-          <span className="section-label">Mehr</span>
-          <div className="flex-1 h-px" style={{ background: 'var(--border-soft)' }} />
-        </div>
+        {allgemeinRows.length > 0 && listCard(allgemeinRows, 80)}
 
-        {/* Liste */}
-        <div className="card overflow-hidden anim-up" style={{ animationDelay: '80ms' }}>
-          {moreRows.map((row, i) => (
-            <a key={row.label} href={row.href}
-              className={`flex items-center gap-3 px-4 py-3.5 active:bg-[var(--surface-2)] transition-colors ${i < moreRows.length - 1 ? 'border-b border-[var(--border-soft)]' : ''}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={row.icon} alt="" className="w-6 h-6 object-contain shrink-0" style={{ opacity: 0.9 }} />
-              <span className="flex-1 text-sm font-semibold">{row.label}</span>
-              {!!row.badge && row.badge > 0 && (
-                <span className="text-[11px] font-semibold" style={{ color: 'var(--bitch)' }}>● {row.badge} offen</span>
-              )}
-              <span className="text-[var(--faint)]">›</span>
-            </a>
-          ))}
-        </div>
+        {/* ── Du ── */}
+        {divider('Du')}
+        {listCard(duRows, 100)}
 
         <button onClick={() => window.location.assign('/start?wrapped=1')}
           className="w-full text-center text-sm py-2 mt-1 text-[var(--muted)] hover:text-white transition-colors">
