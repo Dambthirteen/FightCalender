@@ -5,6 +5,7 @@ import { useUser } from '@/components/UserProvider';
 import { resetAnalytics } from '@/lib/analytics';
 import { nextStreakBadge, STREAK_BADGES } from '@/lib/badges';
 import { isCoach, isFighter } from '@/lib/fighter';
+import { flameFilter } from '@/lib/cosmetics';
 import StreakFlame from '@/components/StreakFlame';
 import FullscreenLoader from '@/components/FullscreenLoader';
 import { XP } from '@/lib/xp';
@@ -20,6 +21,7 @@ export default function StartPage() {
   const [streakOpen, setStreakOpen] = useState(false);
   const [isHobby, setIsHobby] = useState(false);
   const [role, setRole] = useState<string | null>(null);
+  const [flameTint, setFlameTint] = useState<string | undefined>(undefined);
   const [ready, setReady] = useState(false);
 
   // Alles laden, dann erst die Seite zeigen (kein sichtbarer Aufbau).
@@ -34,6 +36,8 @@ export default function StartPage() {
       fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {}),
       fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {}),
       fetch('/api/streak').then((r) => r.json()).then((d) => setStreak({ days: d.days ?? 0, weeks: d.weeks ?? 0 })).catch(() => {}),
+      // Flammen-Farbe (Cosmetic) für die Streak-Flamme.
+      fetch('/api/cosmetics').then((r) => r.json()).then((d) => setFlameTint(flameFilter(d?.cosmetics?.flame))).catch(() => {}),
       // Accountart: Hobby → Wettkämpfe wandert in die Liste; Rolle → Coach-Trainingsplan-Eintrag.
       fetch(`/api/profile-info?user=${encodeURIComponent(userName)}`).then((r) => r.json()).then((d) => {
         setIsHobby(d?.fighter_info?.athlete === 'hobby');
@@ -119,7 +123,7 @@ export default function StartPage() {
         {/* Streak — zentriert; Klick öffnet Details */}
         <button onClick={() => setStreakOpen(true)}
           className="w-full flex flex-col items-center pt-2 pb-3 active:scale-[0.99] transition-transform anim-up">
-          <StreakFlame days={streak.days} height={128} />
+          <StreakFlame days={streak.days} height={128} tint={flameTint} />
           <div className="text-[11px] uppercase tracking-[0.22em] text-[var(--muted)] mt-1">{streak.days === 1 ? 'Tag' : 'Tage'} Streak</div>
         </button>
 
@@ -179,7 +183,7 @@ export default function StartPage() {
 
             {/* Aktuelle Werte */}
             <div className="flex flex-col items-center pb-4">
-              <StreakFlame days={streak.days} height={110} />
+              <StreakFlame days={streak.days} height={110} tint={flameTint} />
               <div className="text-xs text-[var(--muted)] mt-2 text-center px-2">
                 {streak.weeks} {streak.weeks === 1 ? 'Woche' : 'Wochen'} ohne Skip
                 {nextBadge ? ` · noch ${nextBadge.threshold - streak.weeks} bis „${nextBadge.label}"` : ' · Maximalstufe erreicht'}

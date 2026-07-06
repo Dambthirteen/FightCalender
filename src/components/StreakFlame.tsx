@@ -16,13 +16,23 @@ export function streakLevelIndex(days: number): number {
   return 0; // Tag 1+ (und 0) = Level 1
 }
 
-export default function StreakFlame({ days, height = 120, dim }: { days: number; height?: number; dim?: boolean }) {
+export default function StreakFlame({ days, height = 120, dim, tint }: { days: number; height?: number; dim?: boolean; tint?: string }) {
   const lv = LEVELS[streakLevelIndex(days)];
   const width = height * lv.aspect;
   const circleDia = lv.d * width;
   const digits = String(Math.max(0, days)).length;
   const fontPx = circleDia * (digits >= 3 ? 0.42 : digits === 2 ? 0.56 : 0.64);
   const off = dim ?? days === 0;
+  const flameEl = off ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={lv.src} alt="" style={{ width, height, display: 'block', filter: 'grayscale(1)', opacity: 0.5 }} />
+  ) : (
+    // Wrapper trägt den pulsierenden Glow, das Bild die statische Wave (getrennt = kein Glow-Flackern).
+    <div className="flame-glow" style={{ width, height }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={lv.src} alt="" className="flame-wave" style={{ width, height, display: 'block' }} />
+    </div>
+  );
   return (
     <div style={{ position: 'relative', width, height }}>
       {/* Feuer-„Wave"-Filter (mittlere Stärke, zwischen normal und stark) — bewegt die Freisteller-Kanten. */}
@@ -34,16 +44,8 @@ export default function StreakFlame({ days, height = 120, dim }: { days: number;
           <feDisplacementMap in="SourceGraphic" in2="n" scale="11" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </svg>
-      {off ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={lv.src} alt="" style={{ width, height, display: 'block', filter: 'grayscale(1)', opacity: 0.5 }} />
-      ) : (
-        // Wrapper trägt den pulsierenden Glow, das Bild die statische Wave (getrennt = kein Glow-Flackern).
-        <div className="flame-glow" style={{ width, height }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lv.src} alt="" className="flame-wave" style={{ width, height, display: 'block' }} />
-        </div>
-      )}
+      {/* Flammen-Farbe (Cosmetic) als äußerer Filter — komponiert mit Glow & Wave; die Zahl bleibt weiß. */}
+      {tint ? <div style={{ width, height, filter: tint }}>{flameEl}</div> : flameEl}
       <span style={{
         position: 'absolute', left: `${lv.cx * 100}%`, top: `${lv.cy * 100}%`, transform: 'translate(-50%, -50%)',
         fontWeight: 800, fontSize: `${fontPx}px`, lineHeight: 1, color: '#fff',

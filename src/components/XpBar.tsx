@@ -9,13 +9,14 @@ export interface XpData { level: number; into: number; span: number; pct: number
  *  `right` ersetzt die XP-Zahl rechts (z. B. um die Streak einzublenden).
  *  `color` überschreibt die Balkenfarbe (Premium-Cosmetic „XP-Leiste"). */
 export default function XpBar({ data, compact = false, right, color }: { data: XpData; compact?: boolean; right?: ReactNode; color?: string | null }) {
-  const fill = color
-    ? `linear-gradient(90deg, ${color}, ${color})`
-    : `linear-gradient(90deg, ${data.rank.color}, var(--accent))`;
+  // `color` ist ein fertiger Verlauf (Cosmetic) oder null → Rang-Verlauf. Fürs Label-Text
+  // wird der erste Farbstopp herausgezogen (ein Verlauf taugt nicht als Textfarbe).
+  const fill = color ?? `linear-gradient(90deg, ${data.rank.color}, var(--accent))`;
+  const labelColor = color?.match(/#[0-9a-fA-F]{3,8}/)?.[0] ?? data.rank.color;
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-bold" style={{ color: color ?? data.rank.color }}>
+        <span className="text-xs font-bold" style={{ color: labelColor }}>
           Lvl {data.level} · {data.rank.name}
         </span>
         {right ?? (!compact && (

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useUser } from '@/components/UserProvider';
 import { colorFor, initials, PALETTE } from '@/lib/avatar';
+import StreakFlame from '@/components/StreakFlame';
 import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, beltSkin, xpBarColor, type CosmeticCategory } from '@/lib/cosmetics';
 
 export default function SpindPage() {
@@ -73,7 +74,7 @@ export default function SpindPage() {
         </div>
       );
     }
-    return <span className="text-2xl" style={{ filter: flameFilter(id), display: 'inline-block' }}>🔥</span>;
+    return <StreakFlame days={7} height={38} tint={flameFilter(id)} />;
   }
 
   return (
@@ -87,10 +88,9 @@ export default function SpindPage() {
             <span className="font-display text-5xl" style={{ color: c }}>{initials(name)}</span>
           </div>
           <div className="font-display text-3xl tracking-wide" style={nameplateStyle(cos.nameplate)}>{name}</div>
-          <div className="mt-2">
-            <span className="chip" style={{ borderColor: 'var(--accent-2)', color: 'var(--accent-2)' }}>
-              <span style={{ filter: flameFilter(cos.flame), display: 'inline-block' }}>🔥</span> 12 Tage
-            </span>
+          <div className="mt-3 flex flex-col items-center">
+            <StreakFlame days={12} height={76} tint={flameFilter(cos.flame)} />
+            <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--muted)] mt-1">Tage Streak</div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={beltSkin(cos.belt).src} alt="Gürtel" className="w-full mt-4" style={{ aspectRatio: '1400 / 319', objectFit: 'contain' }} />

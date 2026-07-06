@@ -8,14 +8,23 @@ import type { CSSProperties } from 'react';
 export type CosmeticCategory = 'nameplate' | 'avatarFrame' | 'flame' | 'belt' | 'xpbar';
 export interface CosmeticItem { id: string; label: string; minLevel: number; sku?: string }
 
-/** Premium-Farben der XP-Leiste (Supporter). 'default' = Rangfarbe (kein Override). */
-export const XPBAR_COLORS: Record<string, string> = {
-  crimson: '#ff3b30', orange: '#f59e0b', gold: '#f5c518', lime: '#84cc16', green: '#22c55e',
-  teal: '#2dd4bf', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', pink: '#ec4899',
+/** Premium-Verläufe der XP-Leiste (Supporter). 'default' = Rangfarbe (kein Override).
+ *  Jede Farbe ist ein zweistufiger Verlauf (satt → hell) für einen glänzenden Look. */
+export const XPBAR_GRADIENTS: Record<string, string> = {
+  crimson: 'linear-gradient(90deg, #ff3b30, #ff8a3d)',
+  orange: 'linear-gradient(90deg, #f97316, #fbbf24)',
+  gold: 'linear-gradient(90deg, #eab308, #fde047)',
+  lime: 'linear-gradient(90deg, #65a30d, #bef264)',
+  green: 'linear-gradient(90deg, #16a34a, #4ade80)',
+  teal: 'linear-gradient(90deg, #0d9488, #5eead4)',
+  sky: 'linear-gradient(90deg, #0ea5e9, #7dd3fc)',
+  blue: 'linear-gradient(90deg, #2563eb, #60a5fa)',
+  purple: 'linear-gradient(90deg, #7c3aed, #c084fc)',
+  pink: 'linear-gradient(90deg, #db2777, #f9a8d4)',
 };
 export function xpBarColor(id?: string): string | null {
   if (!id || id === 'default') return null;
-  return XPBAR_COLORS[id] ?? null;
+  return XPBAR_GRADIENTS[id] ?? null;
 }
 
 /** Gürtel-Skins. Gleiches Template (8779×2000) → identische Plattengeometrie,
