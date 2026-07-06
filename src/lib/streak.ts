@@ -2,6 +2,7 @@ import { berlinNow, weekStartOf } from './berlin-time';
 import { isHolidayIn } from './holidays';
 import { CUTOVER } from './bitch-scoring';
 import { loadWeekPlan } from './schedule';
+import { isTestAccount, TEST_STREAK_DAYS, TEST_STREAK_WEEKS } from './dev-override';
 
 /**
  * Persönliche Trainings-Streak in zwei Einheiten:
@@ -33,6 +34,7 @@ function addDaysStr(dateStr: string, n: number): string {
 export interface Streak { days: number; weeks: number; }
 
 export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW'): Promise<Streak> {
+  if (await isTestAccount(sql, user)) return { days: TEST_STREAK_DAYS, weeks: TEST_STREAK_WEEKS };
   // Geplante Tage pro KW: fester Plan, überschrieben durch eine KW-Abweichung, falls gesetzt.
   const plan = await loadWeekPlan(sql, user);
   if (!plan.hasAny) return { days: 0, weeks: 0 };

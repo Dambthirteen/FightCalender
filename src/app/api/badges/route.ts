@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { canViewProfile, getMyGroups, getUserBundesland } from '@/lib/groups';
 import { getStreak } from '@/lib/streak';
-import { earnedBadges, earnedFightBadges, earnedTournamentBadges, badgeById, ADMIN_BADGE, DOPPELMORAL_BADGE, type BadgeDef } from '@/lib/badges';
+import { earnedBadges, earnedFightBadges, earnedTournamentBadges, badgeById, ADMIN_BADGE, DOPPELMORAL_BADGE, ALL_BADGES, type BadgeDef } from '@/lib/badges';
+import { isTestAccount } from '@/lib/dev-override';
 import { createNotification } from '@/lib/notify';
 import { broadcastToGroup } from '@/lib/feed';
 import { grantStreakPoint, currentWeekRef, STREAK_POINT_CAP } from '@/lib/streak-points';
@@ -24,6 +25,8 @@ async function isGroupAdmin(user: string): Promise<boolean> {
 async function computeEarned(sql: Sql, user: string, weeks: number): Promise<{ badges: BadgeDef[]; competitions: number }> {
   const compRows = (await sql`SELECT COUNT(*)::int AS n FROM competitions WHERE user_name = ${user}`) as { n: number }[];
   const competitions = compRows[0]?.n ?? 0;
+  // Test-Account: alle Trophäen freigeschaltet (der Award-Loop im GET wird separat übersprungen).
+  if (await isTestAccount(sql, user)) return { badges: [...ALL_BADGES], competitions };
   const judgedRows = (await sql`SELECT COUNT(*)::int AS n FROM excuse_votes WHERE voter_name = ${user}`) as { n: number }[];
   const judged = judgedRows[0]?.n ?? 0;
 
@@ -68,7 +71,8 @@ export async function GET(req: NextRequest) {
     const { badges: earned, competitions } = await computeEarned(sql, user, weeks);
 
     // Neu freigeschaltete Abzeichen einmalig verleihen + benachrichtigen; Streak-Badge gibt einen Streak-Punkt.
-    try {
+    // Für Test-Accounts überspringen — sonst würde jede der ~24 Trophäen eine Benachrichtigung auslösen.
+    if (!(await isTestAccount(sql, user))) try {
       const awarded = (await sql`SELECT badge_id FROM badges_awarded WHERE user_name = ${user}`) as { badge_id: string }[];
       const known = new Set(awarded.map((r) => r.badge_id));
       for (const b of earned) {

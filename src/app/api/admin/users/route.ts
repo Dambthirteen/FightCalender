@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
       u.created_at,
       (u.user_name IS NOT NULL) AS has_account,
       (EXISTS (SELECT 1 FROM user_entitlements e WHERE e.user_name = n.user_name AND e.sku = 'supporter')) AS is_supporter,
+      COALESCE(u.is_test, false) AS is_test,
       (SELECT COUNT(*)::int FROM attendance a WHERE a.user_name = n.user_name) AS attend_count,
       (SELECT COUNT(*)::int FROM skipping s WHERE s.user_name = n.user_name) AS skip_count,
       (SELECT COUNT(*)::int FROM user_schedule us WHERE us.user_name = n.user_name) AS schedule_count

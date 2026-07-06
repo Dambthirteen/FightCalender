@@ -7,6 +7,8 @@
  * Alles personenbezogen (global über alle Gruppen) — Level ist deine Fighter-Reise.
  */
 
+import { isTestAccount, TEST_LEVEL } from './dev-override';
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Sql = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
 
@@ -67,6 +69,10 @@ export interface XpBreakdown { attend: number; comp: number; win: number; lob: n
 
 /** Leitet die Gesamt-XP einer Person aus den vorhandenen Tabellen ab. */
 export async function computeXp(sql: Sql, user: string): Promise<{ xp: number; breakdown: XpBreakdown }> {
+  if (await isTestAccount(sql, user)) {
+    const xp = cumulativeXp(TEST_LEVEL);
+    return { xp, breakdown: { attend: xp, comp: 0, win: 0, lob: 0, gigalob: 0, vote: 0 } };
+  }
   const [a] = (await sql`SELECT COUNT(*)::int AS n FROM attendance WHERE user_name = ${user}`) as { n: number }[];
   const [comp] = (await sql`
     SELECT COUNT(*)::int AS n, COUNT(*) FILTER (WHERE result = 'win')::int AS wins

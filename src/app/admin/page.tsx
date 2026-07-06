@@ -19,7 +19,7 @@ export default function AdminPage() {
   const [classes, setClasses] = useState<GymClass[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
 
-  interface UserRow { user_name: string; created_at: string | null; has_account: boolean; attend_count: number; skip_count: number; schedule_count: number; is_supporter: boolean; }
+  interface UserRow { user_name: string; created_at: string | null; has_account: boolean; attend_count: number; skip_count: number; schedule_count: number; is_supporter: boolean; is_test: boolean; }
   const [users, setUsers] = useState<UserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
@@ -109,6 +109,21 @@ export default function AdminPage() {
       if (!res.ok) throw new Error();
     } catch {
       setUsers(prev => prev.map(u => u.user_name === userName ? { ...u, is_supporter: !next } : u));
+    }
+  }
+
+  // Test-/Dev-Account umschalten: erzwingt Level 99, Streak 500 & alle Trophäen; stellt das Profil auf privat.
+  async function toggleTest(userName: string, next: boolean) {
+    if (next && !confirm(`"${userName}" als Test-Account markieren? Level 99, Streak 500 und alle Trophäen werden erzwungen, das Profil wird auf privat gestellt.`)) return;
+    setUsers(prev => prev.map(u => u.user_name === userName ? { ...u, is_test: next } : u));
+    try {
+      const res = await fetch('/api/admin/test-account', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-password': password },
+        body: JSON.stringify({ userName, action: next ? 'enable' : 'disable' }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setUsers(prev => prev.map(u => u.user_name === userName ? { ...u, is_test: !next } : u));
     }
   }
 
@@ -436,6 +451,11 @@ export default function AdminPage() {
                       title={u.is_supporter ? 'Supporter entziehen' : 'Supporter geben'}
                       className="text-sm px-1 transition-opacity" style={{ opacity: u.is_supporter ? 1 : 0.3 }}>
                       ⭐
+                    </button>
+                    <button onClick={() => toggleTest(u.user_name, !u.is_test)}
+                      title={u.is_test ? 'Test-Account aufheben' : 'Als Test-Account (Lvl 99, Streak 500, alle Trophäen, privat)'}
+                      className="text-sm px-1 transition-opacity" style={{ opacity: u.is_test ? 1 : 0.3 }}>
+                      🧪
                     </button>
                     <button onClick={() => deleteUser(u.user_name)}
                       className="text-[var(--faint)] hover:text-[var(--accent)] transition-colors text-sm px-1">
