@@ -18,8 +18,8 @@
    FIGHT NIGHT — Design-System
    ============================================================ */
 :root {
-  --bg: #08080a;
-  --bg-elev: #0d0d10;
+  --bg: #100b08;        /* warmer, leicht heller (vorher #08080a) */
+  --bg-elev: #16100b;
   --surface: #121216;
   --surface-2: #17171c;
   --border: #26262e;
@@ -44,12 +44,13 @@ body {
   font-family: var(--font-body), system-ui, sans-serif;
   color: var(--text);
   background-color: var(--bg);
-  /* atmosphärischer, geschichteter Hintergrund */
+  /* atmosphärischer, geschichteter Hintergrund — wärmer/oranger, mehr Variation */
   background-image:
-    radial-gradient(1100px 640px at 86% -10%, rgba(255, 59, 48, 0.14), transparent 60%),
-    radial-gradient(820px 520px at -14% 4%, rgba(30, 199, 218, 0.07), transparent 55%),
-    radial-gradient(900px 760px at 50% 118%, rgba(255, 194, 75, 0.05), transparent 60%),
-    radial-gradient(140% 120% at 50% 26%, transparent 58%, rgba(0, 0, 0, 0.55) 100%);
+    radial-gradient(1100px 640px at 86% -8%, rgba(255, 106, 61, 0.20), transparent 60%),
+    radial-gradient(760px 500px at -12% 2%, rgba(30, 199, 218, 0.05), transparent 55%),
+    radial-gradient(1000px 820px at 50% 116%, rgba(255, 150, 64, 0.11), transparent 62%),
+    radial-gradient(1200px 900px at 18% 88%, rgba(255, 122, 50, 0.07), transparent 60%),
+    radial-gradient(150% 125% at 50% 24%, transparent 64%, rgba(0, 0, 0, 0.45) 100%);
   min-height: 100svh;
   /* Safe-Area: nicht mehr unter der iPhone-Kamera / Home-Indicator */
   padding-top: env(safe-area-inset-top);
