@@ -65,6 +65,20 @@ export default function VotePage() {
       .finally(() => setLoading(false));
   }, [monthKey, userName]);
 
+  // Live-Update: solange das Voting offen ist, den Tally alle 4 s nachladen (wie im Chat) —
+  // so sieht auch der Einreicher die Stimmen auf seine eigene Ausrede in Echtzeit reinkommen.
+  useEffect(() => {
+    if (!userName || hardMode === false || info.isPast) return;
+    const iv = setInterval(() => {
+      if (voting !== null) return; // laufende eigene Abstimmung nicht überschreiben
+      fetch(`/api/vote?month=${monthKey}&voter=${encodeURIComponent(userName)}`)
+        .then(r => r.json())
+        .then(d => { if (Array.isArray(d)) setExcuses(d); })
+        .catch(() => {});
+    }, 4000);
+    return () => clearInterval(iv);
+  }, [userName, monthKey, hardMode, info.isPast, voting]);
+
   // Ist das Gericht in der aktuellen Gruppe überhaupt an (harter Modus)?
   useEffect(() => {
     fetch('/api/groups').then(r => r.json()).then(d => {
@@ -185,6 +199,19 @@ export default function VotePage() {
                     ❌ Gilt nicht <span className="opacity-60">({e.reject_count})</span>
                   </button>
                 </>
+              ) : isOwn && !info.isPast ? (
+                // Live-Stand der eigenen Ausrede (aktualisiert sich per Polling)
+                <div className="flex items-center gap-2 text-xs w-full">
+                  <span className="inline-flex items-center gap-1 text-[var(--faint)]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> live
+                  </span>
+                  <span className="text-green-500">✅ {e.accept_count}</span>
+                  <span className="text-red-500">❌ {e.reject_count}</span>
+                  <span className="ml-auto font-semibold"
+                    style={{ color: total === 0 ? 'var(--faint)' : e.accept_count > e.reject_count ? '#22c55e' : e.accept_count < e.reject_count ? '#ef4444' : 'var(--muted)' }}>
+                    {total === 0 ? 'Noch keine Stimmen' : e.accept_count > e.reject_count ? 'Gilt aktuell' : e.accept_count < e.reject_count ? 'Kippt gerade' : 'Unentschieden'}
+                  </span>
+                </div>
               ) : (
                 total > 0 ? (
                   <div className="flex gap-3 text-xs text-[var(--muted)]">
@@ -279,7 +306,8 @@ export default function VotePage() {
             {/* Own excuses — always visible to yourself */}
             {ownExcuses.length > 0 && (
               <section>
-                <h3 className="section-label mb-3">Deine Ausreden</h3>
+                <h3 className="section-label mb-1">Deine Ausreden</h3>
+                {!info.isPast && <p className="text-[11px] text-[var(--faint)] mb-3">Die Stimmen aktualisieren sich live, während die Crew richtet.</p>}
                 <div className="space-y-3">
                   {ownExcuses.map(e => <ExcuseCard key={e.id} e={e} canVote={false} />)}
                 </div>
