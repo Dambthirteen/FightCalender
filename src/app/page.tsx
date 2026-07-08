@@ -16,7 +16,7 @@ import type { GymClass, AttendanceRecord } from '@/lib/db';
 
 // Kursfarbe → Hex (für Dots, Badges, Ränder)
 const COLOR_HEX: Record<string, string> = {
-  red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7',
+  red: '#ff8a80', blue: '#93b7f7', green: '#8fe0b0', orange: '#ffbf80', purple: '#c9a3f5',
 };
 const hex = (c: string) => COLOR_HEX[c] ?? COLOR_HEX.red;
 const hhmmToMin = (t: string) => { const [h, m] = t.split(':').map(Number); return (h || 0) * 60 + (m || 0); };
@@ -628,7 +628,7 @@ export default function Home() {
                                   const mine = a.user_name === userName;
                                   return (
                                     <span key={a.user_name} className="text-[10px] font-semibold px-1.5 py-px rounded-[3px]"
-                                      style={{ background: uc, color: '#fff', boxShadow: mine ? '0 0 0 1.5px rgba(255,255,255,0.6)' : 'none' }}>
+                                      style={{ background: uc, color: '#15151b', boxShadow: mine ? '0 0 0 1.5px rgba(255,255,255,0.6)' : 'none' }}>
                                       {a.user_name}
                                     </span>
                                   );

@@ -7,7 +7,7 @@ import type { GymClass } from '@/lib/db';
 const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 const COLORS = ['red', 'blue', 'green', 'orange', 'purple'];
 const COLOR_HEX: Record<string, string> = {
-  red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7',
+  red: '#ff8a80', blue: '#93b7f7', green: '#8fe0b0', orange: '#ffbf80', purple: '#c9a3f5',
 };
 
 export default function AdminPage() {

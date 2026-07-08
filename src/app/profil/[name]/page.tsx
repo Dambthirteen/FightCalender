@@ -116,7 +116,7 @@ type Tab = (typeof TABS)[number][0];
 
 // Kursfarben (wie auf der Startseite) → für den Trainingsplan.
 const CLASS_COLOR: Record<string, string> = {
-  red: '#ff3b30', blue: '#3b82f6', green: '#22c55e', orange: '#f59e0b', purple: '#a855f7',
+  red: '#ff8a80', blue: '#93b7f7', green: '#8fe0b0', orange: '#ffbf80', purple: '#c9a3f5',
 };
 const classHex = (c: string) => CLASS_COLOR[c] ?? CLASS_COLOR.red;
 const DAY_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
