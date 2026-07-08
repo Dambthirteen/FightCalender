@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * Persönliche Trainings-Statistik im Profil-Stats-Tab: Kennzahl-Kacheln, Kurs-Aufteilung (Donut),
@@ -74,6 +75,8 @@ function Tile({ value, label, sub, onClick }: { value: React.ReactNode; label: s
 export default function ProfileStats({ user, comps }: { user: string; comps: { result: string | null }[] }) {
   const [a, setA] = useState<Analytics | null>(null);
   const [info, setInfo] = useState<{ title: string; body: React.ReactNode } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     fetch(`/api/profile/analytics?user=${encodeURIComponent(user)}`).then((r) => r.json())
@@ -263,11 +266,12 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
         </div>
       )}
 
-      {/* Erklär-Popup beim Tippen auf eine Kennzahl */}
-      {info && (
-        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm anim-in"
+      {/* Erklär-Popup — via Portal an <body>, damit es garantiert mittig überm ganzen
+          Screen liegt (nicht unter der Fußleiste, egal wie tief die Kachel verschachtelt ist). */}
+      {mounted && info && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm anim-in px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setInfo(null); }}>
-          <div className="card w-full max-w-sm p-5 anim-up rounded-b-none sm:rounded-2xl">
+          <div className="card w-full max-w-sm p-5 anim-up rounded-2xl">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-display text-xl tracking-wide">{info.title}</h2>
               <button onClick={() => setInfo(null)} className="text-[var(--faint)] hover:text-white text-lg px-1">✕</button>
@@ -275,7 +279,8 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
             <div className="text-sm text-[var(--muted)] space-y-2">{info.body}</div>
             <button onClick={() => setInfo(null)} className="btn btn-primary w-full mt-4">Verstanden</button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
