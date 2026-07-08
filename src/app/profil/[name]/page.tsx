@@ -10,6 +10,7 @@ import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, TOURN
 import XpBar, { type XpData } from '@/components/XpBar';
 import LoadingScreen from '@/components/LoadingScreen';
 import ProfileGallery from '@/components/ProfileGallery';
+import ProfileStats from '@/components/ProfileStats';
 import { nameplateStyle, avatarFrame, flameFilter, beltSkin, beltFxClass, xpBarColor } from '@/lib/cosmetics';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
@@ -985,6 +986,7 @@ export default function ProfilePage() {
             {/* --- Tab: Stats --- */}
             {tab === 'stats' && (
               <div className="space-y-5 anim-in">
+                <ProfileStats user={name} comps={comps} />
                 <div>
                   <div className="section-label mb-2.5">Titel &amp; Anwesenheit</div>
                   <div className="flex gap-2.5">
