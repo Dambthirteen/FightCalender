@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 
-// Monetarisierungs-Backbone („Tap In Plus"). Alles hier ist rein additiv und
+// Monetarisierungs-Backbone („Submit Plus"). Alles hier ist rein additiv und
 // schläft, bis die Flags gesetzt werden — ohne MONETIZATION_ACTIVE verhält sich
 // die App exakt wie ohne Monetarisierung (alles frei).
 function getSql() {

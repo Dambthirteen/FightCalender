@@ -25,7 +25,7 @@ export default function InviteFriends() {
     if (!code) return;
     setMsg(''); track('invite_shared', { method: 'share', via: 'members' });
     if (typeof navigator !== 'undefined' && navigator.share) {
-      try { await navigator.share({ title: 'Tap In', text: 'Komm in unsere Crew auf Tap In!', url: url() }); } catch { /* abgebrochen */ }
+      try { await navigator.share({ title: 'Submit', text: 'Komm in unsere Crew auf Submit!', url: url() }); } catch { /* abgebrochen */ }
     } else {
       try { await navigator.clipboard.writeText(url()); setMsg('Link kopiert.'); } catch {}
     }
@@ -52,7 +52,7 @@ export default function InviteFriends() {
     <section className="card p-5">
       <h2 className="font-display text-xl tracking-wide mb-1">Freunde einladen</h2>
       <p className="text-sm text-[var(--muted)] mb-4">
-        Teil den Link — wer noch kein Tap In hat, landet direkt auf der Anmeldung und ist danach automatisch in eurer Crew.
+        Teil den Link — wer noch kein Submit hat, landet direkt auf der Anmeldung und ist danach automatisch in eurer Crew.
       </p>
       <div className="flex gap-2">
         <button onClick={share} className="flex-1 text-white font-bold py-2.5 rounded-xl" style={{ background: 'var(--accent)' }}>Einladung teilen</button>

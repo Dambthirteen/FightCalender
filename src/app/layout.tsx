@@ -13,12 +13,12 @@ const display = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--fon
 const sans = Sora({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Tap In",
+  title: "Submit",
   description: "Wer kommt diese Woche? Trainingsplan für deine Crew.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Tap In",
+    title: "Submit",
     statusBarStyle: "black-translucent",
   },
 };

@@ -185,7 +185,7 @@ export default function GroupsPage() {
     setInviteMsg('');
     track('invite_shared', { method: 'share' });
     if (typeof navigator !== 'undefined' && navigator.share) {
-      try { await navigator.share({ title: 'Tap In', text: 'Komm in unsere Crew!', url: inviteUrl() }); } catch { /* abgebrochen */ }
+      try { await navigator.share({ title: 'Submit', text: 'Komm in unsere Crew!', url: inviteUrl() }); } catch { /* abgebrochen */ }
     } else {
       try { await navigator.clipboard.writeText(inviteUrl()); setInviteMsg('Link kopiert.'); } catch {}
     }

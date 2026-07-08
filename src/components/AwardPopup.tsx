@@ -157,7 +157,10 @@ export default function AwardPopup() {
       <Overlay onClose={dismissCongrat}>
         <div className="card award-pop w-full max-w-sm p-7 text-center relative overflow-hidden" style={{ borderColor: m.color }}>
           {isMacher && <Confetti />}
-          <div className="text-7xl mb-3 award-bounce">{m.emoji}</div>
+          {congrat.kind === 'bitch'
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src="/logo-chicken.png" alt="" className="w-24 h-24 mx-auto mb-3 award-bounce object-contain" />
+            : <div className="text-7xl mb-3 award-bounce">{m.emoji}</div>}
           <div className="text-[11px] uppercase tracking-[0.2em] text-[var(--faint)]">{congrat.groupName} · {monthLabel(congrat.month)}</div>
           <h2 className="font-display text-2xl tracking-wide mt-2">{isMacher ? 'Glückwunsch!' : 'Autsch.'}</h2>
           <p className="text-lg mt-1">Du bist <strong style={{ color: m.color }}>{isMacher ? macherMonth(gender) : m.label}</strong></p>

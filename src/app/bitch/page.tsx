@@ -39,7 +39,7 @@ export default function BitchPage() {
 
   return (
     <div className="min-h-screen text-[var(--text)]">
-      <PageHeader title="🐔 Chicken des Monats" />
+      <PageHeader title="Chicken des Monats" icon="/logo-chicken.png" />
 
       <main className="max-w-md mx-auto px-4 pb-24">
         {/* Monats-Navigation */}

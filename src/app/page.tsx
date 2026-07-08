@@ -521,7 +521,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <img src="/logo-chicken.png" alt="Submit" className="w-11 h-11 object-contain shrink-0" />
           <div>
-            <h1 className="font-display text-2xl leading-none tracking-wide">Tap In</h1>
+            <h1 className="font-display text-2xl leading-none tracking-wide">Submit</h1>
             <p className="text-[var(--muted)] text-[11px] mt-1 uppercase tracking-[0.18em]">Wer kommt diese Woche?</p>
           </div>
         </div>

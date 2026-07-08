@@ -1,7 +1,7 @@
 // E-Mail-Versand über Resend (per REST, keine zusätzliche Abhängigkeit).
 // Ohne RESEND_API_KEY: kompletter No-op (gibt false zurück) — nichts crasht.
 
-const FROM = process.env.RESEND_FROM || 'Tap In <onboarding@resend.dev>';
+const FROM = process.env.RESEND_FROM || 'Submit <onboarding@resend.dev>';
 
 export function isEmailConfigured(): boolean {
   return !!process.env.RESEND_API_KEY;
@@ -37,7 +37,7 @@ function shell(title: string, body: string, cta: { href: string; label: string }
 export function verifyEmailHtml(baseUrl: string, token: string): { subject: string; html: string } {
   const href = `${baseUrl}/verify?token=${token}`;
   return {
-    subject: 'Bestätige deine E-Mail für Tap In',
+    subject: 'Bestätige deine E-Mail für Submit',
     html: shell('E-Mail bestätigen', 'Tippe auf den Button, um deine E-Mail-Adresse zu bestätigen. Der Link gilt 24 Stunden.', { href, label: 'E-Mail bestätigen' }),
   };
 }
@@ -45,7 +45,7 @@ export function verifyEmailHtml(baseUrl: string, token: string): { subject: stri
 export function resetPasswordHtml(baseUrl: string, token: string): { subject: string; html: string } {
   const href = `${baseUrl}/reset?token=${token}`;
   return {
-    subject: 'Passwort zurücksetzen – Tap In',
+    subject: 'Passwort zurücksetzen – Submit',
     html: shell('Passwort zurücksetzen', 'Du (oder jemand) hat einen Reset angefragt. Über den Button setzt du ein neues Passwort. Der Link gilt 1 Stunde. Ignorier die Mail, falls du das nicht warst.', { href, label: 'Neues Passwort setzen' }),
   };
 }

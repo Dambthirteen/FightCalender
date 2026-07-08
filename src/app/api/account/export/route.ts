@@ -11,7 +11,7 @@ export async function GET() {
   return new NextResponse(JSON.stringify(data, null, 2), {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Content-Disposition': `attachment; filename="tapin-daten-${safeName}.json"`,
+      'Content-Disposition': `attachment; filename="submit-daten-${safeName}.json"`,
     },
   });
 }

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 // Impressum nach § 5 DDG (ehem. TMG). Vor breitem Launch anwaltlich prüfen lassen.
-export const metadata = { title: 'Impressum · Tap In' };
+export const metadata = { title: 'Impressum · Submit' };
 
 export default function ImpressumPage() {
   return (

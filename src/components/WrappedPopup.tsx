@@ -97,10 +97,10 @@ function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
       });
       if (!blob) return;
       track('wrapped_shared', { month: data.month });
-      const file = new File([blob], `tapin-wrapped-${data.month}.png`, { type: 'image/png' });
+      const file = new File([blob], `submit-wrapped-${data.month}.png`, { type: 'image/png' });
       const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
       if (nav.canShare && nav.canShare({ files: [file] }) && navigator.share) {
-        try { await navigator.share({ files: [file], title: 'Tap In', text: 'Mein Trainingsmonat' }); } catch { /* abgebrochen */ }
+        try { await navigator.share({ files: [file], title: 'Submit', text: 'Mein Trainingsmonat' }); } catch { /* abgebrochen */ }
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
@@ -144,7 +144,10 @@ function Story({ data, onClose }: { data: WrappedData; onClose: () => void }) {
           </div>
         ) : card ? (
           <div key={i} className="anim-pop">
-            <div className="text-6xl mb-4">{card.emoji}</div>
+            {card.emoji === '🐔'
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src="/logo-chicken.png" alt="" className="w-20 h-20 mx-auto mb-4 object-contain" />
+              : <div className="text-6xl mb-4">{card.emoji}</div>}
             <div className="section-label mb-2" style={{ color: card.color }}>{card.label}</div>
             <div className="font-display text-4xl tracking-wide leading-tight">{card.big}</div>
             {card.sub && <div className="text-[var(--muted)] mt-3 max-w-xs mx-auto">{card.sub}</div>}

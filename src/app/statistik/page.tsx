@@ -1,16 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 interface Row { user_name: string; n: number }
 const MEDAL = ['🥇', '🥈', '🥉'];
 
-function Board({ title, color, rows, unit }: { title: string; color: string; rows: Row[]; unit: string }) {
+// Kleines textloses Logo (ersetzt das 🐔-Emoji in Titeln/Boards).
+function ChickenMark({ size = 20 }: { size?: number }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/logo-chicken.png" alt="" style={{ width: size, height: size }} className="object-contain shrink-0" />;
+}
+
+function Board({ title, color, rows, unit }: { title: ReactNode; color: string; rows: Row[]; unit: string }) {
   return (
     <div className="card overflow-hidden flex-1 min-w-0">
-      <div className="px-3 py-2 border-b text-center font-display text-lg tracking-wide"
+      <div className="px-3 py-2 border-b text-center font-display text-lg tracking-wide flex items-center justify-center gap-1.5"
         style={{ borderColor: 'var(--border-soft)', color }}>{title}</div>
       <div className="divide-y" style={{ borderColor: 'var(--border-soft)' }}>
         {rows.length === 0 && <div className="px-3 py-5 text-center text-[11px] text-[var(--faint)]">noch leer</div>}
@@ -74,7 +80,7 @@ export default function StatistikPage() {
               <div className="text-[11px] uppercase tracking-[0.2em] text-[var(--faint)] mb-2">{format(now, 'MMMM yyyy', { locale: de })}</div>
               <div className="flex gap-3">
                 <Board title="💪 Macher" color="var(--gold)" rows={macherM} unit="Trainings" />
-                <Board title="🐔 Chicken" color="var(--bitch)" rows={bitchM} unit="Fehltage" />
+                <Board title={<><ChickenMark size={18} /> Chicken</>} color="var(--bitch)" rows={bitchM} unit="Fehltage" />
               </div>
             </section>
 
@@ -82,7 +88,7 @@ export default function StatistikPage() {
               <div className="text-[11px] uppercase tracking-[0.2em] text-[var(--faint)] mb-2">Jahr {year}</div>
               <div className="flex gap-3">
                 <Board title="💪 Macher" color="var(--gold)" rows={macherY} unit="Trainings" />
-                <Board title="🐔 Chicken" color="var(--bitch)" rows={bitchY} unit="Fehltage" />
+                <Board title={<><ChickenMark size={18} /> Chicken</>} color="var(--bitch)" rows={bitchY} unit="Fehltage" />
               </div>
             </section>
           </>

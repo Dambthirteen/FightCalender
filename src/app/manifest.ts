@@ -5,8 +5,8 @@ import type { MetadataRoute } from "next";
 // (Standalone-Anzeige ohne Browser-Leiste, eigene Farben).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Tap In",
-    short_name: "Tap In",
+    name: "Submit",
+    short_name: "Submit",
     description: "Wer kommt diese Woche? Trainingsplan für deine Crew.",
     start_url: "/",
     display: "standalone",

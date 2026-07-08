@@ -17,7 +17,7 @@ const SERVER_URL = process.env.CAP_SERVER_URL ?? 'https://fight-calender.vercel.
 
 const config: CapacitorConfig = {
   appId: 'de.everyco.fightcalendar',
-  appName: 'Fight Calendar',
+  appName: 'Submit',
   webDir: 'capacitor-webdir',
   backgroundColor: '#0a0a0a',
   server: {

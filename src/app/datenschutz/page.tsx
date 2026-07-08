@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 // Datenschutzerklärung (DSGVO). Vor breitem Launch anwaltlich prüfen lassen.
-export const metadata = { title: 'Datenschutz · Tap In' };
+export const metadata = { title: 'Datenschutz · Submit' };
 
 export default function DatenschutzPage() {
   return (

@@ -86,7 +86,7 @@ export async function renderWrappedCard(d: WrappedForCard): Promise<Blob | null>
   }
   ctx.fillStyle = '#ffffff';
   setLS(6); display(66);
-  ctx.fillText('TAP IN', cx + 3, 338);
+  ctx.fillText('SUBMIT', cx + 3, 338);
   setLS(0);
   ctx.fillStyle = MUTED;
   font('400 40px');
