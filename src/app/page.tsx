@@ -569,7 +569,7 @@ export default function Home() {
               const myExcuse = skipping.find(s => s.date === dateStr && s.user_name === userName);
               const daysLeft = 3 - Math.round((Date.parse(todayStr) - Date.parse(dateStr)) / 86400000);
               return (
-                <section key={day} className="card overflow-hidden anim-up" style={{ animationDelay: `${idx * 55}ms`, opacity: isPast ? 0.55 : 1 }}>
+                <section key={day} className="card overflow-hidden anim-up" style={{ animationDelay: `${idx * 55}ms`, filter: isPast ? 'grayscale(0.85) opacity(0.55)' : undefined }}>
                   {/* Day header */}
                   <div className="flex items-center justify-between px-4 py-2.5 border-b"
                     style={{
