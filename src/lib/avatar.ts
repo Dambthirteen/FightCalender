@@ -1,5 +1,7 @@
-// Avatar-/Profilfarben-Helfer. Pastell-Palette (gleiche Farbtöne, softer/heller).
-export const PALETTE = ['#ff8a80', '#ffb570', '#ffd98a', '#8fe0b0', '#84d6e0', '#93b7f7', '#c9a3f5', '#f2a0c4'];
+// Avatar-/Profilfarben-Helfer. Zwei wählbare Reihen: kräftig + Pastell (gleiche Farbtöne).
+export const PALETTE_NORMAL = ['#ff3b30', '#ff8c1a', '#ffc24b', '#3ddc84', '#1ec7da', '#3b82f6', '#a855f7', '#ec4899'];
+export const PALETTE_PASTEL = ['#ff8a80', '#ffb570', '#ffd98a', '#8fe0b0', '#84d6e0', '#93b7f7', '#c9a3f5', '#f2a0c4'];
+export const PALETTE = [...PALETTE_NORMAL, ...PALETTE_PASTEL];
 
 /** Deterministische Fallback-Farbe aus dem Namen (falls keine Profilfarbe gesetzt). */
 export function userColor(name: string): string {

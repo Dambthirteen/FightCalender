@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useUser } from '@/components/UserProvider';
-import { colorFor, initials, PALETTE } from '@/lib/avatar';
+import { colorFor, initials, PALETTE_NORMAL, PALETTE_PASTEL } from '@/lib/avatar';
 import StreakFlame from '@/components/StreakFlame';
 import { COSMETICS, nameplateStyle, avatarFrame, flameFilter, beltSkin, beltFxClass, xpBarColor, type CosmeticCategory } from '@/lib/cosmetics';
 
@@ -185,11 +185,18 @@ export default function SpindPage() {
             {group.color && (
               <div>
                 <div className="section-label mb-2.5">Profilfarbe</div>
-                <div className="flex flex-wrap gap-2.5">
-                  {PALETTE.map((col) => (
-                    <button key={col} onClick={() => pickColor(col)}
-                      className="w-9 h-9 rounded-full transition-transform active:scale-90"
-                      style={{ background: col, outline: color === col ? '2px solid #fff' : 'none', outlineOffset: '2px' }} />
+                <div className="space-y-2.5">
+                  {([['Kräftig', PALETTE_NORMAL], ['Pastell', PALETTE_PASTEL]] as const).map(([label, pal]) => (
+                    <div key={label}>
+                      <div className="text-[10px] text-[var(--faint)] mb-1">{label}</div>
+                      <div className="flex flex-wrap gap-2.5">
+                        {pal.map((col) => (
+                          <button key={col} onClick={() => pickColor(col)}
+                            className="w-9 h-9 rounded-full transition-transform active:scale-90"
+                            style={{ background: col, outline: color === col ? '2px solid #fff' : 'none', outlineOffset: '2px' }} />
+                        ))}
+                      </div>
+                    </div>
                   ))}
                   <button onClick={() => pickColor(null)} title="Automatisch"
                     className="w-9 h-9 rounded-full grid place-items-center text-[10px] border border-[var(--border)] text-[var(--muted)]"

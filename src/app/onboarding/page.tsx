@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { ARTS, SKILLS, artBelts } from '@/lib/fighter';
 import { GENDERS, competitorLabel } from '@/lib/gender';
-import { PALETTE, initials, colorFor } from '@/lib/avatar';
+import { PALETTE_NORMAL, PALETTE_PASTEL, initials, colorFor } from '@/lib/avatar';
 import { track } from '@/lib/analytics';
 
 // Bild im Browser auf 256×256 (cover) verkleinern → JPEG-Data-URL (wie im Profil).
@@ -212,11 +212,18 @@ export default function OnboardingPage() {
               </div>
               <div>
                 <div className="section-label mb-2">Deine Farbe</div>
-                <div className="flex flex-wrap gap-2">
-                  {PALETTE.map(c => (
-                    <button key={c} onClick={() => setColor(c === color ? null : c)} aria-label={`Farbe ${c}`}
-                      className="w-8 h-8 rounded-full active:scale-90 transition-transform"
-                      style={{ background: c, outline: color === c ? '2px solid #fff' : 'none', outlineOffset: '2px' }} />
+                <div className="space-y-2">
+                  {([['Kräftig', PALETTE_NORMAL], ['Pastell', PALETTE_PASTEL]] as const).map(([label, pal]) => (
+                    <div key={label}>
+                      <div className="text-[10px] text-[var(--faint)] mb-1">{label}</div>
+                      <div className="flex flex-wrap gap-2">
+                        {pal.map(c => (
+                          <button key={c} onClick={() => setColor(c === color ? null : c)} aria-label={`Farbe ${c}`}
+                            className="w-8 h-8 rounded-full active:scale-90 transition-transform"
+                            style={{ background: c, outline: color === c ? '2px solid #fff' : 'none', outlineOffset: '2px' }} />
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
