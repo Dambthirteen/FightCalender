@@ -548,6 +548,31 @@ export async function POST(req: NextRequest) {
         UNIQUE(user_name, badge_id)
       )
     `;
+    // streak_shields: automatisches Meilenstein-Schild (Kontostand, max. 1). Verdient über jeden
+    // zweiten Streak-Meilenstein; schützt automatisch, wenn ein geplantes Training die Streak bräche.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_shields INTEGER NOT NULL DEFAULT 0`;
+    // streak_shield_log: Verdienen-Ledger (ref = badge_id) → jeder Schild-Meilenstein verleiht genau 1×.
+    await sql`
+      CREATE TABLE IF NOT EXISTS streak_shield_log (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        ref VARCHAR(40) NOT NULL,     -- badge_id, der das Schild verliehen hat
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_name, ref)
+      )
+    `;
+    // streak_shield_use: eingelöste Schilde. Deckt ein 3-Tage-Fenster [from_date, until_date] ab
+    // (until_date = der geschützte Fehltag) → diese Tage gelten in der Streak als neutral.
+    await sql`
+      CREATE TABLE IF NOT EXISTS streak_shield_use (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        from_date DATE NOT NULL,
+        until_date DATE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_name, until_date)
+      )
+    `;
 
     // --- Monats-Wrapped: merkt, wer den Rückblick eines Monats schon gesehen hat ---
     await sql`

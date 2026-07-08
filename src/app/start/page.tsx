@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserProvider';
 import { resetAnalytics } from '@/lib/analytics';
-import { nextStreakBadge, STREAK_BADGES } from '@/lib/badges';
+import { nextStreakBadge, nextShieldBadge, STREAK_BADGES } from '@/lib/badges';
 import { isCoach, isFighter } from '@/lib/fighter';
 import { flameFilter } from '@/lib/cosmetics';
 import StreakFlame from '@/components/StreakFlame';
@@ -17,7 +17,7 @@ export default function StartPage() {
   const [pendingVotes, setPendingVotes] = useState(0);
   const [unread, setUnread] = useState(0);
   const [chatUnread, setChatUnread] = useState(0);
-  const [streak, setStreak] = useState({ days: 0, weeks: 0 });
+  const [streak, setStreak] = useState({ days: 0, weeks: 0, shields: 0, shieldUsedRecently: false });
   const [helpOpen, setHelpOpen] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
   const [fbOpen, setFbOpen] = useState(false);
@@ -42,7 +42,7 @@ export default function StartPage() {
       fetch('/api/vote/pending').then((r) => r.json()).then((d) => setPendingVotes(d.pending ?? 0)).catch(() => {}),
       fetch('/api/notifications').then((r) => r.json()).then((d) => setUnread(d.unread ?? 0)).catch(() => {}),
       fetch('/api/chat/read').then((r) => r.json()).then((d) => setChatUnread(d.count ?? 0)).catch(() => {}),
-      fetch('/api/streak').then((r) => r.json()).then((d) => setStreak({ days: d.days ?? 0, weeks: d.weeks ?? 0 })).catch(() => {}),
+      fetch('/api/streak').then((r) => r.json()).then((d) => setStreak({ days: d.days ?? 0, weeks: d.weeks ?? 0, shields: d.shields ?? 0, shieldUsedRecently: !!d.shieldUsedRecently })).catch(() => {}),
       // Flammen-Farbe (Cosmetic) für die Streak-Flamme.
       fetch('/api/cosmetics').then((r) => r.json()).then((d) => setFlameTint(flameFilter(d?.cosmetics?.flame))).catch(() => {}),
       // Accountart: Hobby → Wettkämpfe wandert in die Liste; Rolle → Coach-Trainingsplan-Eintrag.
@@ -54,6 +54,7 @@ export default function StartPage() {
   }, [userLoading, userName]);
 
   const nextBadge = nextStreakBadge(streak.weeks);
+  const nextShield = nextShieldBadge(streak.weeks);
 
   async function logout() {
     resetAnalytics();
@@ -200,7 +201,7 @@ export default function StartPage() {
         {/* Dezenter Hilfe-Button ganz unten */}
         <button onClick={() => setHelpOpen(true)}
           className="w-full text-center text-xs py-2 text-[var(--faint)] hover:text-[var(--muted)] transition-colors">
-          ⓘ Wie bekomme ich XP & Level?
+          ⓘ FAQ – wie funktioniert die App?
         </button>
         <button onClick={() => { setFbMsg(''); setFbOpen(true); }}
           className="w-full text-center text-[11px] py-1 text-[var(--faint)] hover:text-[var(--muted)] transition-colors">
@@ -227,6 +228,32 @@ export default function StartPage() {
               </div>
             </div>
 
+            {/* Streak-Schild — automatischer Schutz aus Meilensteinen */}
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-4"
+              style={{ background: (streak.shields >= 1 || streak.shieldUsedRecently) ? 'var(--accent-soft)' : 'var(--surface-2)' }}>
+              <span className="text-2xl" style={(streak.shields >= 1 || streak.shieldUsedRecently) ? undefined : { filter: 'grayscale(1)', opacity: 0.6 }}>🛡️</span>
+              <div className="flex-1 min-w-0">
+                {streak.shields >= 1 ? (
+                  <>
+                    <div className="text-sm font-semibold">Streak-Schild bereit</div>
+                    <div className="text-[11px] text-[var(--muted)]">Verpasst du ein Training, schützt es deine Streak automatisch 3 Tage lang.</div>
+                  </>
+                ) : streak.shieldUsedRecently ? (
+                  <>
+                    <div className="text-sm font-semibold">Schild aktiv</div>
+                    <div className="text-[11px] text-[var(--muted)]">Es hat gerade deine Streak gerettet. Das nächste gibt&apos;s beim nächsten Schild-Meilenstein.</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm font-semibold">Kein Schild</div>
+                    <div className="text-[11px] text-[var(--muted)]">
+                      {nextShield ? `Nächstes bei ${nextShield.threshold} Wochen — „${nextShield.label}".` : 'Alle Schild-Meilensteine erreicht.'}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
             <div className="section-label mb-2">Trophäen</div>
             <div className="space-y-1.5">
               {STREAK_BADGES.map((b) => {
@@ -237,7 +264,7 @@ export default function StartPage() {
                     <span className="text-xl" style={got ? undefined : { filter: 'grayscale(1)', opacity: 0.6 }}>{b.emoji}</span>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold">{b.label}</div>
-                      <div className="text-[11px] text-[var(--muted)]">{b.hint}</div>
+                      <div className="text-[11px] text-[var(--muted)]">{b.hint}{b.shield ? ' · +1 Schild 🛡️' : ''}</div>
                     </div>
                     <span className="text-[11px] font-bold tnum shrink-0" style={{ color: got ? 'var(--accent-2)' : 'var(--faint)' }}>
                       {got ? '✓ erreicht' : `${b.threshold} Wo`}
@@ -328,10 +355,57 @@ export default function StartPage() {
               </section>
 
               <section>
-                <div className="section-label mb-2">Streak</div>
+                <div className="section-label mb-2">Wochenplan</div>
                 <p className="text-[var(--muted)]">
-                  Trainiere regelmäßig deinen Plan → deine Streak (🔥) wächst und schaltet Abzeichen frei.
-                  Streak-Punkte schützen dich, wenn du mal einen geplanten Tag verpasst.
+                  Dein Wochenplan legt fest, an welchen Tagen du normalerweise trainierst. An diesen Tagen
+                  wirst du erwartet – hier zählen Streak, perfekte Wochen und (falls du fehlst) Bitch-Punkte.
+                  Einmalig anders unterwegs? Du kannst für eine einzelne Woche eine Abweichung setzen, ohne
+                  den festen Plan zu ändern.
+                </p>
+              </section>
+
+              <section>
+                <div className="section-label mb-2">Streak 🔥</div>
+                <p className="text-[var(--muted)] mb-2">
+                  Deine Streak zählt die geplanten Trainings, die du am Stück besucht hast (die große Zahl = Tage).
+                  Erscheinst du an einem geplanten Tag nicht, bricht sie – aber nicht sofort:
+                </p>
+                <ul className="text-[var(--muted)] space-y-1 list-disc pl-4">
+                  <li><strong className="text-[var(--text)]">3 Tage Kulanz:</strong> ein Fehltag bricht erst nach 3 Tagen.</li>
+                  <li><strong className="text-[var(--text)]">Ausrede:</strong> trägst du eine ein, ist der Tag geschützt, solange sie im Gericht nicht abgelehnt wird.</li>
+                  <li><strong className="text-[var(--text)]">Krank / Urlaub &amp; Feiertage:</strong> zählen nie gegen dich.</li>
+                </ul>
+                <p className="text-[var(--muted)] mt-2">
+                  Ganze Wochen ohne Skip schalten die <strong className="text-[var(--text)]">Trophäen</strong> frei (2, 3, 4, 8, 12, 26, 52 Wochen).
+                </p>
+              </section>
+
+              <section>
+                <div className="section-label mb-2">Streak-Schild 🛡️</div>
+                <p className="text-[var(--muted)]">
+                  Bei jedem zweiten Streak-Meilenstein (<strong className="text-[var(--text)]">3, 8 und 26 Wochen</strong>) bekommst du
+                  automatisch ein Schild. Verpasst du danach mal ein Training, greift es <strong className="text-[var(--text)]">von selbst</strong> und
+                  friert deine Streak für 3 Tage ein – du verlierst sie nicht. Du kannst höchstens ein Schild auf einmal haben;
+                  ein neues kommt beim nächsten Schild-Meilenstein. Deinen Schild-Status siehst du oben, wenn du auf die Flamme tippst.
+                </p>
+              </section>
+
+              <section>
+                <div className="section-label mb-2">Streak-Punkte</div>
+                <p className="text-[var(--muted)]">
+                  Streak-Punkte sind manuelle Joker (Kontostand max. 5): Du kannst damit einen Skip einlegen, ohne die Streak zu brechen.
+                  Du bekommst sie für <strong className="text-[var(--text)]">perfekte Wochen</strong> (alle geplanten Tage anwesend), fürs Freischalten
+                  eines Streak-Abzeichens und für erhaltenes <strong className="text-[var(--text)]">Gigalob</strong>.
+                  Anders als das Schild musst du sie selbst einsetzen.
+                </p>
+              </section>
+
+              <section>
+                <div className="section-label mb-2">Trophäen &amp; Abzeichen</div>
+                <p className="text-[var(--muted)]">
+                  Abzeichen schaltest du dauerhaft frei: über deine <strong className="text-[var(--text)]">Streak-Wochen</strong>,
+                  bestrittene &amp; gewonnene <strong className="text-[var(--text)]">Wettkämpfe</strong> und fürs fleißige
+                  <strong className="text-[var(--text)]"> Richten von Ausreden</strong> im Gericht. Bis zu 4 davon kannst du an deinem Profil ausstellen.
                 </p>
               </section>
 

@@ -11,18 +11,23 @@ export interface BadgeDef {
   threshold: number; // Streak: Wochen · Wettkampf: Anzahl · Gericht: gerichtete Ausreden
   hint: string;
   secret?: boolean; // wird in der Übersicht erst nach Freischalten gezeigt
+  shield?: boolean; // verleiht ein Streak-Schild (jeder zweite Streak-Meilenstein)
 }
 
 // Streak = aufeinanderfolgende Wochen ohne Trainings-Skip vom regulären Plan.
+// shield: true bei jedem zweiten Meilenstein (3/8/26 Wo) → verleiht ein automatisches Streak-Schild.
 export const STREAK_BADGES: BadgeDef[] = [
   { id: 'streak_2', label: 'Rookie', emoji: '🐣', kind: 'streak', threshold: 2, hint: '2 Wochen ohne Skip' },
-  { id: 'streak_3', label: 'Getting Serious', emoji: '😤', kind: 'streak', threshold: 3, hint: '3 Wochen ohne Skip' },
+  { id: 'streak_3', label: 'Getting Serious', emoji: '😤', kind: 'streak', threshold: 3, hint: '3 Wochen ohne Skip', shield: true },
   { id: 'streak_4', label: 'Soldier', emoji: '🪖', kind: 'streak', threshold: 4, hint: '4 Wochen ohne Skip' },
-  { id: 'streak_8', label: 'Unstoppable', emoji: '🔥', kind: 'streak', threshold: 8, hint: '8 Wochen ohne Skip' },
+  { id: 'streak_8', label: 'Unstoppable', emoji: '🔥', kind: 'streak', threshold: 8, hint: '8 Wochen ohne Skip', shield: true },
   { id: 'streak_12', label: 'Real Threat', emoji: '⚡', kind: 'streak', threshold: 12, hint: '12 Wochen ohne Skip' },
-  { id: 'streak_26', label: 'How is that even possible?', emoji: '🤯', kind: 'streak', threshold: 26, hint: 'Halbes Jahr ohne Skip' },
+  { id: 'streak_26', label: 'How is that even possible?', emoji: '🤯', kind: 'streak', threshold: 26, hint: 'Halbes Jahr ohne Skip', shield: true },
   { id: 'streak_52', label: 'Ultimate Warrior', emoji: '👑', kind: 'streak', threshold: 52, hint: 'Ein Jahr ohne Skip' },
 ];
+
+// Streak-Meilensteine, die ein Schild verleihen (jeder zweite).
+export const SHIELD_STREAK_BADGES: BadgeDef[] = STREAK_BADGES.filter((b) => b.shield);
 
 export const COMPETITION_BADGES: BadgeDef[] = [
   { id: 'comp_1', label: 'Junior Competitor', emoji: '🥋', kind: 'competition', threshold: 1, hint: '1 Wettkampf bestritten' },
@@ -95,6 +100,11 @@ export function earnedBadges(weeks: number, competitions: number, judged = 0): B
 /** Nächstes Streak-Abzeichen über `weeks` (für Fortschritts-Anzeige), oder null wenn alle erreicht. */
 export function nextStreakBadge(weeks: number): BadgeDef | null {
   return STREAK_BADGES.find((b) => weeks < b.threshold) ?? null;
+}
+
+/** Nächster Schild-Meilenstein über `weeks` (für die Schild-Anzeige), oder null wenn alle erreicht. */
+export function nextShieldBadge(weeks: number): BadgeDef | null {
+  return SHIELD_STREAK_BADGES.find((b) => weeks < b.threshold) ?? null;
 }
 
 /** Flammen-Stufe (0–4) für die optische Intensität der Streak-Anzeige. */

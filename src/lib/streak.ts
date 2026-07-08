@@ -31,13 +31,15 @@ function addDaysStr(dateStr: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export interface Streak { days: number; weeks: number; }
+// blockedAt: der geplante, unentschuldigte Fehltag, an dem die Tages-Streak bricht (oder null,
+// wenn sie sauber bis zur Konto-Erstellung durchläuft) — damit ein Schild automatisch dort greifen kann.
+export interface Streak { days: number; weeks: number; blockedAt: string | null; }
 
 export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW'): Promise<Streak> {
-  if (await isTestAccount(sql, user)) return { days: TEST_STREAK_DAYS, weeks: TEST_STREAK_WEEKS };
+  if (await isTestAccount(sql, user)) return { days: TEST_STREAK_DAYS, weeks: TEST_STREAK_WEEKS, blockedAt: null };
   // Geplante Tage pro KW: fester Plan, überschrieben durch eine KW-Abweichung, falls gesetzt.
   const plan = await loadWeekPlan(sql, user);
-  if (!plan.hasAny) return { days: 0, weeks: 0 };
+  if (!plan.hasAny) return { days: 0, weeks: 0, blockedAt: null };
 
   const attRows = (await sql`
     SELECT (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
@@ -50,6 +52,16 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
     SELECT date::text AS d FROM skipping WHERE user_name = ${user} AND streak_protected = TRUE
   `) as { d: string }[];
   const protectedDays = new Set(skipRows.map((r) => r.d));
+
+  // Eingelöste Streak-Schilde: jedes deckt ein 3-Tage-Fenster [from, until] ab → geplante Tage
+  // darin gelten als neutral (brechen die Streak nicht). Tabelle evtl. noch nicht angelegt → tolerant.
+  let shieldRows: { f: string; u: string }[] = [];
+  try {
+    shieldRows = (await sql`
+      SELECT from_date::text AS f, until_date::text AS u FROM streak_shield_use WHERE user_name = ${user}
+    `) as { f: string; u: string }[];
+  } catch { /* streak_shield_use evtl. noch nicht angelegt */ }
+  const shielded = (dd: string) => shieldRows.some((w) => dd >= w.f && dd <= w.u);
 
   const statusRows = (await sql`
     SELECT start_date::text AS s, end_date::text AS e FROM user_status
@@ -93,15 +105,18 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
 
   // --- Tage: geplante Trainings am Stück (rückwärts ab heute) ---
   let days = 0;
+  let blockedAt: string | null = null;
   let d = today;
   for (let guard = 0; guard < 400 && d >= floor; guard++, d = addDaysStr(d, -1)) {
     if (!plan.dowsFor(weekStartOf(d)).has(isodow(d))) continue;
     if (isHolidayIn(d, bundesland)) continue;
     if (exempt(d)) continue;
     if (present.has(d)) { days++; continue; }
-    if (protectedDays.has(d)) continue;       // geschützt → neutral
+    if (protectedDays.has(d)) continue;       // per Streak-Punkt geschützt → neutral
+    if (shielded(d)) continue;                // von einem eingelösten Schild gedeckt → neutral
     if (!breaksStreak(d)) continue;           // 3-Tage-Kulanz / offene Ausrede → neutral
-    break;                                     // bestätigter Bitch-Punkt → Bruch
+    blockedAt = d;                             // bestätigter Bitch-Punkt → hier bricht die Streak
+    break;
   }
 
   // --- Wochen: abgeschlossene saubere Wochen am Stück (für Badges) ---
@@ -121,6 +136,7 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
       hadScheduled = true;
       if (present.has(wd)) continue;
       if (protectedDays.has(wd)) continue;
+      if (shielded(wd)) continue;
       if (!breaksStreak(wd)) continue;
       broke = true;
       break;
@@ -129,5 +145,5 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
     if (hadScheduled) weeks++;
   }
 
-  return { days, weeks };
+  return { days, weeks, blockedAt };
 }
