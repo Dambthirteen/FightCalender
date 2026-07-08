@@ -587,6 +587,20 @@ export async function POST(req: NextRequest) {
     `;
     await sql`CREATE INDEX IF NOT EXISTS profile_gallery_user_idx ON profile_gallery (user_name)`;
 
+    // group_events: einmalige Sondertermine (z. B. Seminare), die nur der Gruppen-Admin einträgt.
+    await sql`
+      CREATE TABLE IF NOT EXISTS group_events (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL,
+        event_date DATE NOT NULL,
+        title VARCHAR(120) NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_by VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS group_events_idx ON group_events (group_id, event_date)`;
+
     // --- Monats-Wrapped: merkt, wer den Rückblick eines Monats schon gesehen hat ---
     await sql`
       CREATE TABLE IF NOT EXISTS wrapped_seen (

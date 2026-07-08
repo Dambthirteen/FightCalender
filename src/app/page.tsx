@@ -62,6 +62,7 @@ export default function Home() {
   const [useStreakPt, setUseStreakPt] = useState(false);
   const [userColors, setUserColors] = useState<Record<string, string | null>>({});
   const [bitchAnim, setBitchAnim] = useState(false);
+  const [events, setEvents] = useState<{ id: number; date: string; title: string; note: string }[]>([]);
   const audioRef = useRef<AudioContext | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
 
@@ -131,6 +132,12 @@ export default function Home() {
     }
     init();
   }, [userName, userLoading]);
+
+  // Sondertermine der aktuellen Gruppe (Event-Karten im Kalender).
+  useEffect(() => {
+    if (!userName) return;
+    fetch('/api/group-events').then((r) => r.json()).then((d) => setEvents(Array.isArray(d) ? d : [])).catch(() => {});
+  }, [userName]);
 
   useEffect(() => {
     if (step === 'done' && userName) fetchCalendarData(weekStart);
@@ -452,6 +459,9 @@ export default function Home() {
 
   // --- MAIN CALENDAR ---
   const weekMonday = startOfWeek(currentWeek, { weekStartsOn: 1 });
+  const weekStartStr = format(weekMonday, 'yyyy-MM-dd');
+  const weekEndStr = format(addDays(weekMonday, 6), 'yyyy-MM-dd');
+  const weekEvents = events.filter((e) => e.date >= weekStartStr && e.date <= weekEndStr);
   const classesByDay: Record<number, GymClass[]> = {};
   for (let d = 1; d <= 7; d++) classesByDay[d] = classes.filter(c => c.day_of_week === d);
 
@@ -536,6 +546,23 @@ export default function Home() {
         </div>
         <button onClick={() => setCurrentWeek(w => addWeeks(w, 1))} className="w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">→</button>
       </div>
+
+      {/* Sondertermine dieser Woche (vom Gruppen-Admin eingetragen) */}
+      {weekEvents.length > 0 && (
+        <div className="max-w-md mx-auto px-4 pb-1">
+          {weekEvents.map((ev) => (
+            <div key={ev.id} className="card px-4 py-3 mb-2 anim-up flex items-center gap-2.5" style={{ borderLeft: '3px solid var(--accent)' }}>
+              <span className="text-lg shrink-0">📣</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold truncate">{ev.title}</div>
+                <div className="text-[11px] text-[var(--muted)]">
+                  {format(new Date(`${ev.date}T12:00`), 'EEEE, d. MMM', { locale: de })}{ev.note ? ` · ${ev.note}` : ''}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Day list (iPhone-first vertical) */}
       <main className="max-w-md mx-auto px-4 pb-16">

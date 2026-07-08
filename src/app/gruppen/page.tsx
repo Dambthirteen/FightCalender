@@ -61,6 +61,10 @@ export default function GroupsPage() {
   const [qrUrl, setQrUrl] = useState('');
   const [showQr, setShowQr] = useState(false);
   const [form, setForm] = useState({ name: '', dayOfWeek: 1, startTime: '18:00', endTime: '19:30', color: 'red' });
+  const [events, setEvents] = useState<{ id: number; date: string; title: string; note: string }[]>([]);
+  const [evDate, setEvDate] = useState('');
+  const [evTitle, setEvTitle] = useState('');
+  const [evNote, setEvNote] = useState('');
 
   const load = useCallback(async () => {
     const [g, m, c] = await Promise.all([
@@ -85,6 +89,12 @@ export default function GroupsPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Sondertermine der aktuellen Gruppe laden.
+  useEffect(() => {
+    if (!current) { setEvents([]); return; }
+    fetch('/api/group-events').then((r) => r.json()).then((d) => setEvents(Array.isArray(d) ? d : [])).catch(() => {});
+  }, [current]);
 
   async function createGroup() {
     if (!newName.trim()) return;
@@ -112,6 +122,20 @@ export default function GroupsPage() {
       await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, clanTag }) });
       setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, clan_tag: clanTag || null } : g)));
     } finally { setBusy(false); }
+  }
+  async function addEvent() {
+    if (!evDate || !evTitle.trim()) return;
+    setBusy(true); setMsg('');
+    try {
+      const res = await fetch('/api/group-events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: evDate, title: evTitle.trim(), note: evNote.trim() }) });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.id) { setEvents((prev) => [...prev, d].sort((a, b) => a.date.localeCompare(b.date))); setEvTitle(''); setEvNote(''); setEvDate(''); }
+      else setMsg(d.error ?? 'Konnte Termin nicht anlegen.');
+    } finally { setBusy(false); }
+  }
+  async function deleteEvent(id: number) {
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+    await fetch(`/api/group-events?id=${id}`, { method: 'DELETE' }).catch(() => {});
   }
   async function pickGroupAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -390,6 +414,41 @@ export default function GroupsPage() {
               {BUNDESLAENDER.map((b) => <option key={b.code} value={b.code}>{b.label}</option>)}
             </select>
             <p className="text-[11px] text-[var(--faint)] mt-2">Bestimmt, welche Feiertage in der Wertung als frei gelten (Standard: NRW).</p>
+          </section>
+        )}
+
+        {/* Sondertermine (nur Admin) — einmalige Events wie Seminare */}
+        {current && isAdmin && (
+          <section className="card p-4 anim-up" style={{ animationDelay: '72ms' }}>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-2.5">Sondertermine</div>
+            <p className="text-[11px] text-[var(--faint)] mb-3">Einmalige Events (z. B. Seminare) — erscheinen im Kalender der ganzen Crew und werden per Push angekündigt.</p>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input type="date" value={evDate} onChange={(e) => setEvDate(e.target.value)}
+                  className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--accent)]" />
+                <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)} maxLength={120} placeholder="Titel, z. B. BJJ Seminar"
+                  className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)]" />
+              </div>
+              <input value={evNote} onChange={(e) => setEvNote(e.target.value)} maxLength={500} placeholder="Notiz (optional) — Uhrzeit, Gast-Coach …"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)]" />
+              <button onClick={addEvent} disabled={busy || !evDate || !evTitle.trim()}
+                className="w-full text-white font-bold py-2.5 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>Termin hinzufügen</button>
+            </div>
+            {events.length > 0 && (
+              <div className="mt-3 divide-y" style={{ borderColor: 'var(--border-soft)' }}>
+                {events.map((ev) => (
+                  <div key={ev.id} className="flex items-center gap-2 py-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate">{ev.title}</div>
+                      <div className="text-[11px] text-[var(--faint)]">
+                        {new Date(`${ev.date}T12:00`).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: '2-digit' })}{ev.note ? ` · ${ev.note}` : ''}
+                      </div>
+                    </div>
+                    <button onClick={() => deleteEvent(ev.id)} aria-label="Termin löschen" className="text-[var(--faint)] hover:text-[var(--accent)] text-sm px-1 shrink-0">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
