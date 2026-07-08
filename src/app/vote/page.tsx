@@ -1,5 +1,6 @@
 'use client';
 import PageHeader from '@/components/PageHeader';
+import LoadingScreen from '@/components/LoadingScreen';
 
 import { useEffect, useState } from 'react';
 import { format, subMonths, addMonths } from 'date-fns';
@@ -257,7 +258,7 @@ export default function VotePage() {
             <div className="text-[var(--faint)] text-xs mt-1">Ein Gruppen-Admin kann den „harten Modus“ in den Gruppen-Einstellungen aktivieren.</div>
           </div>
         ) : loading ? (
-          <div className="text-center text-[var(--faint)] py-16">Lädt…</div>
+          <LoadingScreen inline />
         ) : excuses.length === 0 ? (
           <div className="card p-10 text-center">
             <div className="text-4xl mb-2">🏅</div>

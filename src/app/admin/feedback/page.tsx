@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
+import LoadingScreen from '@/components/LoadingScreen';
 
 interface Fb { id: number; user_name: string | null; kind: string; text: string; resolved: boolean; created_at: string }
 
@@ -49,7 +50,7 @@ export default function AdminFeedbackPage() {
               ))}
             </div>
             {loading ? (
-              <div className="py-16 text-center text-[var(--faint)] text-sm">Laden…</div>
+              <LoadingScreen inline />
             ) : shown.length === 0 ? (
               <div className="py-16 text-center text-[var(--faint)] text-sm">Nichts hier.</div>
             ) : (

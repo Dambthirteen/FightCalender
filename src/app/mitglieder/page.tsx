@@ -5,6 +5,7 @@ import { useUser } from '@/components/UserProvider';
 import { colorFor, initials } from '@/lib/avatar';
 import { isCoach } from '@/lib/fighter';
 import InviteFriends from '@/components/InviteFriends';
+import LoadingScreen from '@/components/LoadingScreen';
 
 type Person = { user_name: string; color?: string | null; avatar?: string | null; streak?: number; role?: string | null; group_role?: string | null };
 type FriendState = 'none' | 'outgoing' | 'incoming' | 'friends' | 'self';
@@ -217,7 +218,7 @@ export default function MitgliederPage() {
               })}
             </div>
             {loading ? (
-              <div className="py-24 text-center text-[var(--faint)] text-sm">Laden…</div>
+              <LoadingScreen inline />
             ) : (() => {
               const shown = users.filter((u) => roleFilter === 'all' || (roleFilter === 'coach' ? isCoach(u.role) : !isCoach(u.role)));
               return (

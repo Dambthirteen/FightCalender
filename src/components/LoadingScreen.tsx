@@ -1,7 +1,8 @@
-// Gebrandeter Ladebildschirm: pulsierendes Chicken-Logo + „Submit…".
-export default function LoadingScreen() {
+// Einheitlicher, gebrandeter Ladebildschirm (App-weit): pulsierendes Chicken-Logo + „Submit…".
+// `inline` für Ladezustände unterhalb eines Seitenkopfs (füllt nur den Inhaltsbereich statt Vollbild).
+export default function LoadingScreen({ inline = false }: { inline?: boolean } = {}) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-5">
+    <div className={`${inline ? 'min-h-[55vh]' : 'min-h-screen'} flex flex-col items-center justify-center gap-5`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo-chicken.png" alt="Submit"
         className="w-28 h-28 object-contain"

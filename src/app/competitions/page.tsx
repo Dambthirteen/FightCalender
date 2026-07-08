@@ -1,5 +1,6 @@
 'use client';
 import PageHeader from '@/components/PageHeader';
+import LoadingScreen from '@/components/LoadingScreen';
 
 import { useEffect, useState } from 'react';
 import { format, differenceInDays } from 'date-fns';
@@ -407,7 +408,7 @@ export default function CompetitionsPage() {
         )}
 
         {loading ? (
-          <div className="text-center text-[var(--faint)] py-16">Lädt…</div>
+          <LoadingScreen inline />
         ) : upcoming.length === 0 && past.length === 0 ? (
           <div className="card p-10 text-center anim-up">
             <div className="text-5xl mb-3">🥊</div>

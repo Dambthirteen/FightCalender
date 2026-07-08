@@ -1,5 +1,6 @@
 'use client';
 import PageHeader from '@/components/PageHeader';
+import LoadingScreen from '@/components/LoadingScreen';
 
 import { useEffect, useState } from 'react';
 import { format, subMonths, addMonths } from 'date-fns';
@@ -56,7 +57,7 @@ export default function BitchPage() {
             <div className="text-[var(--faint)] text-sm mt-1">Ein Gruppen-Admin kann den „harten Modus“ aktivieren.</div>
           </div>
         ) : loading ? (
-          <div className="text-center text-[var(--faint)] py-20">Lädt…</div>
+          <LoadingScreen inline />
         ) : data.length === 0 ? (
           <div className="card p-10 text-center anim-up">
             <div className="text-5xl mb-3">💪</div>

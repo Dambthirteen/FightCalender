@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
+import LoadingScreen from '@/components/LoadingScreen';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -73,7 +74,7 @@ export default function StatistikPage() {
 
       <main className="max-w-md mx-auto px-4 pb-16 space-y-6">
         {loading ? (
-          <div className="py-24 text-center text-[var(--faint)] text-sm">Laden…</div>
+          <LoadingScreen inline />
         ) : (
           <>
             <section className="anim-up">

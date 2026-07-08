@@ -8,7 +8,7 @@ import { ARTS, SKILLS, BELT_COLORS, ROLES, isCoach, artLabel, artBelts, overallR
 import { GENDERS, athleteLabel, competitorLabel, trainerLabel, macherMonth } from '@/lib/gender';
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, TOURNAMENT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
-import FullscreenLoader from '@/components/FullscreenLoader';
+import LoadingScreen from '@/components/LoadingScreen';
 import { nameplateStyle, avatarFrame, flameFilter, beltSkin, beltFxClass, xpBarColor } from '@/lib/cosmetics';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
@@ -532,7 +532,7 @@ export default function ProfilePage() {
     </div>
   );
 
-  if (userLoading || !ready) return <FullscreenLoader />;
+  if (userLoading || !ready) return <LoadingScreen />;
 
   return (
     <div className="min-h-screen text-[var(--text)]">

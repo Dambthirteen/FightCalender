@@ -63,11 +63,25 @@ export default function OnboardingPage() {
   const [refYes, setRefYes] = useState<boolean | null>(null);
   const [refEmail, setRefEmail] = useState('');
   const [refSaving, setRefSaving] = useState(false);
+  // Bestätigung nach Crew-Beitritt/-Anfrage — wird im letzten Schritt gezeigt.
+  const [joinInfo, setJoinInfo] = useState('');
 
   // Wer schon fertig ist, hat hier nichts zu suchen.
   useEffect(() => {
     if (!loading && onboardingCompleted) window.location.href = '/';
   }, [loading, onboardingCompleted]);
+
+  // Bulletproof: aktuellen Schritt merken, damit ein Reload/Absturz nicht auf Schritt 1 zurückwirft.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('onb_step');
+      if (saved === 'group' || saved === 'referral') setStep(saved as Step);
+    } catch { /* egal */ }
+  }, []);
+  useEffect(() => {
+    // 'invite' braucht den frisch erzeugten Code → stattdessen 'referral' merken (Crew ist ja fertig).
+    try { localStorage.setItem('onb_step', step === 'invite' ? 'referral' : step); } catch { /* egal */ }
+  }, [step]);
 
   async function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -125,6 +139,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({ referrerEmail }),
       });
     } catch { /* egal */ }
+    try { localStorage.removeItem('onb_step'); } catch { /* egal */ }
     window.location.href = '/';
   }
 
@@ -169,8 +184,17 @@ export default function OnboardingPage() {
     try {
       const res = await fetch('/api/groups/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
       const d = await res.json().catch(() => ({}));
-      if (res.ok && d.status === 'active') { track('group_joined', { via: 'onboarding', status: 'active' }); await finish(); return; }
-      if (res.ok) { track('group_joined', { via: 'onboarding', status: 'pending' }); setMsg(`Anfrage an „${d.group}" gesendet — ein Admin muss dich annehmen. Du kannst schon fortfahren.`); return; }
+      if (res.ok) {
+        // Beide Fälle (sofort aktiv ODER Anfrage gesendet) leiten direkt weiter — intuitiver,
+        // kein manuelles „fortfahren" mehr nötig. Die Bestätigung erscheint im letzten Schritt.
+        const active = d.status === 'active';
+        track('group_joined', { via: 'onboarding', status: active ? 'active' : 'pending' });
+        setJoinInfo(active
+          ? `Du bist in „${d.group ?? 'der Crew'}" — willkommen!`
+          : `Anfrage an „${d.group ?? 'die Crew'}" gesendet. Ein Admin nimmt dich gleich an — du kannst schon loslegen.`);
+        finish();
+        return;
+      }
       setMsg(d.error ?? 'Code ungültig.');
     } finally { setBusy(false); }
   }
@@ -374,7 +398,7 @@ export default function OnboardingPage() {
             <section className="card p-5">
               <div className="section-label mb-2">Neue Gruppe erstellen</div>
               <div className="flex gap-2">
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="Name (z.B. deine Crew)…" className={inputCls} />
+                <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && name.trim() && !busy) createGroup(); }} placeholder="Name (z.B. deine Crew)…" className={inputCls} />
                 <button onClick={createGroup} disabled={busy || !name.trim()} className="text-white font-bold px-4 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>Erstellen</button>
               </div>
             </section>
@@ -382,7 +406,7 @@ export default function OnboardingPage() {
             <section className="card p-5">
               <div className="section-label mb-2">Mit Einladungscode beitreten</div>
               <div className="flex gap-2">
-                <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="CODE" maxLength={12} className={`${inputCls} tracking-widest font-mono`} />
+                <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} onKeyDown={e => { if (e.key === 'Enter' && code.trim() && !busy) joinGroup(); }} placeholder="CODE" maxLength={12} className={`${inputCls} tracking-widest font-mono`} />
                 <button onClick={joinGroup} disabled={busy || !code.trim()} className="font-semibold px-4 rounded-xl border border-[var(--border)] text-[var(--text)] disabled:opacity-40">Beitreten</button>
               </div>
             </section>
@@ -424,6 +448,11 @@ export default function OnboardingPage() {
               <h1 className="font-display text-3xl tracking-wide">Fast fertig!</h1>
               <p className="text-[var(--muted)] text-sm mt-1">Wurdest du von jemandem geworben?</p>
             </div>
+            {joinInfo && (
+              <div className="rounded-xl px-4 py-3 text-sm text-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent-2)' }}>
+                {joinInfo}
+              </div>
+            )}
             <section className="card p-5 space-y-4">
               <div className="flex gap-2">
                 <button onClick={() => setRefYes(true)}

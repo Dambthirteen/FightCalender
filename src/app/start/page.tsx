@@ -7,7 +7,7 @@ import { nextStreakBadge, nextShieldBadge, STREAK_BADGES } from '@/lib/badges';
 import { isCoach, isFighter } from '@/lib/fighter';
 import { flameFilter } from '@/lib/cosmetics';
 import StreakFlame from '@/components/StreakFlame';
-import FullscreenLoader from '@/components/FullscreenLoader';
+import LoadingScreen from '@/components/LoadingScreen';
 import { XP } from '@/lib/xp';
 
 export default function StartPage() {
@@ -120,7 +120,7 @@ export default function StartPage() {
     </div>
   );
 
-  if (userLoading || !ready) return <FullscreenLoader />;
+  if (userLoading || !ready) return <LoadingScreen />;
 
   return (
     <div className="min-h-screen text-[var(--text)]">

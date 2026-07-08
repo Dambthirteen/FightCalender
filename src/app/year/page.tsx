@@ -1,5 +1,6 @@
 'use client';
 import PageHeader from '@/components/PageHeader';
+import LoadingScreen from '@/components/LoadingScreen';
 
 import { useEffect, useState } from 'react';
 
@@ -177,7 +178,7 @@ export default function YearPage() {
         <div className="text-xs text-[var(--faint)] text-center">Stand: {lastUpdate} · Aktualisiert sich jeden 1. des Monats</div>
 
         {loading ? (
-          <div className="text-center text-[var(--faint)] py-16">Lädt…</div>
+          <LoadingScreen inline />
         ) : !data ? (
           <div className="text-center text-[var(--faint)] py-16">Fehler beim Laden</div>
         ) : (
