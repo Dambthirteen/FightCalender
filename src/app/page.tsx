@@ -548,7 +548,7 @@ export default function Home() {
             <a href="/admin" className="text-[var(--accent)] text-sm hover:underline mt-1">Kurse hinzufügen →</a>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-[13px]">
             {activeDays.map((day, idx) => {
               const dayClasses = classesByDay[day] ?? [];
               const dayDate = addDays(weekMonday, day - 1);
