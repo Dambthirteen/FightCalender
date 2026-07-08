@@ -16,6 +16,7 @@ interface Analytics {
   bestWeek: { w: string; n: number } | null;
   days: { d: string; status: string }[];
   since: string;
+  created: string;
   weeks: { w: string; n: number }[];
   byCourse: Course[];
   rate: { planned: number; attended: number; pct: number } | null;
@@ -23,6 +24,11 @@ interface Analytics {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+const FULL_MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+function fmtDate(d: string): string {
+  const [y, m, dd] = d.split('-');
+  return `${Number(dd)}. ${FULL_MONTHS[Number(m) - 1]} ${y}`;
+}
 
 // Status-Farben der Heatmap.
 const STATUS: Record<string, { color: string; label: string }> = {
@@ -53,18 +59,21 @@ function monthLabel(ym: string): string {
   return `${MONTHS[Number(ym.slice(5, 7)) - 1]} ${ym.slice(2, 4)}`;
 }
 
-function Tile({ value, label, sub }: { value: React.ReactNode; label: string; sub?: string }) {
+function Tile({ value, label, sub, onClick }: { value: React.ReactNode; label: string; sub?: string; onClick?: () => void }) {
   return (
-    <div className="card px-2.5 py-3 flex-1 text-center min-w-0">
+    <button onClick={onClick} disabled={!onClick}
+      className="card px-2.5 py-3 flex-1 text-center min-w-0 relative active:scale-[0.98] transition-transform disabled:active:scale-100">
+      {onClick && <span className="absolute top-1 right-1.5 text-[9px] text-[var(--faint)]">ⓘ</span>}
       <div className="font-display text-2xl tnum leading-none" style={{ color: 'var(--accent-2)' }}>{value}</div>
       <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mt-1 leading-tight">{label}</div>
       {sub && <div className="text-[10px] text-[var(--faint)] mt-0.5 truncate">{sub}</div>}
-    </div>
+    </button>
   );
 }
 
 export default function ProfileStats({ user, comps }: { user: string; comps: { result: string | null }[] }) {
   const [a, setA] = useState<Analytics | null>(null);
+  const [info, setInfo] = useState<{ title: string; body: React.ReactNode } | null>(null);
 
   useEffect(() => {
     fetch(`/api/profile/analytics?user=${encodeURIComponent(user)}`).then((r) => r.json())
@@ -118,9 +127,34 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
     <div className="space-y-5 anim-in">
       {/* Kennzahl-Kacheln */}
       <div className="flex gap-2.5">
-        <Tile value={a.total} label="Trainings" />
-        <Tile value={a.rate ? `${a.rate.pct}%` : '–'} label="Quote" sub={a.rate ? `${a.rate.attended} von ${a.rate.planned} da` : undefined} />
-        <Tile value={a.bestMonth?.n ?? '–'} label="Bester Monat" sub={a.bestMonth ? monthLabel(a.bestMonth.m) : undefined} />
+        <Tile value={a.total} label="Trainings" onClick={() => setInfo({
+          title: 'Trainings gesamt',
+          body: (<>
+            <p>Alle erfassten Anwesenheiten: <strong className="text-[var(--text)]">{a.total}</strong>. Jedes Training, bei dem du eingetragen warst, zählt.</p>
+            <p className="text-[var(--faint)]">Angemeldet seit {fmtDate(a.created)} · getrackt seit {fmtDate(a.since)}.</p>
+          </>),
+        })} />
+        <Tile value={a.rate ? `${a.rate.pct}%` : '–'} label="Quote" sub={a.rate ? `${a.rate.attended} von ${a.rate.planned} da` : undefined}
+          onClick={() => setInfo({
+            title: 'Erscheinungsquote',
+            body: (<>
+              <p>Wie oft du bei deinen <strong className="text-[var(--text)]">geplanten</strong> Trainings wirklich da warst.</p>
+              {a.rate
+                ? <p>Aktuell: <strong className="text-[var(--text)]">{a.rate.attended} von {a.rate.planned}</strong> geplanten Trainings — <strong className="text-[var(--text)]">{a.rate.pct}%</strong>.</p>
+                : <p>Du hast noch keinen festen Wochenplan hinterlegt.</p>}
+              <p>Nicht gegen dich gezählt: krank, verletzt, Urlaub und Feiertage.</p>
+              <p>Zeitraum: die letzten 12 Wochen — frühestens ab Tracking-Start (davor gibt es keine Daten).</p>
+              <p className="text-[var(--faint)]">Angemeldet seit {fmtDate(a.created)} · getrackt seit {fmtDate(a.since)}.</p>
+            </>),
+          })} />
+        <Tile value={a.bestMonth?.n ?? '–'} label="Bester Monat" sub={a.bestMonth ? monthLabel(a.bestMonth.m) : undefined}
+          onClick={a.bestMonth ? () => setInfo({
+            title: 'Bester Monat',
+            body: (<>
+              <p>Dein aktivster Monat: <strong className="text-[var(--text)]">{monthLabel(a.bestMonth!.m)}</strong> mit <strong className="text-[var(--text)]">{a.bestMonth!.n}</strong> Trainings.</p>
+              <p>Deine aktivste Woche: <strong className="text-[var(--text)]">{a.bestWeek?.n ?? 0}</strong> Trainings.</p>
+            </>),
+          }) : undefined} />
       </div>
 
       {/* Kurs-Aufteilung (Donut) */}
@@ -225,6 +259,21 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
             <span style={{ color: 'var(--good)' }}>{wins} Siege</span>
             <span className="text-[var(--muted)]">{draws} Unent.</span>
             <span style={{ color: 'var(--accent)' }}>{losses} Niederl.</span>
+          </div>
+        </div>
+      )}
+
+      {/* Erklär-Popup beim Tippen auf eine Kennzahl */}
+      {info && (
+        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm anim-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setInfo(null); }}>
+          <div className="card w-full max-w-sm p-5 anim-up rounded-b-none sm:rounded-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-display text-xl tracking-wide">{info.title}</h2>
+              <button onClick={() => setInfo(null)} className="text-[var(--faint)] hover:text-white text-lg px-1">✕</button>
+            </div>
+            <div className="text-sm text-[var(--muted)] space-y-2">{info.body}</div>
+            <button onClick={() => setInfo(null)} className="btn btn-primary w-full mt-4">Verstanden</button>
           </div>
         </div>
       )}

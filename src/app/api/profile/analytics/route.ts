@@ -130,7 +130,7 @@ export async function GET(req: NextRequest) {
       total,
       thisMonth: perMonth[curMonth] ?? 0,
       lastMonth: perMonth[lastMonth] ?? 0,
-      bestMonth, bestWeek, days, since, weeks, byCourse, rate, rateWeeks: RATE_WEEKS,
+      bestMonth, bestWeek, days, since, created, weeks, byCourse, rate, rateWeeks: RATE_WEEKS,
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
