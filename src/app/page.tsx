@@ -471,7 +471,8 @@ export default function Home() {
       {excuseDate && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/75 backdrop-blur-md px-4 anim-in">
           <div className="card anim-pop p-6 w-full max-w-sm shadow-2xl">
-            <div className="text-2xl mb-1">🐔</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-chicken.png" alt="" className="w-9 h-9 mb-1 object-contain" />
             <h2 className="font-display text-2xl tracking-wide mb-1">Begründung</h2>
             <p className="text-[var(--muted)] text-sm mb-4">
               Warum {excuseDate < todayStr ? 'warst' : 'bist'} du am <span className="text-white">{DAY_NAMES_FULL[new Date(excuseDate + 'T12:00').getDay() === 0 ? 6 : new Date(excuseDate + 'T12:00').getDay() - 1]}</span> nicht da?
@@ -506,17 +507,19 @@ export default function Home() {
         </div>
       )}
 
-      {/* 🐔 Bitch-Pop */}
+      {/* Chicken-Pop: das Logo wächst und ploppt weg */}
       {bitchAnim && (
         <div className="fixed inset-0 z-[1000] grid place-items-center pointer-events-none">
-          <span className="chicken-pop" style={{ fontSize: '150px', filter: 'drop-shadow(0 12px 34px rgba(0,0,0,0.65))' }}>🐔</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-chicken.png" alt="" className="chicken-pop"
+            style={{ width: '190px', height: '190px', objectFit: 'contain', filter: 'drop-shadow(0 12px 34px rgba(0,0,0,0.65))' }} />
         </div>
       )}
 
       {/* Header */}
       <header className="px-4 pt-5 pb-3 flex items-center justify-between max-w-md mx-auto anim-in">
         <div className="flex items-center gap-3">
-          <img src="/icon-192.png" alt="Tap In" className="w-11 h-11 rounded-[4px] ring-1 ring-white/10 shadow-lg shadow-black/40" />
+          <img src="/logo-chicken.png" alt="Submit" className="w-11 h-11 object-contain shrink-0" />
           <div>
             <h1 className="font-display text-2xl leading-none tracking-wide">Tap In</h1>
             <p className="text-[var(--muted)] text-[11px] mt-1 uppercase tracking-[0.18em]">Wer kommt diese Woche?</p>

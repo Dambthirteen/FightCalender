@@ -68,7 +68,8 @@ export default function BitchPage() {
             {/* Sieger-Karte */}
             {top && (
               <div className="card p-6 text-center anim-up" style={{ borderColor: 'var(--bitch)' }}>
-                <div className="text-5xl mb-2">🐔</div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo-chicken.png" alt="" className="w-16 h-16 mx-auto mb-2 object-contain" />
                 <div className="section-label" style={{ color: 'var(--bitch)' }}>Chicken des Monats</div>
                 <div className="font-display text-3xl tracking-wide mt-1">{top.user_name}</div>
                 <div className="text-[var(--muted)] text-sm mt-1">{top.skip_count}× nicht da gewesen</div>
