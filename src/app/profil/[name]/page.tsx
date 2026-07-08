@@ -9,6 +9,7 @@ import { GENDERS, athleteLabel, competitorLabel, trainerLabel, macherMonth } fro
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, TOURNAMENT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
 import LoadingScreen from '@/components/LoadingScreen';
+import ProfileGallery from '@/components/ProfileGallery';
 import { nameplateStyle, avatarFrame, flameFilter, beltSkin, beltFxClass, xpBarColor } from '@/lib/cosmetics';
 
 interface BadgeInfo { id: string; label: string; emoji: string; kind: string; hint: string }
@@ -703,7 +704,7 @@ export default function ProfilePage() {
                                 const on = (fighterInfo.coachingArts ?? []).includes(a.key);
                                 return (
                                   <button key={a.key} onClick={() => toggleCoachingArt(a.key)}
-                                    className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-all active:scale-95"
+                                    className="text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-all active:scale-95"
                                     style={on ? { background: 'rgba(45,212,191,0.14)', borderColor: 'var(--teal)', color: 'var(--teal)' } : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)', color: 'var(--muted)' }}>
                                     {a.label}
                                   </button>
@@ -788,7 +789,7 @@ export default function ProfilePage() {
                           const active = arts.some((m) => m.art === a.key);
                           return (
                             <button key={a.key} onClick={() => toggleArt(a.key)}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-all active:scale-95"
+                              className="text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-all active:scale-95"
                               style={active
                                 ? { background: `${c}1f`, borderColor: c, color: '#fff' }
                                 : { background: 'var(--surface-2)', borderColor: 'var(--border-soft)', color: 'var(--muted)' }}>
@@ -818,7 +819,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {arts.map((m) => (
-                        <span key={m.art} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: `${c}1f`, border: `1px solid ${c}` }}>
+                        <span key={m.art} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-[3px]" style={{ background: `${c}1f`, border: `1px solid ${c}` }}>
                           {artLabel(m.art)}
                           {m.belt && <span className="flex items-center gap-1 opacity-90"><span className="w-2.5 h-2.5 rounded-full" style={{ background: BELT_COLORS[m.belt] ?? '#888' }} />{m.belt}</span>}
                         </span>
@@ -929,7 +930,8 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                {/* Wettkämpfe */}
+                {/* Wettkämpfe — für Hobby-Nutzer ausgeblendet */}
+                {fighterInfo.athlete !== 'hobby' && (
                 <div className="card px-4 py-4">
                   <div className="section-label mb-2.5">Wettkämpfe</div>
                   {(() => {
@@ -973,6 +975,10 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
+                )}
+
+                {/* Galerie — Wettkampffotos, Trophäen, Medaillen (unten im Fighter-Tab) */}
+                <ProfileGallery user={name} isMe={isSelf} supporter={supporter} />
               </div>
             )}
 

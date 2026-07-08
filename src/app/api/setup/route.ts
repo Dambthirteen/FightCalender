@@ -574,6 +574,19 @@ export async function POST(req: NextRequest) {
       )
     `;
 
+    // profile_gallery: Bildergalerie im Profil (Wettkampffotos, Trophäen, Medaillen).
+    // Bilder als komprimierte data-URL; Cap (Free 4 / Supporter 6) setzt die API durch.
+    await sql`
+      CREATE TABLE IF NOT EXISTS profile_gallery (
+        id SERIAL PRIMARY KEY,
+        user_name VARCHAR(100) NOT NULL,
+        image TEXT NOT NULL,
+        position INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS profile_gallery_user_idx ON profile_gallery (user_name)`;
+
     // --- Monats-Wrapped: merkt, wer den Rückblick eines Monats schon gesehen hat ---
     await sql`
       CREATE TABLE IF NOT EXISTS wrapped_seen (
