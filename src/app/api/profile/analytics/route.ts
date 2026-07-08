@@ -5,6 +5,7 @@ import { canViewProfile, getUserBundesland } from '@/lib/groups';
 import { loadWeekPlan } from '@/lib/schedule';
 import { isHolidayIn } from '@/lib/holidays';
 import { berlinNow, weekStartOf, isoDayOfWeek } from '@/lib/berlin-time';
+import { CUTOVER } from '@/lib/bitch-scoring';
 
 /**
  * Persönliche Trainings-Analytics fürs Profil (Stats-Tab):
@@ -85,11 +86,16 @@ export async function GET(req: NextRequest) {
     const compSet = new Set(compRows.map((r) => r.d));
     const isPlanned = (d: string) => plan.hasAny && !isHolidayIn(d, bl) && plan.dowsFor(weekStartOf(d)).has(isoDayOfWeek(d));
 
-    // Heatmap: Status je Tag über die letzten 371 Tage (nur Tage mit Status).
+    // Heatmap-Fenster ab Tracking-Start (Konto-Erstellung, frühestens CUTOVER) — kein leeres Vorjahr.
+    const createdRows = (await sql`SELECT created_at::date::text AS d FROM users WHERE user_name = ${user}`) as { d: string }[];
+    const created = createdRows[0]?.d ?? CUTOVER;
+    const since = created > CUTOVER ? created : CUTOVER;
+
+    // Status je Tag ab `since` (nur Tage mit Status).
     // Priorität: Wettkampf(gold) > trainiert(grün) > krank/verletzt(lila) > Urlaub(blau) > verpasst(rot).
     const days: { d: string; status: string }[] = [];
-    let hd = addDaysStr(today, -371);
-    for (let guard = 0; guard <= 372 && hd <= today; guard++, hd = addDaysStr(hd, 1)) {
+    let hd = since;
+    for (let guard = 0; guard <= 400 && hd <= today; guard++, hd = addDaysStr(hd, 1)) {
       let status: string | null = null;
       if (compSet.has(hd)) status = 'competition';
       else if (present.has(hd)) status = 'attended';
@@ -123,7 +129,7 @@ export async function GET(req: NextRequest) {
       total,
       thisMonth: perMonth[curMonth] ?? 0,
       lastMonth: perMonth[lastMonth] ?? 0,
-      bestMonth, bestWeek, days, weeks, byCourse, rate, rateWeeks: RATE_WEEKS,
+      bestMonth, bestWeek, days, since, weeks, byCourse, rate, rateWeeks: RATE_WEEKS,
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

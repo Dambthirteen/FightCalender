@@ -15,6 +15,7 @@ interface Analytics {
   bestMonth: { m: string; n: number } | null;
   bestWeek: { w: string; n: number } | null;
   days: { d: string; status: string }[];
+  since: string;
   weeks: { w: string; n: number }[];
   byCourse: Course[];
   rate: { planned: number; attended: number; pct: number } | null;
@@ -75,9 +76,12 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
   const today = new Date().toISOString().slice(0, 10);
   const statusMap = new Map(a.days.map((x) => [x.d, x.status]));
 
-  // Heatmap: 53 Wochen-Spalten (Mo–So), älteste links.
-  const start = mondayOf(addDays(today, -52 * 7));
-  const cols = Array.from({ length: 53 }, (_, c) => {
+  // Heatmap ab Tracking-Start (a.since) bis heute; max. 53 Wochen. Kein leeres Vorjahr.
+  const curMon = mondayOf(today);
+  const weeksSpan = Math.round((Date.parse(curMon) - Date.parse(mondayOf(a.since))) / (7 * 86400000));
+  const numCols = Math.min(53, Math.max(1, weeksSpan + 1));
+  const start = addDays(curMon, -(numCols - 1) * 7);
+  const cols = Array.from({ length: numCols }, (_, c) => {
     const wk = addDays(start, c * 7);
     const days = Array.from({ length: 7 }, (_, r) => {
       const d = addDays(wk, r);
@@ -154,7 +158,7 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
       <div className="card px-4 py-4">
         <div className="flex items-center justify-between mb-2.5">
           <div className="section-label">Aktivität</div>
-          <span className="text-[10px] text-[var(--faint)]">letzte 12 Monate</span>
+          <span className="text-[10px] text-[var(--faint)]">seit Start</span>
         </div>
         <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
           <div className="inline-flex flex-col gap-[3px]">
