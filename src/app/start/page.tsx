@@ -358,7 +358,7 @@ export default function StartPage() {
                 <div className="section-label mb-2">Wochenplan</div>
                 <p className="text-[var(--muted)]">
                   Dein Wochenplan legt fest, an welchen Tagen du normalerweise trainierst. An diesen Tagen
-                  wirst du erwartet – hier zählen Streak, perfekte Wochen und (falls du fehlst) Bitch-Punkte.
+                  wirst du erwartet – hier zählen Streak, perfekte Wochen und (falls du fehlst) Chicken-Punkte.
                   Einmalig anders unterwegs? Du kannst für eine einzelne Woche eine Abweichung setzen, ohne
                   den festen Plan zu ändern.
                 </p>
@@ -384,9 +384,10 @@ export default function StartPage() {
                 <div className="section-label mb-2">Streak-Schild 🛡️</div>
                 <p className="text-[var(--muted)]">
                   Bei jedem zweiten Streak-Meilenstein (<strong className="text-[var(--text)]">3, 8 und 26 Wochen</strong>) bekommst du
-                  automatisch ein Schild. Verpasst du danach mal ein Training, greift es <strong className="text-[var(--text)]">von selbst</strong> und
-                  friert deine Streak für 3 Tage ein – du verlierst sie nicht. Du kannst höchstens ein Schild auf einmal haben;
-                  ein neues kommt beim nächsten Schild-Meilenstein. Deinen Schild-Status siehst du oben, wenn du auf die Flamme tippst.
+                  automatisch ein Schild – mehr als eins auf einmal geht nicht. Verpasst du ein Training, setzt es sich
+                  <strong className="text-[var(--text)]"> von selbst</strong> ein und rettet deine Streak über ein 3-Tage-Fenster.
+                  Danach ist es <strong className="text-[var(--text)]">aufgebraucht</strong>: es schützt dich also einmalig, nicht dauerhaft –
+                  ein neues gibt&apos;s erst beim nächsten Schild-Meilenstein. Deinen Schild-Status siehst du oben, wenn du auf die Flamme tippst.
                 </p>
               </section>
 
