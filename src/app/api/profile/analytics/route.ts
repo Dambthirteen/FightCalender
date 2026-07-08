@@ -41,11 +41,17 @@ export async function GET(req: NextRequest) {
     const present = new Set(dates);
     const total = dates.length;
 
-    const perDay: Record<string, number> = {};
+    // Kurs-Aufteilung (wie oft in welchem Kurs) — für den Donut.
+    const byCourse = (await sql`
+      SELECT c.name AS name, c.color AS color, COUNT(*)::int AS n
+      FROM attendance a JOIN classes c ON c.id = a.class_id
+      WHERE a.user_name = ${user}
+      GROUP BY c.name, c.color ORDER BY n DESC
+    `) as { name: string; color: string; n: number }[];
+
     const perMonth: Record<string, number> = {};
     const perWeek: Record<string, number> = {};
     for (const d of dates) {
-      perDay[d] = (perDay[d] ?? 0) + 1;
       const m = d.slice(0, 7);
       perMonth[m] = (perMonth[m] ?? 0) + 1;
       const w = weekStartOf(d);
@@ -63,46 +69,61 @@ export async function GET(req: NextRequest) {
     let bestWeek: { w: string; n: number } | null = null;
     for (const [w, n] of Object.entries(perWeek)) if (!bestWeek || n > bestWeek.n) bestWeek = { w, n };
 
-    // Heatmap: letzte 371 Tage, nur Tage mit >0
-    const cutoff = addDaysStr(today, -371);
-    const heat = Object.entries(perDay).filter(([d]) => d >= cutoff).map(([d, n]) => ({ d, n }));
-
     // Trend: letzte 12 Wochen (inkl. Null-Wochen)
     const weeks: { w: string; n: number }[] = [];
     for (let i = 11; i >= 0; i--) { const w = addDaysStr(curWeek, -7 * i); weeks.push({ w, n: perWeek[w] ?? 0 }); }
 
-    // Erscheinungsquote über die letzten RATE_WEEKS Wochen (geplant vs. tatsächlich da)
-    let rate: { planned: number; attended: number; pct: number } | null = null;
+    // Gemeinsame Basis für Heatmap-Status & Erscheinungsquote.
     const plan = await loadWeekPlan(sql, user);
+    const bl = await getUserBundesland(user);
+    const stRows = (await sql`
+      SELECT status_type AS t, start_date::text AS s, end_date::text AS e FROM user_status
+      WHERE user_name = ${user} AND status_type IN ('sick','injured','vacation')
+    `) as { t: string; s: string; e: string }[];
+    const inRange = (d: string, types: string[]) => stRows.some((x) => types.includes(x.t) && d >= x.s && d <= x.e);
+    const compRows = (await sql`SELECT competition_date::text AS d FROM competitions WHERE user_name = ${user}`) as { d: string }[];
+    const compSet = new Set(compRows.map((r) => r.d));
+    const isPlanned = (d: string) => plan.hasAny && !isHolidayIn(d, bl) && plan.dowsFor(weekStartOf(d)).has(isoDayOfWeek(d));
+
+    // Heatmap: Status je Tag über die letzten 371 Tage (nur Tage mit Status).
+    // Priorität: Wettkampf(gold) > trainiert(grün) > krank/verletzt(lila) > Urlaub(blau) > verpasst(rot).
+    const days: { d: string; status: string }[] = [];
+    let hd = addDaysStr(today, -371);
+    for (let guard = 0; guard <= 372 && hd <= today; guard++, hd = addDaysStr(hd, 1)) {
+      let status: string | null = null;
+      if (compSet.has(hd)) status = 'competition';
+      else if (present.has(hd)) status = 'attended';
+      else if (inRange(hd, ['sick', 'injured'])) status = 'sick';
+      else if (inRange(hd, ['vacation'])) status = 'vacation';
+      else if (hd < today && isPlanned(hd)) status = 'missed';
+      if (status) days.push({ d: hd, status });
+    }
+
+    // Erscheinungsquote über die letzten RATE_WEEKS Wochen (geplant vs. tatsächlich da).
+    let rate: { planned: number; attended: number; pct: number } | null = null;
     if (plan.hasAny) {
-      const bl = await getUserBundesland(user);
-      const statusRows = (await sql`
-        SELECT start_date::text AS s, end_date::text AS e FROM user_status
-        WHERE user_name = ${user} AND status_type IN ('sick','vacation','injured')
-      `) as { s: string; e: string }[];
-      const exempt = (d: string) => statusRows.some((x) => d >= x.s && d <= x.e);
-      let planned = 0, attended = 0;
+      let plannedN = 0, attendedN = 0;
       for (let i = 0; i < RATE_WEEKS; i++) {
         const ws = addDaysStr(curWeek, -7 * i);
         const dows = plan.dowsFor(ws);
         for (let off = 0; off < 7; off++) {
           const d = addDaysStr(ws, off);
-          if (d > today) continue;                 // Zukunft überspringen
+          if (d > today) continue;                  // Zukunft überspringen
           if (!dows.has(isoDayOfWeek(d))) continue; // kein geplanter Tag
           if (isHolidayIn(d, bl)) continue;
-          if (exempt(d)) continue;                  // krank/verletzt/Urlaub zählt nicht
-          planned++;
-          if (present.has(d)) attended++;
+          if (inRange(d, ['sick', 'injured', 'vacation'])) continue; // zählt nicht dagegen
+          plannedN++;
+          if (present.has(d)) attendedN++;
         }
       }
-      if (planned > 0) rate = { planned, attended, pct: Math.round((attended / planned) * 100) };
+      if (plannedN > 0) rate = { planned: plannedN, attended: attendedN, pct: Math.round((attendedN / plannedN) * 100) };
     }
 
     return NextResponse.json({
       total,
       thisMonth: perMonth[curMonth] ?? 0,
       lastMonth: perMonth[lastMonth] ?? 0,
-      bestMonth, bestWeek, heat, weeks, rate, rateWeeks: RATE_WEEKS,
+      bestMonth, bestWeek, days, weeks, byCourse, rate, rateWeeks: RATE_WEEKS,
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

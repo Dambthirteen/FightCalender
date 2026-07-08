@@ -2,24 +2,40 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Persönliche Trainings-Statistik im Profil-Stats-Tab: Kennzahl-Kacheln, Aktivitäts-Heatmap,
- * Monats-/Wochen-Trend und (für Wettkämpfer) Sieg/Niederlage/Unentschieden.
- * Daten von /api/profile/analytics; W/L/D aus den übergebenen Wettkämpfen.
+ * Persönliche Trainings-Statistik im Profil-Stats-Tab: Kennzahl-Kacheln, Kurs-Aufteilung (Donut),
+ * Status-Heatmap (trainiert/verpasst/Urlaub/krank/Wettkampf), Monats-/Wochen-Trend und
+ * (für Wettkämpfer) Sieg/Niederlage/Unentschieden. Daten von /api/profile/analytics.
  */
 
+interface Course { name: string; color: string; n: number; }
 interface Analytics {
   total: number;
   thisMonth: number;
   lastMonth: number;
   bestMonth: { m: string; n: number } | null;
   bestWeek: { w: string; n: number } | null;
-  heat: { d: string; n: number }[];
+  days: { d: string; status: string }[];
   weeks: { w: string; n: number }[];
+  byCourse: Course[];
   rate: { planned: number; attended: number; pct: number } | null;
   rateWeeks: number;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+
+// Status-Farben der Heatmap.
+const STATUS: Record<string, { color: string; label: string }> = {
+  attended:    { color: '#3ddc84', label: 'Trainiert' },
+  missed:      { color: '#ff453a', label: 'Verpasst' },
+  vacation:    { color: '#3b82f6', label: 'Urlaub' },
+  sick:        { color: '#a855f7', label: 'Krank/Verletzt' },
+  competition: { color: '#ffc24b', label: 'Wettkampf' },
+};
+const STATUS_ORDER = ['attended', 'missed', 'vacation', 'sick', 'competition'];
+
+// Kursfarben (pastell, wie im Rest der App).
+const COURSE_HEX: Record<string, string> = { red: '#ff8a80', blue: '#93b7f7', green: '#8fe0b0', orange: '#ffbf80', purple: '#c9a3f5' };
+const courseColor = (c: string) => COURSE_HEX[c] ?? '#8a8a94';
 
 function addDays(s: string, n: number): string {
   const d = new Date(`${s}T12:00:00Z`);
@@ -34,12 +50,6 @@ function mondayOf(s: string): string {
 }
 function monthLabel(ym: string): string {
   return `${MONTHS[Number(ym.slice(5, 7)) - 1]} ${ym.slice(2, 4)}`;
-}
-function heatColor(n: number): string {
-  if (n <= 0) return 'var(--surface-2)';
-  if (n === 1) return 'rgba(255,111,97,0.32)';
-  if (n === 2) return 'rgba(255,111,97,0.58)';
-  return 'rgba(255,111,97,0.92)';
 }
 
 function Tile({ value, label, sub }: { value: React.ReactNode; label: string; sub?: string }) {
@@ -60,10 +70,10 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
       .then((d) => { if (d && !d.error && !d.private) setA(d); }).catch(() => {});
   }, [user]);
 
-  if (!a) return null; // Titel/Punkte darunter erscheinen sofort; die Analytics blenden nach
+  if (!a) return null;
 
   const today = new Date().toISOString().slice(0, 10);
-  const heatMap = new Map(a.heat.map((h) => [h.d, h.n]));
+  const statusMap = new Map(a.days.map((x) => [x.d, x.status]));
 
   // Heatmap: 53 Wochen-Spalten (Mo–So), älteste links.
   const start = mondayOf(addDays(today, -52 * 7));
@@ -71,12 +81,18 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
     const wk = addDays(start, c * 7);
     const days = Array.from({ length: 7 }, (_, r) => {
       const d = addDays(wk, r);
-      const future = d > today;
-      return { color: future ? 'transparent' : heatColor(heatMap.get(d) ?? 0) };
+      if (d > today) return { color: 'transparent' };
+      const st = statusMap.get(d);
+      return { color: st ? STATUS[st].color : 'var(--surface-2)' };
     });
     const label = Number(wk.slice(8, 10)) <= 7 ? MONTHS[Number(wk.slice(5, 7)) - 1] : '';
     return { days, label };
   });
+
+  // Kurs-Donut.
+  const courses = a.byCourse.filter((cs) => cs.n > 0);
+  const cTotal = courses.reduce((s, cs) => s + cs.n, 0);
+  let acc = 0;
 
   // Trend: 12 Wochenwerte + 4-Wochen-Schnitt.
   const ws = a.weeks;
@@ -103,7 +119,38 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
         <Tile value={a.bestMonth?.n ?? '–'} label="Bester Monat" sub={a.bestMonth ? monthLabel(a.bestMonth.m) : undefined} />
       </div>
 
-      {/* Aktivitäts-Heatmap */}
+      {/* Kurs-Aufteilung (Donut) */}
+      {courses.length > 0 && (
+        <div className="card px-4 py-4">
+          <div className="section-label mb-3">Kurs-Aufteilung</div>
+          <div className="flex items-center gap-4">
+            <svg viewBox="0 0 36 36" className="w-24 h-24 shrink-0">
+              <circle cx={18} cy={18} r={15.9155} fill="none" stroke="var(--surface-2)" strokeWidth={4.5} />
+              {courses.map((cs) => {
+                const pct = cTotal ? (cs.n / cTotal) * 100 : 0;
+                const el = (
+                  <circle key={cs.name} cx={18} cy={18} r={15.9155} fill="none" stroke={courseColor(cs.color)} strokeWidth={4.5}
+                    strokeDasharray={`${pct} ${100 - pct}`} strokeDashoffset={`${25 - acc}`} />
+                );
+                acc += pct;
+                return el;
+              })}
+              <text x={18} y={19} textAnchor="middle" style={{ fill: 'var(--muted)', fontSize: '6px' }}>{cTotal}×</text>
+            </svg>
+            <div className="flex-1 min-w-0 space-y-1.5">
+              {courses.slice(0, 6).map((cs) => (
+                <div key={cs.name} className="flex items-center gap-2 text-xs">
+                  <span className="w-2.5 h-2.5 rounded-[2px] shrink-0" style={{ background: courseColor(cs.color) }} />
+                  <span className="flex-1 min-w-0 truncate">{cs.name}</span>
+                  <span className="tnum text-[var(--muted)] shrink-0">{cs.n}× · {Math.round((cs.n / cTotal) * 100)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status-Heatmap */}
       <div className="card px-4 py-4">
         <div className="flex items-center justify-between mb-2.5">
           <div className="section-label">Aktivität</div>
@@ -127,10 +174,13 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-end gap-1 mt-2 text-[9px] text-[var(--faint)]">
-          weniger
-          {[0, 1, 2, 3].map((n) => <span key={n} className="w-[9px] h-[9px] rounded-[2px] inline-block" style={{ background: heatColor(n) }} />)}
-          mehr
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5 text-[10px] text-[var(--muted)]">
+          {STATUS_ORDER.map((k) => (
+            <span key={k} className="inline-flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-[2px]" style={{ background: STATUS[k].color }} />
+              {STATUS[k].label}
+            </span>
+          ))}
         </div>
       </div>
 
