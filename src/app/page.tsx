@@ -554,6 +554,7 @@ export default function Home() {
               const dayDate = addDays(weekMonday, day - 1);
               const dateStr = format(dayDate, 'yyyy-MM-dd');
               const isToday = dateStr === todayStr;
+              const isPast = dateStr < todayStr; // vergangene Tage der Woche → ausgegraut
               const daySkippers = skipping.filter(s => s.date === dateStr);
               const holiday = holidayMap.get(dateStr) ?? null;
               // Geplant = Wochenplan der angezeigten KW (Abweichung oder fester Plan). Bis der
@@ -568,7 +569,7 @@ export default function Home() {
               const myExcuse = skipping.find(s => s.date === dateStr && s.user_name === userName);
               const daysLeft = 3 - Math.round((Date.parse(todayStr) - Date.parse(dateStr)) / 86400000);
               return (
-                <section key={day} className="card overflow-hidden anim-up" style={{ animationDelay: `${idx * 55}ms` }}>
+                <section key={day} className="card overflow-hidden anim-up" style={{ animationDelay: `${idx * 55}ms`, opacity: isPast ? 0.55 : 1 }}>
                   {/* Day header */}
                   <div className="flex items-center justify-between px-4 py-2.5 border-b"
                     style={{
