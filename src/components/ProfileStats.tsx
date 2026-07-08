@@ -119,7 +119,7 @@ export default function ProfileStats({ user, comps }: { user: string; comps: { r
       {/* Kennzahl-Kacheln */}
       <div className="flex gap-2.5">
         <Tile value={a.total} label="Trainings" />
-        <Tile value={a.rate ? `${a.rate.pct}%` : '–'} label="Quote" sub={a.rate ? `${a.rate.attended}/${a.rate.planned} · ${a.rateWeeks} Wo` : undefined} />
+        <Tile value={a.rate ? `${a.rate.pct}%` : '–'} label="Quote" sub={a.rate ? `${a.rate.attended} von ${a.rate.planned} da` : undefined} />
         <Tile value={a.bestMonth?.n ?? '–'} label="Bester Monat" sub={a.bestMonth ? monthLabel(a.bestMonth.m) : undefined} />
       </div>
 

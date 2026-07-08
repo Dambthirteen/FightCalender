@@ -115,6 +115,7 @@ export async function GET(req: NextRequest) {
         for (let off = 0; off < 7; off++) {
           const d = addDaysStr(ws, off);
           if (d > today) continue;                  // Zukunft überspringen
+          if (d < since) continue;                  // vor Tracking-Start gibt's keine Daten → nicht werten
           if (!dows.has(isoDayOfWeek(d))) continue; // kein geplanter Tag
           if (isHolidayIn(d, bl)) continue;
           if (inRange(d, ['sick', 'injured', 'vacation'])) continue; // zählt nicht dagegen
