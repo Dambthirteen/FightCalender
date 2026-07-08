@@ -82,7 +82,7 @@ export default function NavMenu() {
           top: 'calc(env(safe-area-inset-top) + 4.5rem)',
           background: 'var(--surface)',
           border: '1px solid var(--border)',
-          borderRadius: '1rem',
+          borderRadius: '0.3rem',
           boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
         }}>
         <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)' }}>

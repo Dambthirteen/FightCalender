@@ -516,7 +516,7 @@ export default function Home() {
       {/* Header */}
       <header className="px-4 pt-5 pb-3 flex items-center justify-between max-w-md mx-auto anim-in">
         <div className="flex items-center gap-3">
-          <img src="/icon-192.png" alt="Tap In" className="w-11 h-11 rounded-[13px] ring-1 ring-white/10 shadow-lg shadow-black/40" />
+          <img src="/icon-192.png" alt="Tap In" className="w-11 h-11 rounded-[4px] ring-1 ring-white/10 shadow-lg shadow-black/40" />
           <div>
             <h1 className="font-display text-2xl leading-none tracking-wide">Tap In</h1>
             <p className="text-[var(--muted)] text-[11px] mt-1 uppercase tracking-[0.18em]">Wer kommt diese Woche?</p>

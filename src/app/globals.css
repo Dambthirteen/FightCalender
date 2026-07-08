@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/* Kantiger Look ("entrundet"): alle Tailwind-Radien auf 30 % → ~70 % eckiger. Trifft jede
+   rounded-*-Utility (rounded-xl/-lg/-2xl …) app-weit auf einmal. Voll-runde Elemente bleiben
+   rund: rounded-full ist calc(infinity) und 999px-Pillen/Avatare stehen separat unten. */
+@theme {
+  --radius-xs: 0.0375rem;
+  --radius-sm: 0.075rem;
+  --radius-md: 0.1125rem;
+  --radius-lg: 0.15rem;
+  --radius-xl: 0.225rem;
+  --radius-2xl: 0.3rem;
+  --radius-3xl: 0.45rem;
+  --radius-4xl: 0.6rem;
+}
+
 /* ============================================================
    FIGHT NIGHT — Design-System
    ============================================================ */
@@ -181,7 +195,7 @@ h1, h2, h3, .font-display {
 .card {
   background: linear-gradient(180deg, var(--surface) 0%, var(--bg-elev) 100%);
   border: 1px solid var(--border-soft);
-  border-radius: 1.1rem;
+  border-radius: 0.33rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 14px 30px -22px rgba(0, 0, 0, 0.7);
 }
 
@@ -217,7 +231,7 @@ h1, h2, h3, .font-display {
   justify-content: center;
   gap: 0.5rem;
   font-weight: 700;
-  border-radius: 0.85rem;
+  border-radius: 0.255rem;
   padding: 0.72rem 1rem;
   transition: transform 0.12s ease, opacity 0.12s ease, filter 0.12s ease;
   cursor: pointer;
@@ -232,7 +246,7 @@ h1, h2, h3, .font-display {
   width: 100%;
   background: var(--surface-2);
   border: 1px solid var(--border-soft);
-  border-radius: 0.85rem;
+  border-radius: 0.255rem;
   padding: 0.62rem 0.9rem;
   color: var(--text);
   transition: border-color 0.12s ease;
@@ -269,6 +283,6 @@ h1, h2, h3, .font-display {
   position: absolute;
   left: 0; top: 14%; bottom: 14%;
   width: 3px;
-  border-radius: 3px;
+  border-radius: 1px;
   background: var(--accent);
 }
