@@ -43,8 +43,8 @@ export default function AccountSettings() {
           <div className="section-label mb-1.5 flex items-center gap-2">
             E-Mail
             {loaded && email && (verified
-              ? <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(61,220,132,0.15)', color: 'var(--teal)' }}>verifiziert</span>
-              : <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>unbestätigt</span>)}
+              ? <span className="text-[10px] px-1.5 py-px rounded-[3px]" style={{ background: 'rgba(61,220,132,0.15)', color: 'var(--teal)' }}>verifiziert</span>
+              : <span className="text-[10px] px-1.5 py-px rounded-[3px]" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>unbestätigt</span>)}
           </div>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="du@example.com" className={field} />
         </div>

@@ -838,7 +838,7 @@ export default function ProfilePage() {
                           {!isSelf && canInteract && !challengeOpen && (
                             <button onClick={openChallenge} className="text-[11px] font-semibold" style={{ color: 'var(--accent-2)' }}>⚔ anfechten</button>
                           )}
-                          <span className="font-display text-base tracking-wide px-2.5 py-0.5 rounded-full"
+                          <span className="font-display text-base tracking-wide px-2 py-px rounded-[3px]"
                             style={{ color: rating.color, border: `1px solid ${rating.color}`, background: `${rating.color}1a` }}>
                             {rating.label}
                           </span>
@@ -912,7 +912,7 @@ export default function ProfilePage() {
                               const cur = Math.round(Number(skills[k as keyof Skills] ?? 0) / 20);
                               const label = SKILLS.find((s) => s.key === k)?.label ?? k;
                               return (
-                                <span key={k} className="text-[11px] px-2 py-0.5 rounded-full border border-[var(--border)]">
+                                <span key={k} className="text-[11px] px-1.5 py-px rounded-[3px] border border-[var(--border)]">
                                   {label}: <span className="text-[var(--faint)]">{cur}</span> → <strong style={{ color: c }}>{v}</strong>
                                 </span>
                               );

@@ -111,7 +111,7 @@ export default function NavMenu() {
                     fontWeight: active ? 600 : 400,
                   }}>
                   <span>{it.icon}</span> {it.label}
-                  {voting && <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,197,24,0.16)', color: 'var(--bitch)' }}>offen</span>}
+                  {voting && <span className="ml-auto text-[10px] px-1.5 py-px rounded-[3px]" style={{ background: 'rgba(245,197,24,0.16)', color: 'var(--bitch)' }}>offen</span>}
                   {active && !voting && <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent)' }} />}
                 </a>
               );

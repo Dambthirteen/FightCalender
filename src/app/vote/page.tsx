@@ -139,27 +139,27 @@ export default function VotePage() {
           </div>
           <div className="flex flex-wrap gap-1">
             {e.holiday && (
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
+              <span className="text-[11px] font-medium px-1.5 py-px rounded-[3px] bg-purple-500/20 text-purple-400 border border-purple-500/30">
                 🎄 {e.holiday}
               </span>
             )}
             {statusCfg && (
-              <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${statusCfg.color}`}>
+              <span className={`text-[11px] font-medium px-1.5 py-px rounded-[3px] border ${statusCfg.color}`}>
                 {statusCfg.icon} {statusCfg.label}
               </span>
             )}
             {e.is_exempt && (
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-600/20 text-green-400 border border-green-500/30">
+              <span className="text-[11px] font-medium px-1.5 py-px rounded-[3px] bg-green-600/20 text-green-400 border border-green-500/30">
                 ✓ Befreit
               </span>
             )}
             {e.streak_protected && (
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: 'var(--accent-soft)', color: 'var(--accent-2)', border: '1px solid rgba(255,106,61,0.3)' }}>
+              <span className="text-[11px] font-medium px-1.5 py-px rounded-[3px]" style={{ background: 'var(--accent-soft)', color: 'var(--accent-2)', border: '1px solid rgba(255,106,61,0.3)' }}>
                 🔥 Streak gerettet
               </span>
             )}
             {!e.is_exempt && info.isPast && (
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${!accepted ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
+              <span className={`text-[11px] font-semibold px-1.5 py-px rounded-[3px] ${!accepted ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
                 {accepted ? '✅ Ausrede gilt' : '❌ Chicken bleibt'}
               </span>
             )}

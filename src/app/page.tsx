@@ -618,7 +618,7 @@ export default function Home() {
                             return (
                               <div className="mt-2 flex flex-wrap gap-1.5">
                                 {coaches.map(name => (
-                                  <span key={`coach-${name}`} className="text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
+                                  <span key={`coach-${name}`} className="text-[10px] font-bold px-1.5 py-px rounded-[3px] inline-flex items-center gap-1"
                                     style={{ background: 'var(--gold)', color: '#3a2a00', boxShadow: '0 0 0 1.5px rgba(255,194,75,0.55)' }}>
                                     🎓 {name}
                                   </span>
@@ -627,7 +627,7 @@ export default function Home() {
                                   const uc = colorFor(a.user_name, userColors[a.user_name]);
                                   const mine = a.user_name === userName;
                                   return (
-                                    <span key={a.user_name} className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                                    <span key={a.user_name} className="text-[10px] font-semibold px-1.5 py-px rounded-[3px]"
                                       style={{ background: uc, color: '#fff', boxShadow: mine ? '0 0 0 1.5px rgba(255,255,255,0.6)' : 'none' }}>
                                       {a.user_name}
                                     </span>
@@ -671,7 +671,7 @@ export default function Home() {
                       {daySkippers.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-2">
                           {daySkippers.map(s => (
-                            <span key={s.user_name} title={s.excuse} className="text-[10px] px-2 py-0.5 rounded-full cursor-help"
+                            <span key={s.user_name} title={s.excuse} className="text-[10px] px-1.5 py-px rounded-[3px] cursor-help"
                               style={{ background: 'rgba(245,197,24,0.1)', color: 'var(--bitch)', border: '1px solid rgba(245,197,24,0.22)' }}>
                               {s.user_name}
                             </span>

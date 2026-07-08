@@ -58,7 +58,7 @@ function PersonRow({ u, showStreak, me, onClick, delay, friendState, onFriend }:
           style={{ color: (u.streak ?? 0) > 0 ? 'var(--accent)' : 'var(--faint)' }}>🔥 {u.streak ?? 0}</span>
       )}
       {friendState && friendState !== 'self' && <FriendButton state={friendState} onAction={onFriend} />}
-      {me && <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>Du</span>}
+      {me && <span className="text-[10px] uppercase tracking-wider px-1.5 py-px rounded-[3px]" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>Du</span>}
       <span className="text-[var(--faint)]">›</span>
     </a>
   );
