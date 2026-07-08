@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import LoadingScreen from '@/components/LoadingScreen';
+import GroupStats from '@/components/GroupStats';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -92,6 +93,8 @@ export default function StatistikPage() {
                 <Board title={<><ChickenMark size={18} /> Chicken</>} color="var(--bitch)" rows={bitchY} unit="Fehltage" />
               </div>
             </section>
+
+            <GroupStats />
           </>
         )}
       </main>
