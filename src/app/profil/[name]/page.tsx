@@ -112,7 +112,7 @@ function Stat({ value, label, color }: { value: number | string; label: string; 
   );
 }
 
-const TABS = [['fighter', 'Fighter'], ['stats', 'Stats'], ['plan', 'Plan'], ['ehrungen', 'Ehrungen'], ['pinnwand', 'Pinnwand']] as const;
+const TABS = [['fighter', 'Fighter'], ['stats', 'Stats'], ['plan', 'Plan'], ['ehrungen', 'Ehrungen']] as const;
 type Tab = (typeof TABS)[number][0];
 
 // Kursfarben (wie auf der Startseite) → für den Trainingsplan.
@@ -151,6 +151,16 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="flex items-center justify-between gap-3">
       <span className="text-[var(--muted)]">{label}</span>
       <span className="font-semibold text-right">{value}</span>
+    </div>
+  );
+}
+
+// Kompakte Fakt-Zelle (Label oben, Wert darunter) — für den verdichteten Steckbrief in 2 Spalten.
+function Fact({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-wider text-[var(--faint)]">{label}</div>
+      <div className="text-sm font-medium">{value}</div>
     </div>
   );
 }
@@ -469,6 +479,9 @@ export default function ProfilePage() {
   const year = new Date().getFullYear();
   const frame = avatarFrame(cosmetics.avatarFrame, c); // Spind: Avatar-Rahmen
   const streakDays = badgeData?.streakDays ?? 0;
+  // Hat der Steckbrief überhaupt Eckdaten? (sonst wird der Abschnitt in der Ansicht ausgeblendet)
+  const hasFacts = !!(fighterInfo.athlete || fighterInfo.trainingSince || fighterInfo.weightKg || fighterInfo.heightCm || fighterInfo.instagram
+    || (isCoach(fighterInfo.role) && (fighterInfo.coachingSince || fighterInfo.coachingArts?.length || fighterInfo.licenses)));
 
   // Ausgestellte Abzeichen (für die read-only-Anzeige auf fremden Profilen).
   const displayedBadgeInfos = (badgeData?.earned ?? []).filter((b) => (badgeData?.displayed ?? []).includes(b.id));
@@ -593,15 +606,23 @@ export default function ProfilePage() {
                 </div>
               </div>
             );
-            // Level/XP volle Breite (= Gürtel). Tap wechselt zwischen XP und Streak.
+            // Level/XP volle Breite (= Gürtel). Sichtbarer Umschalter statt unsichtbarem Tap.
             if (xp) return (
-              <button type="button" onClick={() => setStatMode((m) => (m === 'xp' ? 'streak' : 'xp'))}
-                className="w-full mt-3 text-left active:opacity-80 transition-opacity" aria-label="Zwischen XP und Streak wechseln">
+              <div className="w-full mt-3">
+                <div className="flex gap-1 justify-center mb-1.5">
+                  {(['xp', 'streak'] as const).map((m) => (
+                    <button key={m} type="button" onClick={() => setStatMode(m)}
+                      className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-[3px] transition-colors"
+                      style={statMode === m ? { color: 'var(--accent)', background: 'var(--accent-soft)' } : { color: 'var(--faint)' }}>
+                      {m === 'xp' ? 'Level' : 'Streak'}
+                    </button>
+                  ))}
+                </div>
                 {statMode === 'xp'
                   ? <XpBar data={xp} color={xpBarColor(cosmetics.xpbar)}
                       right={<span className="text-[10px] text-[var(--faint)] tnum">noch {Math.max(0, xp.span - xp.into)} XP</span>} />
                   : streakView}
-              </button>
+              </div>
             );
             return <div className="mt-2">{streakView}</div>;
           })()}
@@ -635,8 +656,11 @@ export default function ProfilePage() {
             {/* --- Tab: Fighter --- */}
             {tab === 'fighter' && (
               <div className="space-y-4 anim-in">
-                {/* Eckdaten */}
-                <div className="card px-4 py-4">
+                {/* Steckbrief — Eckdaten · Über mich · Kampfsport in einer Karte mit Trennlinien */}
+                {(editing || hasFacts || bio || arts.length > 0) && (
+                <div className="card px-4 divide-y divide-[var(--border-soft)]">
+                {(editing || hasFacts) && (
+                <section className="py-4">
                   <div className="section-label mb-2.5">Eckdaten</div>
                   {editing ? (
                     <div className="space-y-3">
@@ -737,31 +761,28 @@ export default function ProfilePage() {
                           onChange={(e) => setFighterField('instagram', e.target.value.replace(/^@/, ''))} className="field" />
                       </div>
                     </div>
-                  ) : (fighterInfo.athlete || fighterInfo.trainingSince || fighterInfo.weightKg || fighterInfo.heightCm || fighterInfo.instagram || (isCoach(fighterInfo.role) && (fighterInfo.coachingSince || fighterInfo.coachingArts?.length || fighterInfo.licenses))) ? (
-                    <div className="space-y-2 text-sm">
-                      {fighterInfo.athlete && <InfoRow label="Typ" value={athleteLabel(fighterInfo.athlete, fighterInfo.gender)} />}
-                      {fighterInfo.trainingSince && <InfoRow label="Trainiert" value={trainingLabel(fighterInfo.trainingSince)} />}
-                      {isCoach(fighterInfo.role) && fighterInfo.coachingSince && <InfoRow label={`${trainerLabel(fighterInfo.gender)} seit`} value={trainingLabel(fighterInfo.coachingSince)} />}
-                      {isCoach(fighterInfo.role) && !!fighterInfo.coachingArts?.length && <InfoRow label={`${trainerLabel(fighterInfo.gender)} für`} value={fighterInfo.coachingArts.map(artLabel).join(' · ')} />}
-                      {isCoach(fighterInfo.role) && fighterInfo.licenses && <InfoRow label="Lizenzen" value={fighterInfo.licenses} />}
-                      {fighterInfo.weightKg && <InfoRow label="Gewicht" value={`${fighterInfo.weightKg} kg · ${weightClass(fighterInfo.weightKg)}`} />}
-                      {fighterInfo.heightCm && <InfoRow label="Größe" value={`${fighterInfo.heightCm} cm`} />}
+                  ) : (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                      {fighterInfo.athlete && <Fact label="Typ" value={athleteLabel(fighterInfo.athlete, fighterInfo.gender)} />}
+                      {fighterInfo.trainingSince && <Fact label="Trainiert" value={trainingLabel(fighterInfo.trainingSince)} />}
+                      {fighterInfo.weightKg && <Fact label="Gewicht" value={`${fighterInfo.weightKg} kg · ${weightClass(fighterInfo.weightKg)}`} />}
+                      {fighterInfo.heightCm && <Fact label="Größe" value={`${fighterInfo.heightCm} cm`} />}
+                      {isCoach(fighterInfo.role) && fighterInfo.coachingSince && <Fact label={`${trainerLabel(fighterInfo.gender)} seit`} value={trainingLabel(fighterInfo.coachingSince)} />}
+                      {isCoach(fighterInfo.role) && !!fighterInfo.coachingArts?.length && <Fact label={`${trainerLabel(fighterInfo.gender)} für`} value={fighterInfo.coachingArts.map(artLabel).join(' · ')} />}
+                      {isCoach(fighterInfo.role) && fighterInfo.licenses && <Fact label="Lizenzen" value={fighterInfo.licenses} />}
                       {fighterInfo.instagram && (
-                        <InfoRow label="Instagram" value={
-                          <a href={`https://instagram.com/${fighterInfo.instagram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--teal)' }}>
-                            @{fighterInfo.instagram}
-                          </a>
+                        <Fact label="Instagram" value={
+                          <a href={`https://instagram.com/${fighterInfo.instagram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--teal)' }}>@{fighterInfo.instagram}</a>
                         } />
                       )}
                     </div>
-                  ) : (
-                    <div className="text-sm text-[var(--faint)]">Noch keine Angaben.</div>
                   )}
-                </div>
+                </section>
+                )}
 
                 {/* Über mich */}
                 {(editing || bio) && (
-                  <div className="card px-4 py-4">
+                  <section className="py-4">
                     <div className="section-label mb-2.5">Über mich</div>
                     {editing ? (
                       <>
@@ -776,11 +797,12 @@ export default function ProfilePage() {
                     ) : (
                       <p className="text-sm text-[var(--muted)] whitespace-pre-wrap break-words">{bio}</p>
                     )}
-                  </div>
+                  </section>
                 )}
 
                 {/* Kampfsport */}
-                <div className="card px-4 py-4">
+                {(editing || arts.length > 0) && (
+                <section className="py-4">
                   <div className="section-label mb-2.5">Kampfsport</div>
                   {editing ? (
                     <>
@@ -814,8 +836,6 @@ export default function ProfilePage() {
                         </div>
                       ))}
                     </>
-                  ) : arts.length === 0 ? (
-                    <div className="text-sm text-[var(--faint)]">Noch keine Kampfsportart angegeben.</div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {arts.map((m) => (
@@ -826,7 +846,10 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   )}
+                </section>
+                )}
                 </div>
+                )}
 
                 {/* Skilltree */}
                 {(() => {
@@ -1130,9 +1153,10 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* --- Tab: Pinnwand (Kommentare) --- */}
-            {tab === 'pinnwand' && (
-              <div className="card px-4 py-4 anim-in">
+            {/* --- Pinnwand (Kommentare) — jetzt Teil des Ehrungen-Tabs --- */}
+            {tab === 'ehrungen' && (
+              <div className="card px-4 py-4 anim-in mt-4">
+                <div className="section-label mb-2.5">Pinnwand</div>
                 {comments.length === 0 ? (
                   <div className="text-sm text-[var(--faint)] mb-3">Noch keine Kommentare.</div>
                 ) : (
