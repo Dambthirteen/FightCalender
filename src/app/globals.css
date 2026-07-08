@@ -18,8 +18,8 @@
    FIGHT NIGHT — Design-System
    ============================================================ */
 :root {
-  --bg: #100b08;        /* warmer, leicht heller (vorher #08080a) */
-  --bg-elev: #16100b;
+  --bg: #08080a;        /* wieder dunkel — mehr Schwarztöne */
+  --bg-elev: #0d0d10;
   --surface: #121216;
   --surface-2: #17171c;
   --border: #26262e;
@@ -28,13 +28,14 @@
   --muted: #8b8b96;
   --faint: #5a5a64;
 
-  --accent: #ff3b30;          /* fight red */
-  --accent-2: #ff6a3d;        /* ember */
-  --accent-soft: rgba(255, 59, 48, 0.13);
-  --gold: #ffc24b;            /* Macher */
-  --bitch: #f5c518;           /* Bitch */
-  --teal: #1ec7da;            /* aus dem Logo */
-  --good: #3ddc84;
+  /* Pastell-Variante desselben Schemas: gleiche Farbtöne, nur softer/heller & weniger neon. */
+  --accent: #ff6f61;          /* fight red → soft coral */
+  --accent-2: #ffa07a;        /* ember → soft peach */
+  --accent-soft: rgba(255, 111, 97, 0.15);
+  --gold: #ffd67e;            /* Macher → soft butter */
+  --bitch: #f2d06b;           /* Chicken → soft pastel yellow */
+  --teal: #6fd3df;            /* Logo → soft aqua */
+  --good: #7fdca6;            /* → soft mint */
 }
 
 * { box-sizing: border-box; }
@@ -44,13 +45,12 @@ body {
   font-family: var(--font-body), system-ui, sans-serif;
   color: var(--text);
   background-color: var(--bg);
-  /* atmosphärischer, geschichteter Hintergrund — wärmer/oranger, mehr Variation */
+  /* atmosphärischer, geschichteter Hintergrund — dunkel mit soften Pastell-Glows */
   background-image:
-    radial-gradient(1100px 640px at 86% -8%, rgba(255, 106, 61, 0.20), transparent 60%),
-    radial-gradient(760px 500px at -12% 2%, rgba(30, 199, 218, 0.05), transparent 55%),
-    radial-gradient(1000px 820px at 50% 116%, rgba(255, 150, 64, 0.11), transparent 62%),
-    radial-gradient(1200px 900px at 18% 88%, rgba(255, 122, 50, 0.07), transparent 60%),
-    radial-gradient(150% 125% at 50% 24%, transparent 64%, rgba(0, 0, 0, 0.45) 100%);
+    radial-gradient(1000px 620px at 86% -8%, rgba(255, 111, 97, 0.10), transparent 60%),
+    radial-gradient(760px 500px at -12% 2%, rgba(111, 211, 223, 0.05), transparent 55%),
+    radial-gradient(1000px 820px at 50% 118%, rgba(255, 214, 126, 0.05), transparent 62%),
+    radial-gradient(150% 125% at 50% 26%, transparent 55%, rgba(0, 0, 0, 0.6) 100%);
   min-height: 100svh;
   /* Safe-Area: nicht mehr unter der iPhone-Kamera / Home-Indicator */
   padding-top: env(safe-area-inset-top);
