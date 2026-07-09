@@ -687,7 +687,6 @@ export default function Home() {
                               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-px rounded-[3px] shrink-0" style={{ background: 'var(--gold)', color: '#3a2a00' }}>Special</span>
                             </div>
                             {ev.note && <div className="text-[11px] text-[var(--muted)] mt-1 ml-6">{ev.note}</div>}
-                            <div className="text-[11px] mt-1.5 ml-6" style={{ color: mine ? 'var(--gold)' : 'var(--faint)' }}>{mine ? '✓ Angemeldet · tippen zum Abmelden' : 'Tippen zum Anmelden'}</div>
                             {ev.attendees.length > 0 && (
                               <div className="mt-2 ml-6 flex flex-wrap gap-1.5">
                                 {ev.attendees.map((nm) => {
