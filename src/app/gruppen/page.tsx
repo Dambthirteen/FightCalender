@@ -137,6 +137,28 @@ export default function GroupsPage() {
     setEvents((prev) => prev.filter((e) => e.id !== id));
     await fetch(`/api/group-events?id=${id}`, { method: 'DELETE' }).catch(() => {});
   }
+  async function saveGroupName() {
+    if (!current || groupName.trim().length < 2) return;
+    setBusy(true); setMsg('');
+    try {
+      await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, name: groupName.trim() }) });
+      setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, name: groupName.trim() } : g)));
+      setMsg('Gruppenname gespeichert.');
+    } finally { setBusy(false); }
+  }
+  async function regenCode() {
+    if (!current) return;
+    if (!confirm('Neuen Einladungscode generieren? Der alte Code funktioniert danach nicht mehr.')) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/groups', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupId: current, regenerateCode: true }) });
+      const d = await res.json().catch(() => ({}));
+      if (d.invite_code) {
+        setInviteCode(d.invite_code);
+        setGroups((prev) => prev.map((g) => (g.id === current ? { ...g, invite_code: d.invite_code } : g)));
+      }
+    } finally { setBusy(false); }
+  }
   async function pickGroupAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -358,6 +380,11 @@ export default function GroupsPage() {
               <button onClick={copyInvite} className="px-4 rounded-xl border border-[var(--border)] text-[var(--muted)] text-sm">Link kopieren</button>
             </div>
             <div className="text-center text-[11px] text-[var(--faint)] mt-3 font-mono tracking-widest">Code: {inviteCode}</div>
+            {isAdmin && (
+              <button onClick={regenCode} disabled={busy} className="w-full mt-1 text-[11px] text-[var(--faint)] hover:text-[var(--accent)] transition-colors disabled:opacity-40">
+                Code neu generieren (alter wird ungültig)
+              </button>
+            )}
             <button onClick={toggleQr} className="w-full mt-2 text-xs text-[var(--muted)] hover:text-white transition-colors">
               {showQr ? 'QR-Code ausblenden' : 'QR-Code zum Scannen'}
             </button>
@@ -387,6 +414,18 @@ export default function GroupsPage() {
                 <span className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all"
                   style={{ left: hardMode ? '1.35rem' : '0.15rem' }} />
               </button>
+            </div>
+          </section>
+        )}
+
+        {/* Gruppenname ändern (nur Admin) */}
+        {current && isAdmin && (
+          <section className="card p-4 anim-up" style={{ animationDelay: '55ms' }}>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--faint)] mb-2.5">Gruppenname</div>
+            <div className="flex gap-2">
+              <input value={groupName} onChange={(e) => setGroupName(e.target.value)} maxLength={100} placeholder="Gruppenname"
+                className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[var(--faint)] focus:outline-none focus:border-[var(--accent)]" />
+              <button onClick={saveGroupName} disabled={busy || groupName.trim().length < 2} className="text-white font-bold px-4 rounded-xl disabled:opacity-40" style={{ background: 'var(--accent)' }}>Speichern</button>
             </div>
           </section>
         )}

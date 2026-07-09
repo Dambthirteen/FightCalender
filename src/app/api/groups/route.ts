@@ -84,7 +84,7 @@ export async function DELETE(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { groupId, clanTag, hardMode, bundesland, avatar, description } = await req.json();
+  const { groupId, clanTag, hardMode, bundesland, avatar, description, name, regenerateCode } = await req.json();
   const gid = Number(groupId);
   if (!gid) return NextResponse.json({ error: 'Gruppe fehlt' }, { status: 400 });
   if ((await getRole(me, gid)) !== 'admin') return NextResponse.json({ error: 'Nur Admins' }, { status: 403 });
@@ -96,6 +96,21 @@ export async function PATCH(req: NextRequest) {
     const val = typeof avatar === 'string' && avatar.startsWith('data:') ? avatar.slice(0, 400_000) : null;
     await sql`UPDATE groups SET avatar = ${val} WHERE id = ${gid}`;
     return NextResponse.json({ ok: true, avatar: val });
+  }
+
+  // Gruppenname ändern.
+  if (typeof name === 'string') {
+    const nm = name.trim().slice(0, 100);
+    if (nm.length < 2) return NextResponse.json({ error: 'Name zu kurz (min. 2 Zeichen).' }, { status: 400 });
+    await sql`UPDATE groups SET name = ${nm} WHERE id = ${gid}`;
+    return NextResponse.json({ ok: true, name: nm });
+  }
+
+  // Einladungscode neu generieren (der alte Code wird dadurch ungültig).
+  if (regenerateCode === true) {
+    const code = makeInviteCode();
+    await sql`UPDATE groups SET invite_code = ${code} WHERE id = ${gid}`;
+    return NextResponse.json({ ok: true, invite_code: code });
   }
 
   // Gruppen-Beschreibung.
