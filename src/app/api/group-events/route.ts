@@ -23,9 +23,11 @@ export async function GET() {
     if (!gid) return NextResponse.json([]);
     const sql = getSql();
     const rows = await sql`
-      SELECT id, event_date::text AS date, title, note FROM group_events
-      WHERE group_id = ${gid} AND event_date >= (CURRENT_DATE - INTERVAL '7 days')
-      ORDER BY event_date ASC
+      SELECT ge.id, ge.event_date::text AS date, ge.title, ge.note,
+        COALESCE(array_agg(ea.user_name) FILTER (WHERE ea.user_name IS NOT NULL), '{}') AS attendees
+      FROM group_events ge LEFT JOIN event_attendance ea ON ea.event_id = ge.id
+      WHERE ge.group_id = ${gid} AND ge.event_date >= (CURRENT_DATE - INTERVAL '7 days')
+      GROUP BY ge.id ORDER BY ge.event_date ASC
     `;
     return NextResponse.json(rows);
   } catch {
@@ -64,6 +66,25 @@ export async function POST(req: NextRequest) {
   } catch { /* Broadcast optional */ }
 
   return NextResponse.json(ins[0]);
+}
+
+/** An-/Abmelden zu einem Sondertermin (jedes Gruppenmitglied). */
+export async function PUT(req: NextRequest) {
+  const me = await getCurrentUser();
+  if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { eventId } = (await req.json().catch(() => ({}))) as { eventId?: number };
+  if (!eventId) return NextResponse.json({ error: 'Missing eventId' }, { status: 400 });
+  const sql = getSql();
+  const ev = (await sql`SELECT group_id FROM group_events WHERE id = ${eventId}`) as { group_id: number }[];
+  if (ev.length === 0) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 });
+  if (!(await getRole(me, ev[0].group_id))) return NextResponse.json({ error: 'Kein Mitglied' }, { status: 403 });
+  const existing = (await sql`SELECT 1 FROM event_attendance WHERE event_id = ${eventId} AND user_name = ${me}`) as unknown[];
+  if (existing.length > 0) {
+    await sql`DELETE FROM event_attendance WHERE event_id = ${eventId} AND user_name = ${me}`;
+    return NextResponse.json({ attending: false });
+  }
+  await sql`INSERT INTO event_attendance (event_id, user_name) VALUES (${eventId}, ${me}) ON CONFLICT DO NOTHING`;
+  return NextResponse.json({ attending: true });
 }
 
 export async function DELETE(req: NextRequest) {

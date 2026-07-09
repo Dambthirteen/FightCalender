@@ -74,6 +74,12 @@ export async function computeXp(sql: Sql, user: string): Promise<{ xp: number; b
     return { xp, breakdown: { attend: xp, comp: 0, win: 0, lob: 0, gigalob: 0, vote: 0 } };
   }
   const [a] = (await sql`SELECT COUNT(*)::int AS n FROM attendance WHERE user_name = ${user}`) as { n: number }[];
+  // Sondertermin-Anmeldungen geben ebenfalls Attend-XP (Macher-Punkt). Resilient, falls Tabelle fehlt.
+  let evAttend = 0;
+  try {
+    const [ev] = (await sql`SELECT COUNT(*)::int AS n FROM event_attendance WHERE user_name = ${user}`) as { n: number }[];
+    evAttend = ev?.n ?? 0;
+  } catch { /* event_attendance evtl. noch nicht angelegt */ }
   const [comp] = (await sql`
     SELECT COUNT(*)::int AS n, COUNT(*) FILTER (WHERE result = 'win')::int AS wins
     FROM competitions WHERE user_name = ${user}
@@ -86,7 +92,7 @@ export async function computeXp(sql: Sql, user: string): Promise<{ xp: number; b
   const [v] = (await sql`SELECT COUNT(*)::int AS n FROM excuse_votes WHERE voter_name = ${user}`) as { n: number }[];
 
   const breakdown: XpBreakdown = {
-    attend: (a?.n ?? 0) * XP.attend,
+    attend: ((a?.n ?? 0) + evAttend) * XP.attend,
     comp: (comp?.n ?? 0) * XP.comp,
     win: (comp?.wins ?? 0) * XP.win,
     lob: (pr?.lob ?? 0) * XP.lob,

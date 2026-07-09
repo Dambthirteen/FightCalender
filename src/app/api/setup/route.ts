@@ -600,6 +600,16 @@ export async function POST(req: NextRequest) {
       )
     `;
     await sql`CREATE INDEX IF NOT EXISTS group_events_idx ON group_events (group_id, event_date)`;
+    // event_attendance: Anmeldung zu einem Sondertermin (zählt als Macher-Punkt, nie als Chicken).
+    await sql`
+      CREATE TABLE IF NOT EXISTS event_attendance (
+        id SERIAL PRIMARY KEY,
+        event_id INTEGER NOT NULL REFERENCES group_events(id) ON DELETE CASCADE,
+        user_name VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(event_id, user_name)
+      )
+    `;
 
     // --- Monats-Wrapped: merkt, wer den Rückblick eines Monats schon gesehen hat ---
     await sql`

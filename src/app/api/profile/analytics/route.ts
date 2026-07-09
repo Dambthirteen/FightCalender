@@ -38,7 +38,14 @@ export async function GET(req: NextRequest) {
       FROM attendance a JOIN classes c ON c.id = a.class_id
       WHERE a.user_name = ${user}
     `) as { d: string }[];
-    const dates = rows.map((r) => r.d);
+    // Sondertermin-Anmeldungen zählen wie ein Training (Macher-Punkt, grün in der Heatmap).
+    let evDates: string[] = [];
+    try {
+      evDates = ((await sql`
+        SELECT ge.event_date::text AS d FROM event_attendance ea JOIN group_events ge ON ge.id = ea.event_id WHERE ea.user_name = ${user}
+      `) as { d: string }[]).map((r) => r.d);
+    } catch { /* event_attendance evtl. noch nicht angelegt */ }
+    const dates = [...rows.map((r) => r.d), ...evDates];
     const present = new Set(dates);
     const total = dates.length;
 

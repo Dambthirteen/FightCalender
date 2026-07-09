@@ -62,7 +62,7 @@ export default function Home() {
   const [useStreakPt, setUseStreakPt] = useState(false);
   const [userColors, setUserColors] = useState<Record<string, string | null>>({});
   const [bitchAnim, setBitchAnim] = useState(false);
-  const [events, setEvents] = useState<{ id: number; date: string; title: string; note: string }[]>([]);
+  const [events, setEvents] = useState<{ id: number; date: string; title: string; note: string; attendees: string[] }[]>([]);
   const audioRef = useRef<AudioContext | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
 
@@ -138,6 +138,16 @@ export default function Home() {
     if (!userName) return;
     fetch('/api/group-events').then((r) => r.json()).then((d) => setEvents(Array.isArray(d) ? d : [])).catch(() => {});
   }, [userName]);
+
+  async function toggleEvent(eventId: number) {
+    if (!userName) return;
+    setEvents((prev) => prev.map((ev) => ev.id !== eventId ? ev : ({
+      ...ev,
+      attendees: ev.attendees.includes(userName) ? ev.attendees.filter((u) => u !== userName) : [...ev.attendees, userName],
+    })));
+    track('event_attend_toggled');
+    await fetch('/api/group-events', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId }) }).catch(() => {});
+  }
 
   useEffect(() => {
     if (step === 'done' && userName) fetchCalendarData(weekStart);
@@ -462,6 +472,11 @@ export default function Home() {
   const weekStartStr = format(weekMonday, 'yyyy-MM-dd');
   const weekEndStr = format(addDays(weekMonday, 6), 'yyyy-MM-dd');
   const weekEvents = events.filter((e) => e.date >= weekStartStr && e.date <= weekEndStr);
+  const eventsByDay: Record<number, typeof events> = {};
+  for (const ev of weekEvents) {
+    const wd = ((new Date(`${ev.date}T12:00`).getDay() + 6) % 7) + 1; // Mon=1..So=7
+    (eventsByDay[wd] ??= []).push(ev);
+  }
   const classesByDay: Record<number, GymClass[]> = {};
   for (let d = 1; d <= 7; d++) classesByDay[d] = classes.filter(c => c.day_of_week === d);
 
@@ -471,7 +486,7 @@ export default function Home() {
     allHolidays.push(...getHolidays(weekYear + 1, bundesland));
   const holidayMap = new Map(allHolidays.map(h => [h.date, h.name]));
 
-  const activeDays = [1, 2, 3, 4, 5, 6, 7].filter(day => (classesByDay[day] ?? []).length > 0);
+  const activeDays = [1, 2, 3, 4, 5, 6, 7].filter(day => (classesByDay[day] ?? []).length > 0 || (eventsByDay[day] ?? []).length > 0);
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const nowMinutes = (() => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); })();
 
@@ -546,23 +561,6 @@ export default function Home() {
         </div>
         <button onClick={() => setCurrentWeek(w => addWeeks(w, 1))} className="w-10 h-10 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">→</button>
       </div>
-
-      {/* Sondertermine dieser Woche (vom Gruppen-Admin eingetragen) */}
-      {weekEvents.length > 0 && (
-        <div className="max-w-md mx-auto px-4 pb-1">
-          {weekEvents.map((ev) => (
-            <div key={ev.id} className="card px-4 py-3 mb-2 anim-up flex items-center gap-2.5" style={{ borderLeft: '3px solid var(--accent)' }}>
-              <span className="text-lg shrink-0">📣</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold truncate">{ev.title}</div>
-                <div className="text-[11px] text-[var(--muted)]">
-                  {format(new Date(`${ev.date}T12:00`), 'EEEE, d. MMM', { locale: de })}{ev.note ? ` · ${ev.note}` : ''}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Day list (iPhone-first vertical) */}
       <main className="max-w-md mx-auto px-4 pb-16">
@@ -671,6 +669,38 @@ export default function Home() {
                       );
                     })}
                   </div>
+
+                  {/* Sondertermine an diesem Tag — anmeldbar, gibt einen Macher-Punkt (kein Chicken) */}
+                  {(eventsByDay[day] ?? []).length > 0 && (
+                    <div className="px-3 pb-3 flex flex-col gap-2">
+                      {eventsByDay[day].map((ev) => {
+                        const mine = ev.attendees.includes(userName ?? '');
+                        return (
+                          <button key={`ev-${ev.id}`} onClick={() => toggleEvent(ev.id)}
+                            className="w-full text-left rounded-xl border p-3 transition-all active:scale-[0.99]"
+                            style={{ borderColor: mine ? 'var(--gold)' : 'var(--border-soft)', background: mine ? 'rgba(255,194,75,0.12)' : 'var(--surface-2)', boxShadow: mine ? 'inset 0 0 0 1px rgba(255,194,75,0.4)' : 'none' }}>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="shrink-0">📣</span>
+                                <span className="text-sm font-bold truncate">{ev.title}</span>
+                              </div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-px rounded-[3px] shrink-0" style={{ background: 'var(--gold)', color: '#3a2a00' }}>Special</span>
+                            </div>
+                            {ev.note && <div className="text-[11px] text-[var(--muted)] mt-1 ml-6">{ev.note}</div>}
+                            <div className="text-[11px] mt-1.5 ml-6" style={{ color: mine ? 'var(--gold)' : 'var(--faint)' }}>{mine ? '✓ Angemeldet · tippen zum Abmelden' : 'Tippen zum Anmelden'}</div>
+                            {ev.attendees.length > 0 && (
+                              <div className="mt-2 ml-6 flex flex-wrap gap-1.5">
+                                {ev.attendees.map((nm) => {
+                                  const uc = colorFor(nm, userColors[nm]);
+                                  return <span key={nm} className="text-[10px] font-semibold px-1.5 py-px rounded-[3px]" style={{ background: uc, color: '#15151b', boxShadow: nm === userName ? '0 0 0 1.5px rgba(255,255,255,0.6)' : 'none' }}>{nm}</span>;
+                                })}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Bitch / Ausrede row — auf jedem geplanten Tag (wenn nicht anwesend) */}
                   {((isPlanned && !attendedAny) || daySkippers.length > 0) && (

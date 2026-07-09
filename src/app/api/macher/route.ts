@@ -21,16 +21,34 @@ export async function GET(req: NextRequest) {
     // Nach dem ECHTEN Trainingstag filtern, nicht nach week_start (Montag der Woche):
     // sonst fallen Trainings am Monatsanfang, deren Woche noch im Vormonat startet,
     // aus dem Monat heraus (Board wirkt Anfang des Monats leer).
-    const rows = await sql`
+    const rows = (await sql`
       SELECT a.user_name, COUNT(*)::int AS attend_count
       FROM attendance a JOIN classes c ON c.id = a.class_id
       WHERE c.group_id = ${gid}
         AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date >= ${monthStart}::date
         AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date < (${monthStart}::date + INTERVAL '1 month')
       GROUP BY a.user_name
-      ORDER BY attend_count DESC
-    `;
-    return NextResponse.json(rows);
+    `) as { user_name: string; attend_count: number }[];
+
+    // Sondertermin-Anmeldungen zählen wie ein Training (Macher-Punkt). Resilient, falls Tabelle fehlt.
+    let evRows: { user_name: string; n: number }[] = [];
+    try {
+      evRows = (await sql`
+        SELECT ea.user_name, COUNT(*)::int AS n
+        FROM event_attendance ea JOIN group_events ge ON ge.id = ea.event_id
+        WHERE ge.group_id = ${gid}
+          AND ge.event_date >= ${monthStart}::date AND ge.event_date < (${monthStart}::date + INTERVAL '1 month')
+        GROUP BY ea.user_name
+      `) as { user_name: string; n: number }[];
+    } catch { /* event_attendance evtl. noch nicht angelegt */ }
+
+    const counts = new Map<string, number>();
+    for (const r of rows) counts.set(r.user_name, r.attend_count);
+    for (const r of evRows) counts.set(r.user_name, (counts.get(r.user_name) ?? 0) + r.n);
+    const merged = [...counts.entries()]
+      .map(([user_name, attend_count]) => ({ user_name, attend_count }))
+      .sort((a, b) => b.attend_count - a.attend_count);
+    return NextResponse.json(merged);
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
