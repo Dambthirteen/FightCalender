@@ -163,7 +163,7 @@ export default function AccountPage() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="min-w-0">
                     <label className="section-label mb-1.5 block">Von</label>
                     <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="field w-full min-w-0" />
