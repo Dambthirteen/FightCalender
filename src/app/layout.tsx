@@ -16,10 +16,8 @@ export const metadata: Metadata = {
   title: "Submit",
   description: "Wer kommt diese Woche? Trainingsplan für deine Crew.",
   manifest: "/manifest.webmanifest",
-  icons: {
-    icon: "/icon-192.png",
-    apple: "/apple-touch-icon.png",
-  },
+  // Browser-Tab & iOS-Homescreen-Icon kommen aus den Datei-Konventionen
+  // src/app/icon.png · apple-icon.png · favicon.ico (Next injiziert die Links automatisch).
   appleWebApp: {
     capable: true,
     title: "Submit",
