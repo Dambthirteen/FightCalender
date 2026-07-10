@@ -69,6 +69,10 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
   `) as { s: string; e: string }[];
   const exempt = (d: string) => statusRows.some((x) => d >= x.s && d <= x.e);
 
+  // Eigene Wettkampftage zählen nie als Fehltag (kein Streak-Bruch, kein Chicken).
+  const compRows = (await sql`SELECT competition_date::text AS d FROM competitions WHERE user_name = ${user}`) as { d: string }[];
+  const compDays = new Set(compRows.map((r) => r.d));
+
   // Ausreden je Tag mit ihren Gericht-Stimmen. Für die Streak-Kulanz gilt: eine
   // eingetragene Ausrede verschont den Tag, SOLANGE sie nicht abgelehnt ist
   // (reject > accept). So bricht die Streak nicht, während die Ausrede noch offen ist.
@@ -111,6 +115,7 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
     if (!plan.dowsFor(weekStartOf(d)).has(isodow(d))) continue;
     if (isHolidayIn(d, bundesland)) continue;
     if (exempt(d)) continue;
+    if (compDays.has(d)) continue;            // eigener Wettkampftag → neutral
     if (present.has(d)) { days++; continue; }
     if (protectedDays.has(d)) continue;       // per Streak-Punkt geschützt → neutral
     if (shielded(d)) continue;                // von einem eingelösten Schild gedeckt → neutral
@@ -133,6 +138,7 @@ export async function getStreak(sql: Sql, user: string, bundesland: string = 'NW
       if (!wdows.has(isodow(wd))) continue;
       if (isHolidayIn(wd, bundesland)) continue;
       if (exempt(wd)) continue;
+      if (compDays.has(wd)) continue;         // eigener Wettkampftag → neutral
       hadScheduled = true;
       if (present.has(wd)) continue;
       if (protectedDays.has(wd)) continue;

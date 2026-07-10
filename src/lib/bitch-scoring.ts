@@ -154,6 +154,13 @@ export async function getBitchCounts(
     const exempt = (u: string, d: string) =>
       statusRows.some((st) => st.user_name === u && d >= st.s && d <= st.e);
 
+    // Eigene Wettkampftage: an dem Tag gibt es nie einen Chicken-Punkt.
+    const compRows = (await sql`
+      SELECT user_name, competition_date::text AS d FROM competitions
+      WHERE competition_date >= ${bStart}::date AND competition_date < ${bEnd}::date
+    `) as { user_name: string; d: string }[];
+    const compSet = new Set(compRows.map((r) => `${r.user_name}|${r.d}`));
+
     // Ab wann zählt jemand in DIESER Gruppe? Erst ab dem Beitritt — sonst würde ein frisch
     // beigetretener Account mit Stundenplan rückwirkend Bitch-Punkte für den ganzen Vormonat
     // (vor seinem Beitritt) bekommen und fälschlich „Chicken des Monats" werden.
@@ -171,6 +178,7 @@ export async function getBitchCounts(
         if (!dowsFor(user, d).has(isodow(d))) continue;   // an dem Wochentag nichts geplant (KW-Plan)
         if (holidaySet.has(d)) continue;             // Feiertag
         if (exempt(user, d)) continue;               // krank/Urlaub
+        if (compSet.has(`${user}|${d}`)) continue;   // eigener Wettkampftag → kein Bitch
         if (present.has(`${user}|${d}`)) continue;   // war da → kein Bitch
         // No-Show → Bitch, außer eine angenommene Ausrede entfernt ihn
         const skip = skipByKey.get(`${user}|${d}`);
