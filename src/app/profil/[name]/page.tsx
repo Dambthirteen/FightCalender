@@ -493,6 +493,8 @@ export default function ProfilePage() {
   const streakDays = badgeData?.streakDays ?? 0;
   // Kompakter Header: Rang-Pille + Streak-Pille; die volle XP/Streak-Leiste steckt im Stats-Tab.
   const rank = xp ? rankFor(xp.level) : null;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const activeStatuses = statuses.filter((s) => s.end_date.slice(0, 10) >= todayStr && STATUS_META[s.status_type]);
   const streakWeeksV = badgeData?.streakWeeks ?? 0;
   const longestStreak = badgeData?.longest ?? 0;
   const flameIcon = <span style={{ filter: flameFilter(cosmetics.flame), display: 'inline-block' }}>🔥</span>;
@@ -632,6 +634,15 @@ export default function ProfilePage() {
                   style={{ borderColor: 'rgba(255,106,61,0.4)', background: 'var(--accent-soft)', color: 'var(--accent-2)' }}>
                   {flameIcon} {streakDays} {streakDays === 1 ? 'Tag' : 'Tage'}
                 </span>
+                {activeStatuses.map((s) => {
+                  const m = STATUS_META[s.status_type];
+                  const days = Math.max(0, Math.round((Date.parse(s.end_date.slice(0, 10)) - Date.parse(todayStr)) / 86400000));
+                  return (
+                    <span key={s.id} className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-[3px] border ${m.cls}`}>
+                      {m.icon} {m.label}{s.status_type === 'preparing' ? ` · noch ${days} Tag${days === 1 ? '' : 'e'}` : ''}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -640,26 +651,6 @@ export default function ProfilePage() {
           <div className="w-full mt-2">
             <Belt clanTag={badgeData?.clanTag ?? null} badges={displayedBadges} onBadge={setBeltBadge} skin={cosmetics.belt} fx={cosmetics.beltFx} />
           </div>
-
-          {/* Status-Badges (eckig) — Krank / Verletzt / Urlaub / In Vorbereitung, nur aktive */}
-          {(() => {
-            const todayStr = new Date().toISOString().slice(0, 10);
-            const active = statuses.filter((s) => s.end_date.slice(0, 10) >= todayStr && STATUS_META[s.status_type]);
-            if (active.length === 0) return null;
-            return (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {active.map((s) => {
-                  const m = STATUS_META[s.status_type];
-                  const days = Math.max(0, Math.round((Date.parse(s.end_date.slice(0, 10)) - Date.parse(todayStr)) / 86400000));
-                  return (
-                    <span key={s.id} className={`text-[11px] font-semibold px-2 py-0.5 rounded-[3px] border ${m.cls}`}>
-                      {m.icon} {m.label}{s.status_type === 'preparing' ? ` · noch ${days} Tag${days === 1 ? '' : 'e'}` : ''}
-                    </span>
-                  );
-                })}
-              </div>
-            );
-          })()}
 
         </div>
 
