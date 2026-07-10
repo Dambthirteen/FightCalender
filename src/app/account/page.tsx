@@ -7,9 +7,10 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 const STATUS_CONFIG = {
-  sick:     { label: 'Krank',    icon: '🤒', color: 'border-orange-500/40 bg-orange-500/10 text-orange-400' },
-  injured:  { label: 'Verletzt', icon: '🩹', color: 'border-red-500/40 bg-red-500/10 text-red-400' },
-  vacation: { label: 'Urlaub',   icon: '🏖️', color: 'border-blue-500/40 bg-blue-500/10 text-blue-400' },
+  sick:      { label: 'Krank',           icon: '🤒', color: 'border-orange-500/40 bg-orange-500/10 text-orange-400' },
+  injured:   { label: 'Verletzt',        icon: '🩹', color: 'border-red-500/40 bg-red-500/10 text-red-400' },
+  vacation:  { label: 'Urlaub',          icon: '🏖️', color: 'border-blue-500/40 bg-blue-500/10 text-blue-400' },
+  preparing: { label: 'In Vorbereitung', icon: '🎯', color: 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400' },
 } as const;
 type StatusType = keyof typeof STATUS_CONFIG;
 
@@ -20,14 +21,20 @@ interface StatusEntry {
   end_date: string;
   note: string;
 }
+interface Comp { id: number; name: string; competition_date: string; }
+
+function daysBetween(fromISO: string, toISO: string): number {
+  return Math.round((Date.parse(toISO) - Date.parse(fromISO)) / 86400000);
+}
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
 export default function AccountPage() {
   const { userName } = useUser();
   const [statuses, setStatuses] = useState<StatusEntry[]>([]);
+  const [comps, setComps] = useState<Comp[]>([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ statusType: 'sick' as StatusType, startDate: today(), endDate: today(), note: '' });
+  const [form, setForm] = useState({ statusType: 'sick' as StatusType, startDate: today(), endDate: today(), note: '', compId: 0 });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,21 +44,39 @@ export default function AccountPage() {
       .then(r => r.json())
       .then(d => setStatuses(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false));
+    // Kommende eigene Wettkämpfe (für „In Vorbereitung").
+    fetch(`/api/profile/competitions?user=${encodeURIComponent(userName)}`)
+      .then(r => r.json())
+      .then(d => {
+        const now = today();
+        setComps(Array.isArray(d)
+          ? d.filter((c: Comp) => c.competition_date.slice(0, 10) >= now).sort((a: Comp, b: Comp) => a.competition_date.localeCompare(b.competition_date))
+          : []);
+      }).catch(() => {});
   }, [userName]);
 
   async function addStatus() {
-    if (form.endDate < form.startDate) { setError('Enddatum vor Startdatum'); return; }
+    let startDate = form.startDate, endDate = form.endDate, note = form.note;
+    if (form.statusType === 'preparing') {
+      const comp = comps.find(c => c.id === form.compId);
+      if (!comp) { setError('Bitte einen Wettkampf wählen.'); return; }
+      startDate = today();
+      endDate = comp.competition_date.slice(0, 10);
+      note = comp.name;
+    } else if (endDate < startDate) {
+      setError('Enddatum vor Startdatum'); return;
+    }
     setSaving(true); setError('');
     try {
       const res = await fetch('/api/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statusType: form.statusType, startDate: form.startDate, endDate: form.endDate, note: form.note }),
+        body: JSON.stringify({ statusType: form.statusType, startDate, endDate, note }),
       });
       if (!res.ok) { const d = await res.json(); setError(d.error); return; }
       const newEntry = await res.json();
       setStatuses(prev => [newEntry, ...prev]);
-      setForm(f => ({ ...f, note: '' }));
+      setForm(f => ({ ...f, note: '', compId: 0 }));
     } finally {
       setSaving(false);
     }
@@ -88,8 +113,14 @@ export default function AccountPage() {
                     <span className="text-xl">{cfg.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm">{cfg.label}</div>
-                      <div className="text-xs opacity-70">{fmtDate(s.start_date)} – {fmtDate(s.end_date)}</div>
-                      {s.note && <div className="text-xs opacity-60 mt-0.5 truncate">{s.note}</div>}
+                      {s.status_type === 'preparing' ? (
+                        <div className="text-xs opacity-70">{s.note ? `${s.note} · ` : ''}noch {Math.max(0, daysBetween(now, s.end_date.slice(0, 10)))} Tage</div>
+                      ) : (
+                        <>
+                          <div className="text-xs opacity-70">{fmtDate(s.start_date)} – {fmtDate(s.end_date)}</div>
+                          {s.note && <div className="text-xs opacity-60 mt-0.5 truncate">{s.note}</div>}
+                        </>
+                      )}
                     </div>
                     <button onClick={() => deleteStatus(s.id)} className="text-current opacity-40 hover:opacity-100 transition-opacity text-sm px-2">✕</button>
                   </div>
@@ -105,7 +136,7 @@ export default function AccountPage() {
           <div className="space-y-4">
             <div>
               <label className="section-label mb-2 block">Typ</label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {(Object.entries(STATUS_CONFIG) as [StatusType, typeof STATUS_CONFIG[StatusType]][]).map(([key, cfg]) => (
                   <button
                     key={key}
@@ -117,24 +148,41 @@ export default function AccountPage() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            {form.statusType === 'preparing' ? (
               <div>
-                <label className="section-label mb-1.5 block">Von</label>
-                <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="field" />
+                <label className="section-label mb-1.5 block">Wettkampf</label>
+                {comps.length === 0 ? (
+                  <p className="text-xs text-[var(--faint)]">Keine kommenden Wettkämpfe. Leg zuerst unter „Wettkämpfe“ einen mit Datum in der Zukunft an.</p>
+                ) : (
+                  <select value={form.compId} onChange={e => setForm(f => ({ ...f, compId: Number(e.target.value) }))} className="field">
+                    <option value={0}>Wettkampf wählen…</option>
+                    {comps.map(c => <option key={c.id} value={c.id}>{c.name} · {fmtDate(c.competition_date)}</option>)}
+                  </select>
+                )}
+                <p className="text-[11px] text-[var(--faint)] mt-1.5">Der Zeitraum bis zum Wettkampf wird automatisch berechnet.</p>
               </div>
-              <div>
-                <label className="section-label mb-1.5 block">Bis</label>
-                <input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className="field" />
-              </div>
-            </div>
-            <div>
-              <label className="section-label mb-1.5 block">Notiz (optional)</label>
-              <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-                className="field" placeholder="z.B. Grippe, Knieprobleme…" />
-            </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="section-label mb-1.5 block">Von</label>
+                    <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="field" />
+                  </div>
+                  <div>
+                    <label className="section-label mb-1.5 block">Bis</label>
+                    <input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className="field" />
+                  </div>
+                </div>
+                <div>
+                  <label className="section-label mb-1.5 block">Notiz (optional)</label>
+                  <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
+                    className="field" placeholder="z.B. Grippe, Knieprobleme…" />
+                </div>
+              </>
+            )}
           </div>
           {error && <p className="text-[var(--accent)] text-xs mt-3">{error}</p>}
-          <button onClick={addStatus} disabled={saving} className="btn btn-primary mt-5 w-full">
+          <button onClick={addStatus} disabled={saving || (form.statusType === 'preparing' && !form.compId)} className="btn btn-primary mt-5 w-full">
             {saving ? 'Speichern…' : 'Status eintragen'}
           </button>
         </section>

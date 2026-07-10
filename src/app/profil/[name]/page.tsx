@@ -125,6 +125,14 @@ const DAY_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Sa
 const PLACEMENT_MED: Record<string, string> = { gold: '🥇 1. Platz', silver: '🥈 2. Platz', bronze: '🥉 3. Platz', part: 'Teilnahme' };
 type CompRow = { id: number; name: string; competition_date: string; weight_class: string | null; result: string | null; method: string | null; placement: string | null };
 
+// Status-Badges (eckig) im Profil.
+const STATUS_META: Record<string, { label: string; icon: string; cls: string }> = {
+  sick:      { label: 'Krank',           icon: '🤒', cls: 'bg-orange-500/15 text-orange-400 border-orange-500/40' },
+  injured:   { label: 'Verletzt',        icon: '🩹', cls: 'bg-red-500/15 text-red-400 border-red-500/40' },
+  vacation:  { label: 'Urlaub',          icon: '🏖️', cls: 'bg-blue-500/15 text-blue-400 border-blue-500/40' },
+  preparing: { label: 'In Vorbereitung', icon: '🎯', cls: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/40' },
+};
+
 interface FighterInfo {
   role?: string; // 'fighter' | 'coach' | 'both'
   athlete?: string; // 'hobby' | 'competitor'
@@ -200,6 +208,7 @@ export default function ProfilePage() {
   const [arts, setArts] = useState<MartialArtEntry[]>([]);
   const [skills, setSkills] = useState<Skills>({});
   const [comps, setComps] = useState<CompRow[]>([]);
+  const [statuses, setStatuses] = useState<{ id: number; status_type: string; start_date: string; end_date: string; note: string }[]>([]);
   const [fighterInfo, setFighterInfo] = useState<FighterInfo>({});
   const [xp, setXp] = useState<XpData | null>(null);
   const [cosmetics, setCosmetics] = useState<Record<string, string>>({});
@@ -282,6 +291,7 @@ export default function ProfilePage() {
     fetch(`/api/challenges?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setChallenges(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`/api/praise?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setPraises(Array.isArray(d) ? d : [])).catch(() => {});
     fetch(`/api/profile/competitions?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setComps(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`/api/status?user=${encodeURIComponent(name)}`).then((r) => r.json()).then((d) => setStatuses(Array.isArray(d) ? d : [])).catch(() => {});
   }, [name]);
 
   // Lob/Gigalob-Verfügbarkeit des Betrachters (für die Buttons auf fremden Profilen)
@@ -632,6 +642,26 @@ export default function ProfilePage() {
           <div className="w-full mt-2">
             <Belt clanTag={badgeData?.clanTag ?? null} badges={displayedBadges} onBadge={setBeltBadge} skin={cosmetics.belt} fx={cosmetics.beltFx} />
           </div>
+
+          {/* Status-Badges (eckig) — Krank / Verletzt / Urlaub / In Vorbereitung, nur aktive */}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const active = statuses.filter((s) => s.end_date.slice(0, 10) >= todayStr && STATUS_META[s.status_type]);
+            if (active.length === 0) return null;
+            return (
+              <div className="flex flex-wrap justify-center gap-1.5 mt-3">
+                {active.map((s) => {
+                  const m = STATUS_META[s.status_type];
+                  const days = Math.max(0, Math.round((Date.parse(s.end_date.slice(0, 10)) - Date.parse(todayStr)) / 86400000));
+                  return (
+                    <span key={s.id} className={`text-[11px] font-semibold px-2 py-0.5 rounded-[3px] border ${m.cls}`}>
+                      {m.icon} {m.label}{s.status_type === 'preparing' ? ` · noch ${days} Tag${days === 1 ? '' : 'e'}` : ''}
+                    </span>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
         </div>
 

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const userName = await getCurrentUser();
     if (!userName) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { statusType, startDate, endDate, note } = await req.json();
-    if (!['sick', 'injured', 'vacation'].includes(statusType) || !startDate || !endDate) {
+    if (!['sick', 'injured', 'vacation', 'preparing'].includes(statusType) || !startDate || !endDate) {
       return NextResponse.json({ error: 'Ungültige Daten' }, { status: 400 });
     }
 
@@ -46,6 +46,8 @@ export async function POST(req: NextRequest) {
     `;
     const status = rows[0];
 
+    // Bei 'preparing' (In Vorbereitung) KEINE automatischen Fehltage anlegen — keine Abwesenheit.
+    if (statusType !== 'preparing') {
     // Get user's scheduled days
     const schedule = await sql`
       SELECT DISTINCT c.day_of_week
@@ -71,6 +73,7 @@ export async function POST(req: NextRequest) {
           ON CONFLICT (date, user_name) DO NOTHING
         `;
       }
+    }
     }
 
     return NextResponse.json(status, { status: 201 });

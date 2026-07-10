@@ -73,6 +73,9 @@ export async function POST(req: NextRequest) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `;
+    // 'preparing' (In Vorbereitung auf einen Wettkampf) nachträglich als Status-Typ erlauben.
+    await sql`ALTER TABLE user_status DROP CONSTRAINT IF EXISTS user_status_status_type_check`;
+    await sql`ALTER TABLE user_status ADD CONSTRAINT user_status_status_type_check CHECK (status_type IN ('sick', 'injured', 'vacation', 'preparing'))`;
     await sql`
       CREATE TABLE IF NOT EXISTS user_schedule (
         id SERIAL PRIMARY KEY,
