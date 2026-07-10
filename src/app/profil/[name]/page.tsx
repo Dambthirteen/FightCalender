@@ -8,6 +8,7 @@ import { ARTS, SKILLS, BELT_COLORS, ROLES, isCoach, artLabel, artBelts, overallR
 import { GENDERS, athleteLabel, competitorLabel, trainerLabel, macherMonth } from '@/lib/gender';
 import { nextStreakBadge, STREAK_BADGES, COMPETITION_BADGES, FIGHT_BADGES, TOURNAMENT_BADGES, JUDGE_BADGES, SPECIAL_BADGES, SECRET_BADGES } from '@/lib/badges';
 import XpBar, { type XpData } from '@/components/XpBar';
+import { rankFor } from '@/lib/xp';
 import LoadingScreen from '@/components/LoadingScreen';
 import ProfileGallery from '@/components/ProfileGallery';
 import ProfileStats from '@/components/ProfileStats';
@@ -490,6 +491,23 @@ export default function ProfilePage() {
   const year = new Date().getFullYear();
   const frame = avatarFrame(cosmetics.avatarFrame, c); // Spind: Avatar-Rahmen
   const streakDays = badgeData?.streakDays ?? 0;
+  // Kompakter Header: Rang-Pille + Streak-Pille; die volle XP/Streak-Leiste steckt im Stats-Tab.
+  const rank = xp ? rankFor(xp.level) : null;
+  const streakWeeksV = badgeData?.streakWeeks ?? 0;
+  const longestStreak = badgeData?.longest ?? 0;
+  const flameIcon = <span style={{ filter: flameFilter(cosmetics.flame), display: 'inline-block' }}>🔥</span>;
+  const streakPct = nextBadge ? Math.min(1, streakWeeksV / nextBadge.threshold) : 1;
+  const streakView = (
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-bold" style={{ color: 'var(--accent-2)' }}>{flameIcon} {streakDays} {streakDays === 1 ? 'Tag' : 'Tage'} Streak</span>
+        <span className="text-[10px] text-[var(--faint)] tnum">{streakWeeksV} Wo · Rekord {longestStreak}</span>
+      </div>
+      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+        <div className="h-full rounded-full" style={{ width: `${Math.max(3, Math.round(streakPct * 100))}%`, background: 'linear-gradient(90deg, var(--accent-2), var(--accent))', transition: 'width .6s ease' }} />
+      </div>
+    </div>
+  );
   // Hat der Steckbrief überhaupt Eckdaten? (sonst wird der Abschnitt in der Ansicht ausgeblendet)
   const hasFacts = !!(fighterInfo.athlete || fighterInfo.trainingSince || fighterInfo.weightKg || fighterInfo.heightCm || fighterInfo.instagram
     || (isCoach(fighterInfo.role) && (fighterInfo.coachingSince || fighterInfo.coachingArts?.length || fighterInfo.licenses)));
@@ -563,13 +581,7 @@ export default function ProfilePage() {
     <div className="min-h-screen text-[var(--text)]">
       <header className="max-w-md mx-auto px-4 pt-5 pb-2 grid grid-cols-3 items-center anim-in">
         <a href="/start" aria-label="Zurück" className="justify-self-start w-11 h-11 grid place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--muted)] hover:text-white active:scale-95 transition-all">←</a>
-        <h1 className="font-display text-xl tracking-wide text-center flex items-center justify-center gap-1.5 min-w-0">
-          <span className="truncate" style={nameplateStyle(cosmetics.nameplate)}>{name}</span>
-          {supporter && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src="/supporter-star.png" alt="Supporter" title="Supporter" width={14} height={14} className="shrink-0" style={{ transform: 'translateY(-2px)' }} />
-          )}
-        </h1>
+        <span aria-hidden />{/* Name steht jetzt groß im kompakten Identitäts-Block darunter */}
         <div className="justify-self-end">
           {isSelf && (
             <button onClick={() => setEditMode((v) => !v)}
@@ -582,61 +594,47 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 pb-24">
-        {/* Identität */}
-        <div className="flex flex-col items-center text-center anim-up pt-1">
-          <button
-            onClick={() => editing && fileRef.current?.click()}
-            disabled={!editing || uploading}
-            className={`relative w-24 h-24 rounded-full mb-2.5 overflow-hidden grid place-items-center ${frame.className ?? ''}`}
-            style={{ background: avatar ? 'transparent' : `${c}22`, ...frame.style }}>
-            {avatar
-              ? <img src={avatar} alt={name} className="w-full h-full object-cover" />
-              : <span className="font-display text-5xl" style={{ color: c }}>{initials(name)}</span>}
-            {editing && (
-              <span className="absolute bottom-0 inset-x-0 py-1 text-[10px] font-semibold text-white" style={{ background: 'rgba(0,0,0,0.55)' }}>
-                {uploading ? '…' : '📷 Ändern'}
-              </span>
-            )}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
-
-          {(() => {
-            const weeks = badgeData?.streakWeeks ?? 0;
-            const longest = badgeData?.longest ?? 0;
-            const flameIcon = <span style={{ filter: flameFilter(cosmetics.flame), display: 'inline-block' }}>🔥</span>;
-            // Streak-Ansicht: gleiche Optik wie die XP-Leiste, Balken = Fortschritt zur nächsten Streak-Stufe.
-            const streakPct = nextBadge ? Math.min(1, weeks / nextBadge.threshold) : 1;
-            const streakView = (
-              <div className="w-full">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold" style={{ color: 'var(--accent-2)' }}>{flameIcon} {streakDays} {streakDays === 1 ? 'Tag' : 'Tage'} Streak</span>
-                  <span className="text-[10px] text-[var(--faint)] tnum">{weeks} Wo · Rekord {longest}</span>
-                </div>
-                <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
-                  <div className="h-full rounded-full" style={{ width: `${Math.max(3, Math.round(streakPct * 100))}%`, background: 'linear-gradient(90deg, var(--accent-2), var(--accent))', transition: 'width .6s ease' }} />
-                </div>
+        {/* Identität — kompakt: Avatar + Name + Level/Streak-Pills */}
+        <div className="anim-up pt-1">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => editing && fileRef.current?.click()}
+              disabled={!editing || uploading}
+              className={`relative w-20 h-20 rounded-full overflow-hidden grid place-items-center shrink-0 ${frame.className ?? ''}`}
+              style={{ background: avatar ? 'transparent' : `${c}22`, ...frame.style }}>
+              {avatar
+                ? <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                : <span className="font-display text-4xl" style={{ color: c }}>{initials(name)}</span>}
+              {editing && (
+                <span className="absolute bottom-0 inset-x-0 py-0.5 text-[9px] font-semibold text-white" style={{ background: 'rgba(0,0,0,0.55)' }}>
+                  {uploading ? '…' : '📷'}
+                </span>
+              )}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h1 className="font-display text-3xl tracking-wide truncate" style={nameplateStyle(cosmetics.nameplate)}>{name}</h1>
+                {supporter && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src="/supporter-star.png" alt="Supporter" title="Supporter" width={16} height={16} className="shrink-0" />
+                )}
               </div>
-            );
-            // Level/XP volle Breite (= Gürtel). Sichtbarer Umschalter statt unsichtbarem Tap.
-            if (xp) return (
-              <div className="w-full mt-3">
-                <div className="flex gap-1 justify-center mb-1.5">
-                  {(['xp', 'streak'] as const).map((m) => (
-                    <button key={m} type="button" onClick={() => setStatMode(m)}
-                      className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-[3px] transition-colors"
-                      style={statMode === m ? { color: 'var(--accent)', background: 'var(--accent-soft)' } : { color: 'var(--faint)' }}>
-                      {m === 'xp' ? 'Level' : 'Streak'}
-                    </button>
-                  ))}
-                </div>
-                {statMode === 'xp'
-                  ? <XpBar data={xp} color={xpBarColor(cosmetics.xpbar)}
-                      right={<span className="text-[10px] text-[var(--faint)] tnum">noch {Math.max(0, xp.span - xp.into)} XP</span>} />
-                  : streakView}
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                {xp && rank && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-[3px] border"
+                    style={{ borderColor: `${rank.color}55`, background: `${rank.color}1a`, color: rank.color }}>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: rank.color }} />
+                    Lvl {xp.level} · {rank.name}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-[3px] border"
+                  style={{ borderColor: 'rgba(255,106,61,0.4)', background: 'var(--accent-soft)', color: 'var(--accent-2)' }}>
+                  {flameIcon} {streakDays} {streakDays === 1 ? 'Tag' : 'Tage'}
+                </span>
               </div>
-            );
-            return <div className="mt-2">{streakView}</div>;
-          })()}
+            </div>
+          </div>
 
           {/* Championship-Belt: Clantag + ausgestellte Badges */}
           <div className="w-full mt-2">
@@ -649,7 +647,7 @@ export default function ProfilePage() {
             const active = statuses.filter((s) => s.end_date.slice(0, 10) >= todayStr && STATUS_META[s.status_type]);
             if (active.length === 0) return null;
             return (
-              <div className="flex flex-wrap justify-center gap-1.5 mt-3">
+              <div className="flex flex-wrap gap-1.5 mt-3">
                 {active.map((s) => {
                   const m = STATUS_META[s.status_type];
                   const days = Math.max(0, Math.round((Date.parse(s.end_date.slice(0, 10)) - Date.parse(todayStr)) / 86400000));
@@ -1039,6 +1037,23 @@ export default function ProfilePage() {
             {/* --- Tab: Stats --- */}
             {tab === 'stats' && (
               <div className="space-y-5 anim-in">
+                {xp && (
+                  <div className="card px-4 py-4">
+                    <div className="flex gap-1 justify-center mb-2.5">
+                      {(['xp', 'streak'] as const).map((m) => (
+                        <button key={m} type="button" onClick={() => setStatMode(m)}
+                          className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-[3px] transition-colors"
+                          style={statMode === m ? { color: 'var(--accent)', background: 'var(--accent-soft)' } : { color: 'var(--faint)' }}>
+                          {m === 'xp' ? 'Level' : 'Streak'}
+                        </button>
+                      ))}
+                    </div>
+                    {statMode === 'xp'
+                      ? <XpBar data={xp} color={xpBarColor(cosmetics.xpbar)}
+                          right={<span className="text-[10px] text-[var(--faint)] tnum">noch {Math.max(0, xp.span - xp.into)} XP</span>} />
+                      : streakView}
+                  </div>
+                )}
                 <ProfileStats user={name} comps={comps} />
                 <div>
                   <div className="section-label mb-2.5">Titel &amp; Anwesenheit</div>
