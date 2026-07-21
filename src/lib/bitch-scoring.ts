@@ -57,6 +57,12 @@ export async function getBitchCounts(
     testers = new Set(t.map((r) => r.user_name));
   } catch { /* is_test-Spalte evtl. noch nicht angelegt */ }
 
+  // Nur aktuelle Mitglieder werten. Beim Verlassen bleiben Anwesenheit/Skips/Plan in der DB,
+  // und ohne group_members-Zeile greift der Join-Floor unten nicht mehr — ein Ausgetretener
+  // würde sonst für den ganzen Zeitraum Chicken-Punkte sammeln und „Chicken des Monats" werden.
+  const memberRows = (await sql`SELECT user_name FROM group_members WHERE group_id = ${groupId} AND status = 'active'`) as { user_name: string }[];
+  const activeMembers = new Set(memberRows.map((r) => r.user_name));
+
   // ---------- TEIL A: vor dem Stichtag — ALTE Logik (Historie unverändert) ----------
   const aEnd = endExclusive < CUTOVER ? endExclusive : CUTOVER; // min(endExclusive, CUTOVER)
   if (start < aEnd) {
@@ -193,7 +199,7 @@ export async function getBitchCounts(
   }
 
   return [...counts.entries()]
-    .filter(([user_name]) => !testers.has(user_name)) // Test-Accounts raus
+    .filter(([user_name]) => activeMembers.has(user_name) && !testers.has(user_name)) // Ausgetretene + Test-Accounts raus
     .map(([user_name, count]) => ({ user_name, count }))
     .sort((a, b) => b.count - a.count);
 }

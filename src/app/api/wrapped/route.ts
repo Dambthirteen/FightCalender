@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
       SELECT a.user_name, COUNT(*)::int AS n
       FROM attendance a JOIN classes c ON c.id = a.class_id
       WHERE c.group_id = ${gid}
+        AND a.user_name IN (SELECT user_name FROM group_members WHERE group_id = ${gid} AND status = 'active')
         AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date >= ${start}::date
         AND (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date < ${end}::date
         AND a.user_name NOT IN (SELECT user_name FROM users WHERE is_test = true)

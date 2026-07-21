@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { deleteGroup } from './groups';
 
 // DSGVO-Helfer: vollständige Löschung + Datenauskunft (Export) eines Nutzers.
 // Bewusst zentral, damit Self-Service (/api/account/*) und Admin dieselbe,
@@ -24,6 +25,8 @@ export async function deleteAllUserData(sql: Sql, userName: string): Promise<voi
   await sql`DELETE FROM competitions WHERE user_name = ${userName}`;
   await sql`DELETE FROM user_status WHERE user_name = ${userName}`;
   await sql`DELETE FROM user_schedule WHERE user_name = ${userName}`;
+  try { await sql`DELETE FROM weekly_schedule WHERE user_name = ${userName}`; } catch {}
+  try { await sql`DELETE FROM event_attendance WHERE user_name = ${userName}`; } catch {}
   await sql`DELETE FROM push_subscriptions WHERE user_name = ${userName}`;
   await sql`DELETE FROM notification_prefs WHERE user_name = ${userName}`;
   await sql`DELETE FROM user_notif_log WHERE user_name = ${userName}`;
@@ -47,6 +50,36 @@ export async function deleteAllUserData(sql: Sql, userName: string): Promise<voi
   try { await sql`DELETE FROM friendships WHERE requester = ${userName} OR addressee = ${userName}`; } catch {}
   try { await sql`DELETE FROM coach_schedule WHERE user_name = ${userName}`; } catch {}
   try { await sql`UPDATE feedback SET user_name = NULL WHERE user_name = ${userName}`; } catch {} // anonymisieren, Inhalt bleibt
+  // Vor dem Entfernen der Mitgliedschaften: Gruppen, in denen dieser Nutzer der einzige Admin
+  // ist, nicht führungslos zurücklassen (der Leave-Endpoint blockt das, Konto-Löschung umging es).
+  try {
+    const adminOf = (await sql`
+      SELECT group_id FROM group_members
+      WHERE user_name = ${userName} AND role = 'admin' AND status = 'active'
+    `) as { group_id: number }[];
+    for (const { group_id: gid } of adminOf) {
+      const otherAdmins = (await sql`
+        SELECT 1 FROM group_members
+        WHERE group_id = ${gid} AND role = 'admin' AND status = 'active' AND user_name <> ${userName}
+        LIMIT 1
+      `) as unknown[];
+      if (otherAdmins.length > 0) continue; // noch ein Admin da → nichts zu tun
+      const heir = (await sql`
+        SELECT user_name FROM group_members
+        WHERE group_id = ${gid} AND status = 'active' AND user_name <> ${userName}
+        ORDER BY created_at ASC NULLS LAST, user_name ASC
+        LIMIT 1
+      `) as { user_name: string }[];
+      if (heir.length > 0) {
+        // Ältestes verbleibendes Mitglied rückt zum Admin nach (übernimmt auch die Urheber-Spur).
+        await sql`UPDATE group_members SET role = 'admin' WHERE group_id = ${gid} AND user_name = ${heir[0].user_name}`;
+        await sql`UPDATE groups SET created_by = ${heir[0].user_name} WHERE id = ${gid} AND created_by = ${userName}`;
+      } else {
+        // Niemand mehr übrig → Gruppe restlos entfernen (statt leere, verwaiste Gruppe zu hinterlassen).
+        await deleteGroup(gid);
+      }
+    }
+  } catch { /* group_members/created_at evtl. noch nicht vorhanden → Mitgliedschaften unten regulär löschen */ }
   await sql`DELETE FROM group_members WHERE user_name = ${userName}`;
   await sql`DELETE FROM auth_tokens WHERE user_name = ${userName}`;
   await sql`UPDATE groups SET created_by = NULL WHERE created_by = ${userName}`;

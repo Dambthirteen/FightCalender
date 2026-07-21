@@ -112,6 +112,8 @@ export async function deleteGroup(groupId: number): Promise<void> {
   await safe(() => sql`DELETE FROM title_votes WHERE group_id = ${groupId}`);
   await safe(() => sql`DELETE FROM title_awards_seen WHERE group_id = ${groupId}`);
   await safe(() => sql`DELETE FROM feed_events WHERE group_id = ${groupId}`); // cascadet feed_reactions
+  await safe(() => sql`DELETE FROM event_attendance WHERE event_id IN (SELECT id FROM group_events WHERE group_id = ${groupId})`);
+  await safe(() => sql`DELETE FROM group_events WHERE group_id = ${groupId}`);
   await safe(() => sql`DELETE FROM message_reports WHERE message_id IN (SELECT id FROM messages WHERE group_id = ${groupId})`);
   await safe(() => sql`DELETE FROM messages WHERE group_id = ${groupId}`);
   await safe(() => sql`DELETE FROM chat_reads WHERE group_id = ${groupId}`);

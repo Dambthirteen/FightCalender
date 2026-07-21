@@ -135,9 +135,12 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   // --- Per-User: „Nicht eingetragen / Ausrede-Frist"-Erinnerungen ---
   try {
     const winStart = addD(today, -3);
+    // Nur aktive Mitglieder erinnern: beim Verlassen bleibt der user_schedule stehen,
+    // sonst würden Ausgetretene mit Push-Abo weiter „Nicht eingetragen"-Pushes bekommen.
     const schedRows = (await sql`
       SELECT us.user_name, c.day_of_week::int AS dow, c.end_time
       FROM user_schedule us JOIN classes c ON c.id = us.class_id
+      JOIN group_members gm ON gm.group_id = c.group_id AND gm.user_name = us.user_name AND gm.status = 'active'
     `) as { user_name: string; dow: number; end_time: string }[];
     const userDows = new Map<string, Set<number>>();
     const lastEnd = new Map<string, number>(); // `${user}|${dow}` → Minuten der spätesten geplanten Klasse
