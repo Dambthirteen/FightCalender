@@ -40,7 +40,7 @@ export async function GET() {
     const attRows = (await sql`
       SELECT a.user_name AS u, (a.week_start + (c.day_of_week - 1) * INTERVAL '1 day')::date::text AS d
       FROM attendance a JOIN classes c ON c.id = a.class_id
-      WHERE c.group_id = ${gid}
+      WHERE c.group_id = ${gid} AND a.user_name = ANY(${members}::text[])
     `) as { u: string; d: string }[];
     const presentByUser = new Map<string, Set<string>>();
     const totalByUser = new Map<string, number>();
@@ -61,7 +61,7 @@ export async function GET() {
       FROM attendance a1
       JOIN attendance a2 ON a1.class_id = a2.class_id AND a1.week_start = a2.week_start AND a1.user_name < a2.user_name
       JOIN classes c ON c.id = a1.class_id
-      WHERE c.group_id = ${gid}
+      WHERE c.group_id = ${gid} AND a1.user_name = ANY(${members}::text[]) AND a2.user_name = ANY(${members}::text[])
       GROUP BY a1.user_name, a2.user_name ORDER BY n DESC LIMIT 8
     `) as { a: string; b: string; n: number }[];
 
@@ -69,7 +69,7 @@ export async function GET() {
     const perCourse = (await sql`
       SELECT DISTINCT ON (c.name) c.name AS course, c.color AS color, a.user_name AS user, COUNT(*)::int AS n
       FROM attendance a JOIN classes c ON c.id = a.class_id
-      WHERE c.group_id = ${gid}
+      WHERE c.group_id = ${gid} AND a.user_name = ANY(${members}::text[])
       GROUP BY c.name, c.color, a.user_name
       ORDER BY c.name, n DESC
     `) as { course: string; color: string; user: string; n: number }[];
